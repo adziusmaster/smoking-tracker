@@ -6,7 +6,14 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "android": { "package": "com.adzius.smokefree" },
-    "plugins": ["expo-router", "expo-sqlite", "expo-notifications"]
+    "android": {
+      "package": "com.adzius.smokefree"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      "expo-notifications",
+      "expo-sharing"
+    ]
   }
 }
