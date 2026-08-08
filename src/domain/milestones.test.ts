@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anchorFor, resolveMilestone } from './milestones';
+import { anchorFor, resolveMilestone, resolveMilestones } from './milestones';
 import { MS_PER_DAY, MS_PER_HOUR, type Anchors, type Milestone } from './types';
 
 const QUIT = '2026-06-26T08:00:00+02:00';
@@ -146,5 +146,56 @@ describe('resolveMilestone', () => {
     // Assert
     expect(result.status).toBe('future');
     expect(result.progress).toBeNull();
+  });
+
+  it('resolveMilestone_exactlyAtRangeStart_isInProgressWithZeroProgress', () => {
+    // Arrange — range 0–100 days from the cumulative anchor, now is exactly the start
+    const m = milestone({ offsetMs: 0, offsetEndMs: 100 * MS_PER_DAY, slipBehavior: 'cumulative' });
+    const now = new Date(new Date(QUIT).getTime() + 0);
+
+    // Act
+    const result = resolveMilestone(m, anchors, now);
+
+    // Assert
+    expect(result.status).toBe('in-progress');
+    expect(result.progress).toBe(0);
+  });
+
+  it('resolveMilestone_exactlyAtRangeEnd_isReached', () => {
+    // Arrange — range 0–10 days from the cumulative anchor, now is exactly the end
+    const m = milestone({ offsetMs: 0, offsetEndMs: 10 * MS_PER_DAY, slipBehavior: 'cumulative' });
+    const now = new Date(new Date(QUIT).getTime() + 10 * MS_PER_DAY);
+
+    // Act
+    const result = resolveMilestone(m, anchors, now);
+
+    // Assert
+    expect(result.status).toBe('reached');
+    expect(result.progress).toBeNull();
+  });
+});
+
+describe('resolveMilestones', () => {
+  it('resolveMilestones_arrayOfMilestones_mapsEachInOrderConsistentlyWithResolveMilestone', () => {
+    // Arrange
+    const restartsMilestone = milestone({
+      id: 'restarts-one',
+      offsetMs: 24 * MS_PER_HOUR,
+      slipBehavior: 'restarts',
+    });
+    const cumulativeMilestone = milestone({
+      id: 'cumulative-one',
+      offsetMs: 14 * MS_PER_DAY,
+      slipBehavior: 'cumulative',
+    });
+    const now = new Date('2026-08-08T08:00:00+02:00');
+
+    // Act
+    const result = resolveMilestones([restartsMilestone, cumulativeMilestone], anchors, now);
+
+    // Assert
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual(resolveMilestone(restartsMilestone, anchors, now));
+    expect(result[1]).toEqual(resolveMilestone(cumulativeMilestone, anchors, now));
   });
 });
