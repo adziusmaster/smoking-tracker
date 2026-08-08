@@ -1,0 +1,31 @@
+# Brainstorming companion mockups — local working artefacts
+.superpowers/
+
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# EAS / native build output
+*.aab
+*.apk
+android/
+ios/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.DS_Store
+*.log
+.idea/
+.vscode/
+
+# Test output
+coverage/
