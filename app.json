@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Smoke Free",
+    "slug": "smoking-tracker",
+    "scheme": "smokefree",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "android": { "package": "com.adzius.smokefree" },
+    "plugins": ["expo-router", "expo-sqlite", "expo-notifications"]
+  }
+}
