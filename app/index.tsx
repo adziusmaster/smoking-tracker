@@ -4,10 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { recordMilestoneReached } from '@/data/repositories';
+import { planNotifications } from '@/domain/notifications';
 import { buildTimeline } from '@/domain/timeline';
 import type { MilestoneState } from '@/domain/types';
 import { MILESTONES } from '@/content/milestones';
 import { DANGER_WINDOW_TIPS, PHASES } from '@/content/phases';
+import { syncNotifications } from '@/notifications/schedule';
 import { ChapterBlock } from '@/ui/ChapterBlock';
 import { Hero } from '@/ui/Hero';
 import { theme } from '@/ui/theme';
@@ -66,6 +68,20 @@ export default function Timeline() {
       }
     })();
   }, [timeline, db]);
+
+  // Re-plan the OS notification queue when the danger window or the next milestone changes —
+  // NOT on `timeline` itself, which is rebuilt every minute by the clock and would otherwise
+  // reschedule the entire queue 1440 times a day.
+  useEffect(() => {
+    if (!timeline) return;
+    const planned = planNotifications({
+      milestones: timeline.chapters.flatMap((chapter) => chapter.milestones),
+      dangerWindow: timeline.dangerWindow,
+      now: new Date(),
+    });
+    void syncNotifications(planned);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeline?.dangerWindow.active, timeline?.nextMilestone?.milestone.id]);
 
   if (!loading && error) {
     return (
