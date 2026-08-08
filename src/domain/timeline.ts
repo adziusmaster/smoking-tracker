@@ -22,7 +22,7 @@ export interface TimelineInput {
 /** The soonest unreached milestone, ranked by its projected date. */
 function pickNext(states: MilestoneState[]): MilestoneState | null {
   const upcoming = states
-    .filter((state) => state.status !== 'reached' && state.projectedAt !== null)
+    .filter((milestoneState) => milestoneState.status !== 'reached' && milestoneState.projectedAt !== null)
     .sort((a, b) => new Date(a.projectedAt as string).getTime() - new Date(b.projectedAt as string).getTime());
 
   return upcoming[0] ?? null;

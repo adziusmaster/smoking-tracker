@@ -88,6 +88,12 @@ describe('buildTimeline', () => {
     expect(byId.get('co')).toBe('future');
     expect(byId.get('taste')).toBe('reached');
     expect(result.dangerWindow.active).toBe(true);
+    // The headline streak is the honest-setback promise: a slip must never zero it.
+    // It tracks the cumulative anchor (sustained cessation), not the fast anchor (last
+    // nicotine), so one cigarette after 43 clean days must never read back as day zero.
+    expect(result.elapsed.days).toBe(43);
+    expect(result.anchors.cumulative).toBe(QUIT);
+    expect(result.anchors.fast).toBe('2026-08-07T22:00:00+02:00');
   });
 
   it('buildTimeline_allMilestonesReached_returnsNullNextMilestone', () => {
