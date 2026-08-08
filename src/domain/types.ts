@@ -5,7 +5,7 @@ export type MilestoneStatus = 'reached' | 'in-progress' | 'future';
 export type SourceTier = 'a' | 'b';
 
 export interface Settings {
-  quitDate: string;            // ISO 8601 with offset
+  quitDate: string;            // always `date.toISOString()` — UTC, ending 'Z'
   cigarettesPerDay: number;
   cigarettesPerPack: number;
   packPriceMinor: number;      // integer minor units
