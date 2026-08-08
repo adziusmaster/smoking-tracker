@@ -23,7 +23,7 @@ Every task's requirements implicitly include this section.
 - **Life-expectancy constant:** `MINUTES_LOST_PER_CIGARETTE = 20` (Jackson et al., *Addiction*, 2025). Displayed as "time not lost", never "life regained".
 - **Danger window:** `DANGER_WINDOW_DAYS = 19`.
 - **Default `cigarettesPerPack` is 20; default currency is `EUR`.**
-- **Test naming:** `function_stateUnderTest_expectedBehavior`. Strict AAA with `// Arrange` / `// Act` / `// Assert` comments.
+- **Test naming:** `function_stateUnderTest_expectedBehavior`. Strict AAA with `// Arrange` / `// Act` / `// Assert` comments — except that a test with no distinct arrange step (typically one that filters a static constant) may combine them as `// Arrange & Act`. Padding such a test with an empty Arrange section to satisfy the letter of the rule is worse than combining.
 - **Commit after every task.** Repo identity is already set to `adziusmaster / adzius.lech@gmail.com` — do not change it, and never add a `Co-Authored-By` trailer.
 
 ## File Structure
