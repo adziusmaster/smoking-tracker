@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -32,6 +32,13 @@ export default function Log() {
   const [mood, setMood] = useState(3);
   const [relapseAvg, setRelapseAvg] = useState('15');
   const [status, setStatus] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  // `submittingRef` is the actual correctness guard: it is checked and set
+  // synchronously before any `await`, so two taps in the same tick (before
+  // React re-renders with the updated state) cannot both pass the check. The
+  // `submitting` state exists only to drive the visual disabled/opacity —
+  // it can lag a render behind the ref without weakening the guard.
+  const submittingRef = useRef(false);
 
   const loadCheckins = useCallback(async () => {
     setCheckins(await listCheckins(db, 30));
@@ -42,31 +49,55 @@ export default function Log() {
   const currentlySmoking = state?.periods.some((period) => period.endedAt === null) ?? false;
 
   const submitSlip = async () => {
-    const parsed = /^\d+$/.test(slipCount.trim()) ? Math.max(1, Number(slipCount)) : 1;
-    await addSlip(db, { occurredAt: new Date().toISOString(), cigaretteCount: parsed, trigger: slipTrigger, note: null }, new Date());
-    await reload();
-    setStatus('Slip logged. Your fast clocks restarted; the long ones did not.');
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
+      const parsed = /^\d+$/.test(slipCount.trim()) ? Math.max(1, Number(slipCount)) : 1;
+      await addSlip(db, { occurredAt: new Date().toISOString(), cigaretteCount: parsed, trigger: slipTrigger, note: null }, new Date());
+      await reload();
+      setStatus('Slip logged. Your fast clocks restarted; the long ones did not.');
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
   };
 
   const submitCheckin = async () => {
-    // `.slice(0, 10)` on an ISO string yields the UTC calendar date, which can differ
-    // from the user's local date near midnight. Accepted tradeoff for v1 — see brief.
-    const today = new Date().toISOString().slice(0, 10);
-    await saveCheckin(db, { loggedOn: today, cravingIntensity: craving, mood, note: null }, new Date());
-    await loadCheckins();
-    setStatus('Check-in saved.');
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
+      // `.slice(0, 10)` on an ISO string yields the UTC calendar date, which can differ
+      // from the user's local date near midnight. Accepted tradeoff for v1 — see brief.
+      const today = new Date().toISOString().slice(0, 10);
+      await saveCheckin(db, { loggedOn: today, cravingIntensity: craving, mood, note: null }, new Date());
+      await loadCheckins();
+      setStatus('Check-in saved.');
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
   };
 
   const toggleRelapse = async () => {
-    if (currentlySmoking) {
-      await endSmokingPeriod(db, new Date().toISOString());
-      setStatus('Welcome back. Your long-term clocks restart from today.');
-    } else {
-      const parsed = /^\d+$/.test(relapseAvg.trim()) ? Math.max(1, Number(relapseAvg)) : 15;
-      await startSmokingPeriod(db, { startedAt: new Date().toISOString(), averageCigarettesPerDay: parsed, note: null }, new Date());
-      setStatus('Logged. Nothing here is a verdict on you — come back when you are ready.');
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
+      if (currentlySmoking) {
+        await endSmokingPeriod(db, new Date().toISOString());
+        setStatus('Welcome back. Your long-term clocks restart from today.');
+      } else {
+        const parsed = /^\d+$/.test(relapseAvg.trim()) ? Math.max(1, Number(relapseAvg)) : 15;
+        await startSmokingPeriod(db, { startedAt: new Date().toISOString(), averageCigarettesPerDay: parsed, note: null }, new Date());
+        setStatus('Logged. Nothing here is a verdict on you — come back when you are ready.');
+      }
+      await reload();
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
-    await reload();
   };
 
   return (
@@ -76,7 +107,9 @@ export default function Log() {
       <Text style={styles.h2}>Today’s check-in</Text>
       <Scale label="Craving intensity" value={craving} onChange={setCraving} />
       <Scale label="Mood" value={mood} onChange={setMood} />
-      <Pressable style={styles.cta} onPress={submitCheckin}><Text style={styles.ctaText}>Save check-in</Text></Pressable>
+      <Pressable style={[styles.cta, submitting && styles.ctaDisabled]} onPress={submitCheckin} disabled={submitting}>
+        <Text style={styles.ctaText}>Save check-in</Text>
+      </Pressable>
 
       <Text style={styles.h2}>Craving over the last 30 days</Text>
       <CravingChart checkins={checkins} />
@@ -91,7 +124,9 @@ export default function Log() {
           </Pressable>
         ))}
       </View>
-      <Pressable style={styles.cta} onPress={submitSlip}><Text style={styles.ctaText}>Log slip</Text></Pressable>
+      <Pressable style={[styles.cta, submitting && styles.ctaDisabled]} onPress={submitSlip} disabled={submitting}>
+        <Text style={styles.ctaText}>Log slip</Text>
+      </Pressable>
 
       <Text style={styles.h2}>{currentlySmoking ? 'Start again' : 'I’ve gone back to smoking'}</Text>
       {currentlySmoking ? (
@@ -102,7 +137,11 @@ export default function Log() {
           <TextInput style={styles.input} value={relapseAvg} onChangeText={setRelapseAvg} keyboardType="number-pad" accessibilityLabel="Average cigarettes per day" />
         </>
       )}
-      <Pressable style={[styles.cta, styles.ctaMuted]} onPress={toggleRelapse}>
+      <Pressable
+        style={[styles.cta, styles.ctaMuted, submitting && styles.ctaDisabled]}
+        onPress={toggleRelapse}
+        disabled={submitting}
+      >
         <Text style={styles.ctaText}>{currentlySmoking ? 'I’ve stopped again' : 'Log a relapse'}</Text>
       </Pressable>
 
@@ -144,6 +183,7 @@ const styles = StyleSheet.create({
   chipTextActive: { color: theme.color.heroText, fontWeight: '600' },
   cta: { backgroundColor: theme.color.heroBg, borderRadius: theme.radius.md, paddingVertical: theme.space.md, alignItems: 'center' },
   ctaMuted: { backgroundColor: theme.color.textFaint },
+  ctaDisabled: { opacity: 0.5 },
   ctaText: { color: theme.color.heroText, fontSize: theme.font.body, fontWeight: '700' },
   status: { fontSize: theme.font.small, color: theme.color.done, marginTop: theme.space.md },
 });
