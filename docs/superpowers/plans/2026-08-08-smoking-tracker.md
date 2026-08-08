@@ -3888,8 +3888,13 @@ npx expo install expo-file-system expo-sharing
 
 - [ ] **Step 2: Write `app/settings.tsx`**
 
+**expo-file-system API note (SDK 54+):** the function-based API (`FileSystem.cacheDirectory`,
+`writeAsStringAsync`) moved to the `expo-file-system/legacy` import path. Use the current
+class-based API instead — `new File(Paths.cache, name)`, `file.create()`, `file.write(text)` —
+and hand `file.uri` to `Sharing.shareAsync`.
+
 ```tsx
-import * as FileSystem from 'expo-file-system';
+import { File, Paths } from 'expo-file-system';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -3933,13 +3938,17 @@ export default function Settings() {
 
   const exportData = async () => {
     const json = await exportAll(db);
-    const path = `${FileSystem.cacheDirectory}smokefree-export.json`;
-    await FileSystem.writeAsStringAsync(path, json);
+
+    const file = new File(Paths.cache, 'smokefree-export.json');
+    // The cache file is overwritten on every export, so delete any previous one first.
+    if (file.exists) file.delete();
+    file.create();
+    file.write(json);
 
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(path, { mimeType: 'application/json', dialogTitle: 'Export your data' });
+      await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'Export your data' });
     } else {
-      setStatus(`Saved to ${path}`);
+      setStatus(`Saved to ${file.uri}`);
     }
   };
 
