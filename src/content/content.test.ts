@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MILESTONES } from './milestones';
 import { SOURCES } from './sources';
+import { PHASES } from './phases';
 
 describe('MILESTONES', () => {
   it('MILESTONES_everyRecord_hasResolvableSourceId', () => {
@@ -76,5 +77,45 @@ describe('MILESTONES', () => {
 
     // Assert
     expect(offendingIds).toEqual([]);
+  });
+});
+
+describe('PHASES', () => {
+  it('PHASES_wholeSet_coversTimeContiguouslyFromZero', () => {
+    // Arrange
+    const first = PHASES[0];
+
+    // Act & Assert
+    expect(first?.startMs).toBe(0);
+    for (let i = 1; i < PHASES.length; i += 1) {
+      expect(PHASES[i]?.startMs).toBe(PHASES[i - 1]?.endMs);
+    }
+  });
+
+  it('PHASES_lastPhase_isOpenEnded', () => {
+    // Arrange & Act
+    const last = PHASES[PHASES.length - 1];
+
+    // Assert
+    expect(last?.endMs).toBeNull();
+  });
+
+  it('PHASES_everyPhase_hasAtLeastOneCopingTip', () => {
+    // Arrange & Act
+    const empty = PHASES.filter((phase) => phase.howToCope.length === 0);
+
+    // Assert
+    expect(empty.map((phase) => phase.id)).toEqual([]);
+  });
+
+  it('MILESTONES_everyPhaseId_matchesAKnownPhase', () => {
+    // Arrange
+    const knownPhaseIds = new Set(PHASES.map((phase) => phase.id));
+
+    // Act
+    const orphans = MILESTONES.filter((m) => !knownPhaseIds.has(m.phaseId));
+
+    // Assert
+    expect(orphans.map((m) => m.id)).toEqual([]);
   });
 });
