@@ -47,12 +47,34 @@ describe('MILESTONES', () => {
 
   it('MILESTONES_excludedUnsourcedClaims_areAbsent', () => {
     // Arrange — these circulate widely online but are not in the ACS or CDC timelines
-    const banned = ['nerve-endings', 'bronchial-tubes'];
+    const bannedIds = ['nerve-endings', 'bronchial-tubes'];
+    const bannedPhrases = ['nerve ending', 'bronchial tube'];
 
     // Act
-    const present = MILESTONES.filter((m) => banned.includes(m.id));
+    const offendingIds: string[] = [];
+
+    // Check for banned ids
+    MILESTONES.forEach((m) => {
+      if (bannedIds.includes(m.id)) {
+        offendingIds.push(m.id);
+      }
+    });
+
+    // Check for banned phrases in title and body (case-insensitive)
+    MILESTONES.forEach((m) => {
+      const titleLower = m.title.toLowerCase();
+      const bodyLower = m.body.toLowerCase();
+      for (const phrase of bannedPhrases) {
+        if (titleLower.includes(phrase) || bodyLower.includes(phrase)) {
+          if (!offendingIds.includes(m.id)) {
+            offendingIds.push(m.id);
+          }
+          break;
+        }
+      }
+    });
 
     // Assert
-    expect(present).toEqual([]);
+    expect(offendingIds).toEqual([]);
   });
 });

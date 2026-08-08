@@ -25,8 +25,9 @@ The repository's global .NET standards do not apply here. These are the equivale
 ## Testing
 
 Vitest. `function_stateUnderTest_expectedBehavior` naming, strict AAA with
-`// Arrange` / `// Act` / `// Assert` comments. Minimum one happy path and two
-sad paths or edge cases per module.
+`// Arrange` / `// Act` / `// Assert` comments; a combined `// Arrange & Act`
+is acceptable when a test has no distinct arrange step. Minimum one happy path
+and two sad paths or edge cases per module.
 
 ## Commands
 
