@@ -2257,15 +2257,27 @@ describe('DELETE_ALL', () => {
 });
 ```
 
-- [ ] **Step 4: Run the tests and confirm they fail**
+- [ ] **Step 4: Run the tests**
+
+Run: `npm test -- src/data/sql.test.ts && npm run typecheck`
+Expected: all passing. If `better-sqlite3` fails to load with a `NODE_MODULE_VERSION` error, rebuild it for the local Node: `npm rebuild better-sqlite3`.
+
+This task writes the SQL before its tests, unlike the domain tasks, because the SQL *is* the
+specification — there is no interface to design first. That makes the tests vulnerable to passing
+vacuously, so Step 5 proves they bite.
+
+- [ ] **Step 5: Prove the tests are not vacuous**
+
+Temporarily delete `CHECK (id = 1)` from the `settings` table in `src/data/schema.ts` and re-run:
 
 Run: `npm test -- src/data/sql.test.ts`
-Expected: FAIL — cannot resolve `./schema`.
+Expected: FAIL on `settings_secondRowWithDifferentId_isRejectedByCheckConstraint`.
 
-- [ ] **Step 5: Run the tests again after creating both files**
+Then temporarily change `SELECT_SLIPS` to `ORDER BY occurred_at ASC` and re-run:
 
-Run: `npm test && npm run typecheck`
-Expected: all passing. If `better-sqlite3` fails to load with a `NODE_MODULE_VERSION` error, rebuild it for the local Node: `npm rebuild better-sqlite3`.
+Expected: FAIL on `SELECT_SLIPS_multipleRows_returnsMostRecentFirst`.
+
+Restore both, confirm green again. Do not commit either temporary change.
 
 - [ ] **Step 6: Commit**
 
