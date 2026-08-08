@@ -106,4 +106,21 @@ describe('resolveAnchors', () => {
     // Assert
     expect(result.fast).toBe('2026-07-11T00:00:00+02:00');
   });
+
+  it('resolveAnchors_slipAfterRelapseEnd_leavesCumulativeAnchorAtRelapseEnd', () => {
+    // Arrange
+    const periodEnd = '2026-07-11T00:00:00+02:00';
+    const slipAt = '2026-08-05T22:00:00+02:00';
+    const input = state({
+      periods: [{ id: 1, startedAt: '2026-07-01T00:00:00+02:00', endedAt: periodEnd, averageCigarettesPerDay: 20, note: null }],
+      slips: [{ id: 1, occurredAt: slipAt, cigaretteCount: 2, trigger: null, note: null }],
+    });
+
+    // Act
+    const result = resolveAnchors(input, now);
+
+    // Assert
+    expect(result.cumulative).toBe(periodEnd);
+    expect(result.fast).toBe(slipAt);
+  });
 });
