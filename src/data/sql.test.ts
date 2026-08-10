@@ -9,7 +9,6 @@ import {
   SELECT_SETTINGS,
   SELECT_SLIPS,
   SELECT_SMOKING_PERIODS,
-  SELECT_UNNOTIFIED_MILESTONES,
   UPSERT_CHECKIN,
   UPSERT_MILESTONE_EVENT,
   UPSERT_SETTINGS,
@@ -138,9 +137,9 @@ describe('milestone_events', () => {
 
     // Act
     db.prepare(UPSERT_MILESTONE_EVENT).run('carbon-monoxide', '2026-08-08T08:00:00+02:00');
-    const rows = db.prepare(SELECT_UNNOTIFIED_MILESTONES).all() as { reached_at: string }[];
+    const rows = db.prepare('SELECT reached_at FROM milestone_events').all() as { reached_at: string }[];
 
-    // Assert — reaching it again must not re-fire a notification or overwrite the date
+    // Assert — reaching it again must not duplicate the row or overwrite the original date
     expect(rows).toHaveLength(1);
     expect(rows[0]?.reached_at).toBe('2026-06-27T08:00:00+02:00');
   });

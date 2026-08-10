@@ -52,7 +52,9 @@ export default function Timeline() {
     [state, now],
   );
 
-  // Persist newly reached milestones so notifications never re-fire for them.
+  // Record the date each milestone was reached, so it survives a settings edit that moves an
+  // anchor. This is NOT what suppresses notifications — planNotifications never plans an
+  // already-reached milestone and syncNotifications rebuilds the whole queue.
   const recorded = useRef(new Set<string>());
   useEffect(() => {
     if (!timeline) return;
@@ -72,6 +74,19 @@ export default function Timeline() {
   // Re-plan the OS notification queue when the danger window or the next milestone changes —
   // NOT on `timeline` itself, which is rebuilt every minute by the clock and would otherwise
   // reschedule the entire queue 1440 times a day.
+  //
+  // All four deps are derived from stored facts and anchors, never from the ticking clock, so
+  // they only change when a slip, relapse or settings edit changes what should fire:
+  //   dangerWindow.active           — whether check-ins should be queued at all
+  //   dangerWindow.endsAt           — a SECOND slip inside an open window moves the end date
+  //                                   without flipping `active`, so the check-ins would
+  //                                   otherwise keep running to the first slip's schedule
+  //   nextMilestone.milestone.id    — which milestone is next
+  //   nextMilestone.projectedAt     — WHEN it lands. A second slip re-anchors a `restarts`
+  //                                   milestone without changing its id, so without this the
+  //                                   "milestone reached" alarm still fired at the first
+  //                                   slip's projected time — up to a day early, i.e. the
+  //                                   notification made a claim that was not yet true.
   useEffect(() => {
     if (!timeline) return;
     const planned = planNotifications({
@@ -81,7 +96,12 @@ export default function Timeline() {
     });
     void syncNotifications(planned);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeline?.dangerWindow.active, timeline?.nextMilestone?.milestone.id]);
+  }, [
+    timeline?.dangerWindow.active,
+    timeline?.dangerWindow.endsAt,
+    timeline?.nextMilestone?.milestone.id,
+    timeline?.nextMilestone?.projectedAt,
+  ]);
 
   if (!loading && error) {
     return (

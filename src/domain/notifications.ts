@@ -49,8 +49,15 @@ function planDangerWindowCheckIns(dangerWindow: DangerWindow, now: Date): Planne
 
 /**
  * Pure planning: decides WHAT should be scheduled and WHEN, given the current timeline state.
- * Already-reached milestones are never planned, which is what stops a re-reached milestone
- * from re-firing. Milestones beyond HORIZON_DAYS are skipped since the app re-plans on every launch.
+ *
+ * What actually stops a notification re-firing is entirely in-memory and has nothing to do
+ * with the `milestone_events` table: a milestone whose status is already 'reached' is never
+ * planned here, and `syncNotifications` cancels every scheduled notification before
+ * rescheduling this plan, so the OS queue can only ever hold what this function returned on
+ * its most recent call. `milestone_events` records reach dates; it is not the suppressor,
+ * and its `notified_at` column is unused.
+ *
+ * Milestones beyond HORIZON_DAYS are skipped since the app re-plans on every launch.
  */
 export function planNotifications({ milestones, dangerWindow, now }: NotificationPlanInput): PlannedNotification[] {
   return [...planMilestoneNotifications(milestones, now), ...planDangerWindowCheckIns(dangerWindow, now)];

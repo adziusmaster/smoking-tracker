@@ -5,12 +5,10 @@ import {
   END_OPEN_SMOKING_PERIOD,
   INSERT_SLIP,
   INSERT_SMOKING_PERIOD,
-  MARK_MILESTONE_NOTIFIED,
   SELECT_CHECKINS,
   SELECT_SETTINGS,
   SELECT_SLIPS,
   SELECT_SMOKING_PERIODS,
-  SELECT_UNNOTIFIED_MILESTONES,
   UPSERT_CHECKIN,
   UPSERT_MILESTONE_EVENT,
   UPSERT_SETTINGS,
@@ -129,15 +127,6 @@ export async function endSmokingPeriod(db: SQLiteDatabase, endedAt: string): Pro
 
 export async function recordMilestoneReached(db: SQLiteDatabase, milestoneId: string, reachedAt: string): Promise<void> {
   await db.runAsync(UPSERT_MILESTONE_EVENT, milestoneId, reachedAt);
-}
-
-export async function listUnnotifiedMilestones(db: SQLiteDatabase): Promise<{ milestoneId: string; reachedAt: string }[]> {
-  const rows = await db.getAllAsync<{ milestone_id: string; reached_at: string }>(SELECT_UNNOTIFIED_MILESTONES);
-  return rows.map((row) => ({ milestoneId: row.milestone_id, reachedAt: row.reached_at }));
-}
-
-export async function markMilestoneNotified(db: SQLiteDatabase, milestoneId: string, now: Date): Promise<void> {
-  await db.runAsync(MARK_MILESTONE_NOTIFIED, now.toISOString(), milestoneId);
 }
 
 export async function saveCheckin(

@@ -53,14 +53,6 @@ export const UPSERT_MILESTONE_EVENT = `
   ON CONFLICT (milestone_id) DO NOTHING
 `;
 
-export const MARK_MILESTONE_NOTIFIED = `
-  UPDATE milestone_events SET notified_at = ? WHERE milestone_id = ?
-`;
-
-export const SELECT_UNNOTIFIED_MILESTONES = `
-  SELECT milestone_id, reached_at FROM milestone_events WHERE notified_at IS NULL
-`;
-
 export const UPSERT_CHECKIN = `
   INSERT INTO craving_checkins (logged_on, craving_intensity, mood, note, created_at)
   VALUES (?, ?, ?, ?, ?)

@@ -41,6 +41,11 @@ export const MIGRATIONS: Migration[] = [
         CHECK (ended_at IS NULL OR ended_at >= started_at)
       );
 
+      -- notified_at is RESERVED AND CURRENTLY UNUSED: nothing writes it and nothing reads it.
+      -- Notification suppression does not depend on this table at all -- already-reached
+      -- milestones are never planned, and syncNotifications cancels and rebuilds the whole
+      -- OS queue. The column is kept so v1 databases need no migration if a future release
+      -- wants per-notification bookkeeping. Do not treat it as load-bearing.
       CREATE TABLE milestone_events (
         id           INTEGER PRIMARY KEY AUTOINCREMENT,
         milestone_id TEXT NOT NULL UNIQUE,
