@@ -2,13 +2,16 @@ import { File, Paths } from 'expo-file-system';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SOURCES } from '@/content/sources';
 import { deleteEverything, exportAll, saveSettings } from '@/data/repositories';
+import { parseMinorUnits, parsePositiveInt } from '@/domain/parse';
 import { theme } from '@/ui/theme';
 import { useQuitState } from '@/ui/useQuitState';
+
+type Status = { text: string; tone: 'ok' | 'error' };
 
 const HELP_LINKS = [
   { label: 'Ikstopnu.nl — Dutch national quit support', url: 'https://www.ikstopnu.nl/' },
@@ -19,40 +22,61 @@ export default function Settings() {
   const db = useSQLiteContext();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { state, reload } = useQuitState();
+  const { state, error, reload } = useQuitState();
 
-  const [perDay, setPerDay] = useState(String(state?.settings.cigarettesPerDay ?? 15));
-  const [price, setPrice] = useState(((state?.settings.packPriceMinor ?? 1100) / 100).toFixed(2));
-  const [status, setStatus] = useState<string | null>(null);
+  const [perDay, setPerDay] = useState('');
+  const [price, setPrice] = useState('');
+  const [status, setStatus] = useState<Status | null>(null);
+
+  const storedPerDay = state?.settings.cigarettesPerDay ?? null;
+  const storedPriceMinor = state?.settings.packPriceMinor ?? null;
+
+  // `useQuitState` loads asynchronously, so the first render has `state === null`. Seeding
+  // these inputs with `useState` alone froze whatever default was in scope on screen, and
+  // Save then wrote that default over the user's real numbers. Re-seeding from the STORED
+  // values fixes it. The effect is keyed on those two values rather than on `state` or on
+  // every render, so it runs exactly when the load (or a save's reload) delivers different
+  // numbers — never while the user is part-way through typing.
+  useEffect(() => {
+    if (storedPerDay === null || storedPriceMinor === null) return;
+    setPerDay(String(storedPerDay));
+    setPrice((storedPriceMinor / 100).toFixed(2));
+  }, [storedPerDay, storedPriceMinor]);
 
   const save = async () => {
     if (!state) return;
-    const cigarettesPerDay = /^\d+$/.test(perDay.trim()) ? Number(perDay) : null;
-    const packPriceMinor = /^\d+(\.\d{1,2})?$/.test(price.replace(',', '.').trim())
-      ? Math.round(Number(price.replace(',', '.')) * 100)
-      : null;
+    const cigarettesPerDay = parsePositiveInt(perDay);
+    const packPriceMinor = parseMinorUnits(price);
 
-    if (cigarettesPerDay === null || cigarettesPerDay <= 0) return setStatus('Cigarettes per day must be a whole number above zero.');
-    if (packPriceMinor === null) return setStatus('Pack price must look like 11 or 11.50.');
+    if (cigarettesPerDay === null) return setStatus({ text: 'Cigarettes per day must be a whole number above zero.', tone: 'error' });
+    if (packPriceMinor === null) return setStatus({ text: 'Pack price must look like 11 or 11.50.', tone: 'error' });
 
-    await saveSettings(db, { ...state.settings, cigarettesPerDay, packPriceMinor }, new Date());
-    await reload();
-    setStatus('Saved. Every figure has been recalculated.');
+    try {
+      await saveSettings(db, { ...state.settings, cigarettesPerDay, packPriceMinor }, new Date());
+      await reload();
+      setStatus({ text: 'Saved. Every figure has been recalculated.', tone: 'ok' });
+    } catch {
+      setStatus({ text: 'Couldn’t save that. Your stored numbers are unchanged — please try again.', tone: 'error' });
+    }
   };
 
   const exportData = async () => {
-    const json = await exportAll(db);
+    try {
+      const json = await exportAll(db);
 
-    const file = new File(Paths.cache, 'smokefree-export.json');
-    // The cache file is overwritten on every export, so delete any previous one first.
-    if (file.exists) file.delete();
-    file.create();
-    file.write(json);
+      const file = new File(Paths.cache, 'smokefree-export.json');
+      // The cache file is overwritten on every export, so delete any previous one first.
+      if (file.exists) file.delete();
+      file.create();
+      file.write(json);
 
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'Export your data' });
-    } else {
-      setStatus(`Saved to ${file.uri}`);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'Export your data' });
+      } else {
+        setStatus({ text: `Saved to ${file.uri}`, tone: 'ok' });
+      }
+    } catch {
+      setStatus({ text: 'Couldn’t write the export file. Nothing was exported — please try again.', tone: 'error' });
     }
   };
 
@@ -66,7 +90,11 @@ export default function Settings() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await deleteEverything(db);
+            try {
+              await deleteEverything(db);
+            } catch {
+              return setStatus({ text: 'Couldn’t delete your data. Nothing was removed — please try again.', tone: 'error' });
+            }
             router.replace('/onboarding');
           },
         },
@@ -79,11 +107,21 @@ export default function Settings() {
       <Pressable onPress={() => router.back()}><Text style={styles.close}>Back</Text></Pressable>
 
       <Text style={styles.h2}>Your numbers</Text>
-      <Text style={styles.label}>Cigarettes per day</Text>
-      <TextInput style={styles.input} value={perDay} onChangeText={setPerDay} keyboardType="number-pad" accessibilityLabel="Cigarettes per day" />
-      <Text style={styles.label}>Price per pack</Text>
-      <TextInput style={styles.input} value={price} onChangeText={setPrice} keyboardType="decimal-pad" accessibilityLabel="Price per pack" />
-      <Pressable style={styles.cta} onPress={save}><Text style={styles.ctaText}>Save</Text></Pressable>
+      {/* Nothing editable is rendered until the stored numbers have loaded, so a default
+          is never shown to the user as if it were their own figure. */}
+      {state ? (
+        <>
+          <Text style={styles.label}>Cigarettes per day</Text>
+          <TextInput style={styles.input} value={perDay} onChangeText={setPerDay} keyboardType="number-pad" accessibilityLabel="Cigarettes per day" />
+          <Text style={styles.label}>Price per pack</Text>
+          <TextInput style={styles.input} value={price} onChangeText={setPrice} keyboardType="decimal-pad" accessibilityLabel="Price per pack" />
+          <Pressable style={styles.cta} onPress={save}><Text style={styles.ctaText}>Save</Text></Pressable>
+        </>
+      ) : (
+        <Text style={styles.hint}>
+          {error ? 'Couldn’t load your numbers, so they cannot be edited right now.' : 'Loading your numbers…'}
+        </Text>
+      )}
 
       <Text style={styles.h2}>Your data</Text>
       <Text style={styles.hint}>
@@ -118,7 +156,9 @@ export default function Settings() {
         do more for your odds than any app, including this one.
       </Text>
 
-      {status ? <Text style={styles.status}>{status}</Text> : null}
+      {status ? (
+        <Text style={[styles.status, status.tone === 'error' && styles.statusError]}>{status.text}</Text>
+      ) : null}
     </ScrollView>
   );
 }
@@ -141,4 +181,5 @@ const styles = StyleSheet.create({
   source: { fontSize: theme.font.tiny, color: theme.color.heroBg, lineHeight: 18, marginTop: theme.space.xs },
   disclaimer: { fontSize: theme.font.tiny, color: theme.color.textFaint, lineHeight: 16, marginTop: theme.space.lg },
   status: { fontSize: theme.font.small, color: theme.color.done, marginTop: theme.space.md },
+  statusError: { color: theme.color.danger },
 });

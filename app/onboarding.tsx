@@ -4,19 +4,9 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { saveSettings } from '@/data/repositories';
+import { parseMinorUnits, parseNonNegativeInt, parsePositiveInt } from '@/domain/parse';
+import { MS_PER_DAY } from '@/domain/types';
 import { theme } from '@/ui/theme';
-
-function toMinor(input: string): number | null {
-  const normalised = input.replace(',', '.').trim();
-  if (!/^\d+(\.\d{1,2})?$/.test(normalised)) return null;
-  return Math.round(Number(normalised) * 100);
-}
-
-function toPositiveInt(input: string): number | null {
-  if (!/^\d+$/.test(input.trim())) return null;
-  const value = Number(input);
-  return value > 0 ? value : null;
-}
 
 export default function Onboarding() {
   const db = useSQLiteContext();
@@ -31,10 +21,10 @@ export default function Onboarding() {
   const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
-    const cigarettesPerDay = toPositiveInt(perDay);
-    const cigarettesPerPack = toPositiveInt(perPack);
-    const packPriceMinor = toMinor(price);
-    const backdatedDays = /^\d+$/.test(daysAgo.trim()) ? Number(daysAgo) : null;
+    const cigarettesPerDay = parsePositiveInt(perDay);
+    const cigarettesPerPack = parsePositiveInt(perPack);
+    const packPriceMinor = parseMinorUnits(price);
+    const backdatedDays = parseNonNegativeInt(daysAgo);
 
     if (cigarettesPerDay === null) return setError('Cigarettes per day must be a whole number above zero.');
     if (cigarettesPerPack === null) return setError('Cigarettes per pack must be a whole number above zero.');
@@ -42,21 +32,26 @@ export default function Onboarding() {
     if (backdatedDays === null) return setError('Days ago must be a whole number, or 0 if you are quitting now.');
 
     const now = new Date();
-    const quitDate = new Date(now.getTime() - backdatedDays * 86_400_000);
+    const quitDate = new Date(now.getTime() - backdatedDays * MS_PER_DAY);
 
-    await saveSettings(
-      db,
-      {
-        quitDate: quitDate.toISOString(),
-        cigarettesPerDay,
-        cigarettesPerPack,
-        packPriceMinor,
-        currency: 'EUR',
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        lifetimeBaseline: /^\d+$/.test(baseline.trim()) ? Number(baseline) : 0,
-      },
-      now,
-    );
+    try {
+      await saveSettings(
+        db,
+        {
+          quitDate: quitDate.toISOString(),
+          cigarettesPerDay,
+          cigarettesPerPack,
+          packPriceMinor,
+          currency: 'EUR',
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          // An empty optional field means "I don't know", which the domain reads as 0.
+          lifetimeBaseline: parseNonNegativeInt(baseline) ?? 0,
+        },
+        now,
+      );
+    } catch {
+      return setError('Couldn’t save your setup. Nothing was stored — please try again.');
+    }
 
     router.replace('/');
   };

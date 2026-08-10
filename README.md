@@ -27,8 +27,11 @@ The codebase is split into four layers with a strict one-way dependency rule:
   queries against a real (in-memory) SQLite engine. The `expo-sqlite` binding itself is
   verified by running the app on a device or emulator, not by a unit test.
 - **`app/`** — screens. They render view models handed to them by the domain layer and
-  contain no arithmetic of their own; if a screen needs a number, the domain layer
-  computed it.
+  contain no domain arithmetic: every displayed figure — elapsed time, savings, streaks,
+  milestone status — is computed in `src/domain/`. Input parsing (`domain/parse.ts`) and
+  formatting (`domain/format.ts`) also live there and are called from the screens, so the
+  arithmetic a screen does perform is limited to composing those results (e.g. subtracting
+  `MS_PER_DAY` per backdated day when onboarding turns "days ago" into a quit date).
 
 ## Commands
 
