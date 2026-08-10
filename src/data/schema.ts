@@ -81,3 +81,17 @@ export const MIGRATIONS: Migration[] = [
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]?.version ?? 0;
+
+/**
+ * Selects the migrations a database at `current` still needs, in ascending version order.
+ *
+ * Pure and exported so the selection rule that makes the runner idempotent can be tested
+ * in Node: `db.ts` itself cannot be exercised under Vitest because `expo-sqlite` is native.
+ * Re-running the set after a successful upgrade must select nothing — that is what stops a
+ * second launch from replaying `ALTER TABLE` and failing with `duplicate column name`.
+ */
+export function migrationsToApply(current: number): Migration[] {
+  return MIGRATIONS.filter((migration) => migration.version > current).sort(
+    (a, b) => a.version - b.version,
+  );
+}

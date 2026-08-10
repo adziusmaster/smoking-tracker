@@ -171,10 +171,26 @@ derivation is live rather than frozen at onboarding); the result is a non-negati
 and still accrues past the point where `cigarettesAvoided` clamps at zero.
 
 **SQL, via better-sqlite3.** Apply v1, insert a settings row with a `lifetime_baseline`, then
-apply v2 and assert: the column exists; the back-fill arithmetic is correct; the pre-existing
-row's other fields are untouched; and applying the migration list twice is a no-op. This is
-the load-bearing test — it is the only thing standing between a tester's data and a silent
-loss.
+apply v2 and assert: the column exists; the back-fill arithmetic is correct; and the
+pre-existing row's other fields are untouched. This is the load-bearing test — it is the only
+thing standing between a tester's data and a silent loss.
+
+**Migration selection.** Idempotence is a property of the *selection*, not of the SQL: v2's
+`ALTER TABLE` throws `duplicate column name` if replayed. `migrateDbIfNeeded` therefore cannot
+be re-run safely on its own, and `db.ts` cannot be loaded under Vitest at all because
+`expo-sqlite` is native. The rule is instead extracted into a pure exported helper,
+`migrationsToApply(current)` in `src/data/schema.ts`, which `db.ts` calls; tests cover it
+directly: from 0 it selects v1 then v2 in ascending order, from 1 only v2, and from
+`SCHEMA_VERSION` it selects nothing — applied against a real in-memory database, leaving both
+schema and data byte-identical. A companion test replays v2 with the guard bypassed and asserts
+the `duplicate column name` failure, so the guard is demonstrably load-bearing rather than
+decorative.
+
+Because that failure mode would be a permanent, unrecoverable launch failure if the version
+bump were ever lost, `migrateDbIfNeeded` runs the selected migrations *and* the
+`PRAGMA user_version` bump inside one `db.withTransactionAsync`, so a database can never be
+left with the new column and an old `user_version`. `PRAGMA foreign_keys = ON` stays outside
+the transaction — it is connection-level. That wiring rests on code review, not on a test.
 
 **Screens** are not unit-tested, per the standing decision that React Native cannot load
 under Vitest. Verification is `npm run typecheck`, the full suite, a successful

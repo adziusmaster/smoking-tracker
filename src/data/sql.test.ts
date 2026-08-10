@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { MIGRATIONS, SCHEMA_VERSION } from './schema';
+import { MIGRATIONS, migrationsToApply, SCHEMA_VERSION } from './schema';
 import {
   DELETE_ALL,
   END_OPEN_SMOKING_PERIOD,
@@ -245,6 +245,67 @@ describe('migration v2', () => {
 
     // Assert
     expect(cols.map((c) => c.name)).toContain('smoked_for_months');
+  });
+});
+
+describe('migrationsToApply', () => {
+  // `src/data/db.ts` cannot be loaded under Vitest (expo-sqlite is a native module), so the
+  // rule that keeps its runner idempotent is tested here through the pure helper the runner
+  // now calls. Applying the selection against a real better-sqlite3 database is what proves
+  // the no-op claim, rather than just asserting on an array.
+  const schemaSnapshot = (target: Database.Database): string =>
+    JSON.stringify(
+      target.prepare("SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name").all(),
+    );
+
+  it('migrationsToApply_fromZero_selectsEveryMigrationInAscendingVersionOrder', () => {
+    // Arrange & Act
+    const selected = migrationsToApply(0);
+
+    // Assert
+    expect(selected.map((m) => m.version)).toEqual([1, 2]);
+  });
+
+  it('migrationsToApply_fromAV1Database_selectsOnlyV2', () => {
+    // Arrange & Act
+    const selected = migrationsToApply(1);
+
+    // Assert
+    expect(selected.map((m) => m.version)).toEqual([2]);
+  });
+
+  it('migrationsToApply_afterTheWholeSetHasBeenApplied_selectsNothingSoASecondPassIsANoOp', () => {
+    // Arrange — a database brought fully up to date exactly the way the runner does it,
+    // holding a real settings row so a stray UPDATE would be visible too
+    const fresh = new Database(':memory:');
+    for (const migration of migrationsToApply(0)) fresh.exec(migration.up);
+    fresh.prepare(UPSERT_SETTINGS).run('2026-06-26T08:00:00+02:00', 15, 20, 1100, 'EUR', 'Europe/Amsterdam', 96, NOW, NOW);
+    const before = schemaSnapshot(fresh);
+    const rowBefore = fresh.prepare(SELECT_SETTINGS).get();
+
+    // Act — the second pass, under the same guard the runner applies
+    const secondPass = migrationsToApply(SCHEMA_VERSION);
+    for (const migration of secondPass) fresh.exec(migration.up);
+
+    // Assert — nothing was selected, so nothing ran and neither schema nor data moved
+    expect(secondPass).toEqual([]);
+    expect(schemaSnapshot(fresh)).toBe(before);
+    expect(fresh.prepare(SELECT_SETTINGS).get()).toEqual(rowBefore);
+  });
+
+  it('migrationsToApply_selectionIgnored_replayingV2ThrowsDuplicateColumn', () => {
+    // Arrange — this is what makes the guard load-bearing rather than decorative: if
+    // user_version were bumped outside the migration's own transaction and the bump were
+    // lost, the next launch would re-select v2 and hit a hard failure, not a no-op
+    const fresh = new Database(':memory:');
+    for (const migration of migrationsToApply(0)) fresh.exec(migration.up);
+    const v2 = MIGRATIONS.find((m) => m.version === 2);
+
+    // Act
+    const act = () => fresh.exec(v2?.up ?? '');
+
+    // Assert
+    expect(act).toThrow(/duplicate column name: smoked_for_months/);
   });
 });
 
