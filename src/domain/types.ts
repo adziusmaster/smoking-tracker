@@ -11,7 +11,12 @@ export interface Settings {
   packPriceMinor: number;      // integer minor units
   currency: string;            // ISO 4217
   timezone: string;            // IANA
-  lifetimeBaseline: number;    // cigarettes smoked before quitting; 0 if unknown
+  /**
+   * How long the user smoked before quitting, in whole months. 0 if not given.
+   * The lifetime cigarette total is DERIVED from this and cigarettesPerDay — see
+   * src/domain/lifetime.ts — so correcting the daily rate corrects the total.
+   */
+  smokedForMonths: number;
 }
 
 export interface Slip {
@@ -138,3 +143,5 @@ export const DANGER_WINDOW_DAYS = 19;
 export const MS_PER_MINUTE = 60_000;
 export const MS_PER_HOUR = 3_600_000;
 export const MS_PER_DAY = 86_400_000;
+/** Mean days per month. The same figure src/content/phases.ts uses for MONTHS(). */
+export const DAYS_PER_MONTH_AVG = 30.44;

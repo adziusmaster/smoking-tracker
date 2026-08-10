@@ -25,7 +25,7 @@ const state: QuitState = {
     packPriceMinor: 1100,
     currency: 'EUR',
     timezone: 'Europe/Amsterdam',
-    lifetimeBaseline: 43_800,
+    smokedForMonths: 96,
   },
   slips: [],
   periods: [],

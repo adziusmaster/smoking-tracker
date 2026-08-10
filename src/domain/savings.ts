@@ -1,3 +1,4 @@
+import { estimateCigarettesBeforeQuitting } from './lifetime';
 import {
   MINUTES_LOST_PER_CIGARETTE,
   MS_PER_DAY,
@@ -33,6 +34,6 @@ export function computeSavings(state: QuitState, now: Date): Savings {
     // Integer arithmetic first, then divide, so pack price never drifts through a float.
     moneySavedMinor: Math.round((cigarettesAvoided * settings.packPriceMinor) / settings.cigarettesPerPack),
     minutesNotLost: cigarettesAvoided * MINUTES_LOST_PER_CIGARETTE,
-    lifetimeTotal: settings.lifetimeBaseline + Math.round(actuallySmoked),
+    lifetimeTotal: estimateCigarettesBeforeQuitting(settings) + Math.round(actuallySmoked),
   };
 }
