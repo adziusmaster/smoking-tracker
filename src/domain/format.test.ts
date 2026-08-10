@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatElapsed, formatMinutesNotLost, formatMoneyMinor } from './format';
+import { formatCount, formatElapsed, formatMinutesNotLost, formatMoneyMinor } from './format';
 
 describe('formatMoneyMinor', () => {
   it('formatMoneyMinor_euroAmount_rendersWithTwoDecimals', () => {
@@ -84,5 +84,31 @@ describe('formatMinutesNotLost', () => {
 
     // Assert
     expect(result).toBe('0 hours');
+  });
+});
+
+describe('formatCount', () => {
+  it('formatCount_fiveFigureNumber_groupsThousands', () => {
+    // Arrange & Act
+    const result = formatCount(43_834);
+
+    // Assert
+    expect(result).toBe('43,834');
+  });
+
+  it('formatCount_zero_rendersZero', () => {
+    // Arrange & Act
+    const result = formatCount(0);
+
+    // Assert
+    expect(result).toBe('0');
+  });
+
+  it('formatCount_underOneThousand_hasNoSeparator', () => {
+    // Arrange & Act
+    const result = formatCount(645);
+
+    // Assert
+    expect(result).toBe('645');
   });
 });
