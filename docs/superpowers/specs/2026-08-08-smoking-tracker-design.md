@@ -126,7 +126,11 @@ social, boredom, routine, other), `note` (nullable), `created_at`.
 **`milestone_events`** — which milestone was reached when.
 `id`, `milestone_id`, `reached_at`, `notified_at` (nullable, reserved and currently unused —
 nothing writes or reads it).
-Persisted so the timeline shows real dates. Notifications are prevented from re-firing not
+Written when a milestone is reached, but **nothing reads it**: there is no SELECT against it in
+`queries.ts` and it is absent from `exportAll`. The dates the timeline displays are computed in
+`src/domain/milestones.ts` from the quit date, not read back from here. The table exists so a
+future release that needs a reached-at audit trail already has the history; treat it as
+write-only for now. Notifications are prevented from re-firing not
 by this column but structurally: already-reached milestones are never scheduled, and
 `syncNotifications` cancels and rebuilds the entire OS notification queue from the current
 state on every sync.
@@ -287,17 +291,26 @@ The danger-window tip set overlays and overrides the current phase's tips while 
 4. **Log** — record a slip (count, trigger, note) or start/end a smoking period; daily
    craving and mood check-in; a chart of craving intensity over time with trigger
    breakdown.
-5. **Settings** — edit every input, notification preferences, export all data as JSON,
-   delete everything, sources and citations, medical disclaimer, and links to real
-   cessation services.
+5. **Settings** — edit the quit moment (date and time), cigarettes per day and price per
+   pack; the estimated cigarettes smoked before quitting, shown under the inputs it derives
+   from; export all data as JSON; delete everything; a link to the privacy policy; sources
+   and citations; medical disclaimer; and links to real cessation services.
+   *Not* every input: cigarettes-per-pack, currency, timezone and how long you smoked are
+   collected at onboarding and not editable afterwards. There are **no notification
+   preferences here** — see the note in the Notifications section.
 
 ## Notifications
 
 Local only, via `expo-notifications`. Milestone-reached alerts (never scheduled for a
 milestone already reached; `syncNotifications` cancels and rebuilds the whole OS queue
 from current state, so nothing re-fires), a daily check-in prompt at a user-chosen time, and
-increased-frequency supportive check-ins during an active danger window. All
-individually switchable, and the app is fully usable with every one of them off.
+increased-frequency supportive check-ins during an active danger window. The app is fully
+usable with every one of them off.
+
+**As shipped, there is no in-app toggle for any of them** — no notification preferences screen
+was built, so the only control is the OS-level permission and Android's per-app notification
+settings. Per-notification switches would need a preferences table and UI; they are not in this
+release.
 
 ## Play Store compliance
 

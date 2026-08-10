@@ -14,7 +14,8 @@ built.
 2. The lifetime-cigarettes question is replaced by "how long did you smoke?" in years and
    months. The lifetime total is derived from that duration and the daily rate.
 3. The lifetime total is rendered in the slip confirmation, which the original spec promised
-   and the implementation never delivered.
+   and the implementation never delivered — and the pre-quit estimate alone is shown in
+   Settings, next to the inputs it derives from, under a label that keeps the two apart.
 
 ## The gap this fixes
 
@@ -101,12 +102,22 @@ responsibility.
 
 ## 4. Display
 
-The total appears in the **slip confirmation only**:
+Two different figures are displayed, and they must not share a label. The **running total** —
+the pre-quit estimate plus every slip and relapse cigarette logged since — appears in the slip
+confirmation:
 
 - `app/sos.tsx`, on the slip-logging path.
 - `app/log.tsx`, in the status line after a slip is logged.
 
 Wording: *"That brings your estimated lifetime total to 43,803."*
+
+The **pre-quit estimate alone** appears in Settings, under the numbers it is derived from,
+because that is where the inputs that drive it are edited (the plan mandates it there). It is
+labelled *"Estimated cigarettes smoked before you quit"* and says explicitly that it stops at
+the quit moment — calling it a "lifetime total" there would put two different numbers under one
+phrase: 96 months at 15/day with a 60-day relapse at 20/day is 43,834 in Settings and 45,038 in
+the slip confirmation. "Lifetime total" is reserved for the running figure; "estimated" appears
+in all three places, per the Honesty constraint below.
 
 The figure is thousands-grouped. `src/domain/format.ts` has no plain-integer formatter today,
 so one is added there alongside the existing formatters — pure, tested, and reused by both
