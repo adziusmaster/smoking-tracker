@@ -17,6 +17,11 @@ That data is never transmitted anywhere. The developer cannot see it and has no 
 No data is shared with anyone, because none is collected. There is no analytics SDK, no crash
 reporting, and no advertising.
 
+The app lists the published research behind each recovery milestone, and links to national
+stop-smoking services. Tapping one hands the web address to your browser, which then makes its
+own request in the normal way. The app sends nothing, and no information about you travels with
+that link.
+
 ## Your control
 
 Settings → Export as JSON gives you a copy of your quit data: your settings, logged slips,
