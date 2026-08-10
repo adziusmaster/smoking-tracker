@@ -84,19 +84,20 @@ describe('settings', () => {
     db.prepare(UPSERT_SETTINGS).run(
       '2026-06-26T08:00:00+02:00', 15, 20, 1100, 'EUR', 'Europe/Amsterdam', 77, createdAt, createdAt,
     );
-    const row = db.prepare('SELECT * FROM settings WHERE id = 1').get() as {
+    const row = db.prepare(SELECT_SETTINGS).get() as {
       smoked_for_months: number;
       timezone: string;
       pack_price_minor: number;
-      created_at: string;
+      cigarettes_per_day: number;
     };
 
     // Assert — asserting the neighbours is what catches a transposed bind, not just a
-    // missing column
+    // missing column; reading via SELECT_SETTINGS (not SELECT *) also exercises that
+    // query's own column list, not just the write side
     expect(row.smoked_for_months).toBe(77);
     expect(row.timezone).toBe('Europe/Amsterdam');
     expect(row.pack_price_minor).toBe(1100);
-    expect(row.created_at).toBe(createdAt);
+    expect(row.cigarettes_per_day).toBe(15);
   });
 });
 
