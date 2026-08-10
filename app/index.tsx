@@ -9,11 +9,17 @@ import { buildTimeline } from '@/domain/timeline';
 import type { MilestoneState } from '@/domain/types';
 import { MILESTONES } from '@/content/milestones';
 import { DANGER_WINDOW_TIPS, PHASES } from '@/content/phases';
+import { SOURCES } from '@/content/sources';
 import { syncNotifications } from '@/notifications/schedule';
 import { ChapterBlock } from '@/ui/ChapterBlock';
 import { Hero } from '@/ui/Hero';
 import { theme } from '@/ui/theme';
 import { useQuitState } from '@/ui/useQuitState';
+
+/** Backs the 19-day danger-window claim. `SOURCES` is a Record, so under
+ * noUncheckedIndexedAccess this is `Source | undefined` and the banner renders the
+ * attribution only when it resolves — no cast, no non-null assertion. */
+const LAPSE_RELAPSE_SOURCE = SOURCES['lapse-relapse'];
 
 /** Narrows to milestones that are reached AND have a timestamp, so downstream code
  * never needs `reachedAt as string` — the type system proves it instead of a cast. */
@@ -149,6 +155,11 @@ export default function Timeline() {
               Most slips that become relapses do it within about 19 days. You’re inside that window, so the
               guidance below has changed to match.
             </Text>
+            {/* The 19-day figure is a sourced claim like any milestone, so it is attributed
+                where it is shown rather than only in the Settings citation list. */}
+            {LAPSE_RELAPSE_SOURCE ? (
+              <Text style={styles.bannerSource}>{LAPSE_RELAPSE_SOURCE.label} · full citations in Settings</Text>
+            ) : null}
           </View>
         ) : null}
 
@@ -208,6 +219,7 @@ const styles = StyleSheet.create({
   },
   bannerTitle: { fontSize: theme.font.small, fontWeight: '700', color: theme.color.danger },
   bannerBody: { fontSize: theme.font.tiny, color: theme.color.textMuted, lineHeight: 17, marginTop: 4 },
+  bannerSource: { fontSize: 9, color: theme.color.textFaint, lineHeight: 13, marginTop: 6 },
   footer: { fontSize: theme.font.tiny, color: theme.color.textFaint, lineHeight: 16, marginTop: theme.space.xl },
   sos: {
     position: 'absolute',

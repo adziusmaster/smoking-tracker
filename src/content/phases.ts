@@ -67,7 +67,7 @@ export const PHASES: Phase[] = [
     name: 'Non-Smoker',
     startMs: YEARS(10),
     endMs: null,
-    whatsHappening: "Lung cancer risk is about half a smoker's. By year 15 coronary heart disease risk is close to someone who never smoked, and by year 20 several cancer risks are too.",
+    whatsHappening: "Lung cancer risk is about half a smoker’s. By year 15 coronary heart disease risk is close to someone who never smoked, and by year 20 several cancer risks are too.",
     whyYouFeelThisWay: "Nothing to manage. Smoking is something you used to do.",
     howToCope: [
       "You are statistically close to someone who never started. That is the whole point.",

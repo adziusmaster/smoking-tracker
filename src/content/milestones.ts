@@ -18,7 +18,7 @@ export const MILESTONES: Milestone[] = [
   {
     id: 'carbon-monoxide',
     title: 'Carbon monoxide clears your blood',
-    body: "Blood carbon monoxide returns to a non-smoker's range, so oxygen moves freely again. CO has a half-life of 4–5 hours, which is why this one takes about a day.",
+    body: "Blood carbon monoxide returns to a non-smoker’s range, so oxygen moves freely again. CO has a half-life of 4–5 hours, which is why this one takes about a day.",
     offsetMs: 24 * MS_PER_HOUR,
     offsetEndMs: null,
     slipBehavior: 'restarts',
@@ -107,7 +107,7 @@ export const MILESTONES: Milestone[] = [
   },
   {
     id: 'chd-nonsmoker',
-    title: "Coronary heart disease risk close to a non-smoker's",
+    title: "Coronary heart disease risk close to a non-smoker’s",
     body: 'Fifteen years of sustained abstinence brings your heart disease risk near someone who never smoked.',
     offsetMs: YEARS(15),
     offsetEndMs: null,
@@ -117,7 +117,7 @@ export const MILESTONES: Milestone[] = [
   },
   {
     id: 'multi-cancer-nonsmoker',
-    title: "Several cancer risks close to a non-smoker's",
+    title: "Several cancer risks close to a non-smoker’s",
     body: 'Mouth, throat, larynx and pancreatic cancer risk approach that of someone who does not smoke.',
     offsetMs: YEARS(20),
     offsetEndMs: null,

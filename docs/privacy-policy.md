@@ -19,7 +19,8 @@ reporting, and no advertising.
 
 ## Your control
 
-Settings → Export as JSON gives you a complete copy of your data.
+Settings → Export as JSON gives you a copy of your quit data: your settings, logged slips,
+logged smoking periods and daily check-ins.
 Settings → Delete everything permanently erases it from the device. Uninstalling the app also
 removes it. Because there is no cloud copy, deletion is final.
 
