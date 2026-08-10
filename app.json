@@ -34,6 +34,13 @@
           "backgroundColor": "#0f3d2e"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b8ec62ea-af25-4199-99e4-b3fbf9962e00"
+      }
+    },
+    "owner": "adrzej-dev"
   }
 }
