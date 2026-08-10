@@ -69,6 +69,31 @@ not, and the app does not fabricate a number to describe what was lost in betwee
 - Building (`eas build`) and submitting (`eas submit`) require an authenticated Expo
   account and are not run as part of this repository's automated checks.
 
+### A note on the INTERNET permission
+
+`app.json` blocks `android.permission.INTERNET` deliberately (`android.blockedPermissions`),
+so the shipped app physically cannot open a network socket — anyone can inspect the APK and
+verify it cannot phone home. The app's own code makes no network requests: no fetch, XHR or
+WebSocket anywhere in `src/` or `app/`. `Linking.openURL` hands off to the browser process and
+`expo-sharing` hands off to the share intent, so neither needs this app to hold the permission.
+
+**Consequence:** Android gates even loopback sockets on this permission, and Metro serves the
+JS bundle over a socket. On-device debugging (`npm run android` against a real device) may fail
+to load the bundle while this permission is blocked. If you hit a bundle-loading failure on a
+real device, that is why — not a Metro bug.
+
+**Workaround:** temporarily remove the `blockedPermissions` line, run your debug session, then
+restore it before building a release. This is a deliberate, permanent choice, not something to
+convert into an environment-conditional `app.config.js`.
+
+**If phase-2 cloud backup is ever built**, this line must be removed — the app will need real
+network access then.
+
+The removal is expressed as `tools:node="remove"` in the generated native manifest
+(`android/app/src/main/AndroidManifest.xml` after `expo prebuild`). This has **not** been
+confirmed against a real Gradle build in this environment — verify it on the first actual EAS
+build before finalising the Data Safety form.
+
 ## Out of scope for v1
 
 Cloud backup and multi-device sync are explicitly out of scope for this release. All
