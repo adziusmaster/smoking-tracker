@@ -3,6 +3,7 @@ import { elapsedSince } from './elapsed';
 import { resolveMilestones } from './milestones';
 import { resolveDangerWindow, resolvePhase } from './phases';
 import { computeSavings } from './savings';
+import { longestSmokeFreeStreak } from './streaks';
 import type {
   Chapter,
   Milestone,
@@ -44,6 +45,9 @@ export function buildTimeline({ state, milestones, phases, now }: TimelineInput)
   return {
     // Displayed streak follows the cumulative anchor: a slip does not zero the counter.
     elapsed: elapsedSince(anchors.cumulative, now),
+    // The cumulative anchor keeps moving while a period is open, so it can never answer
+    // "what was your best run?" — that comes from the closed streak boundaries instead.
+    longestStreak: longestSmokeFreeStreak(state, now),
     savings: computeSavings(state, now),
     anchors,
     currentPhase,

@@ -1,16 +1,25 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { formatElapsed, formatMinutesNotLost, formatMoneyMinor } from '@/domain/format';
-import type { Savings, Elapsed } from '@/domain/types';
+import type { Savings, Elapsed, Streak } from '@/domain/types';
 import { theme } from './theme';
 
-export function Hero(props: { elapsed: Elapsed; savings: Savings; currency: string; phaseName: string; currentlySmoking: boolean }) {
+export function Hero(props: {
+  elapsed: Elapsed;
+  /** Longest smoke-free run so far. Not `elapsed`: that one keeps climbing while smoking. */
+  longestStreak: Streak;
+  savings: Savings;
+  currency: string;
+  phaseName: string;
+  currentlySmoking: boolean;
+}) {
   if (props.currentlySmoking) {
     return (
       <View style={[styles.hero, styles.heroSmoking]}>
         <Text style={styles.smokingTitle}>You’re smoking again right now</Text>
         <Text style={styles.smokingBody}>
-          That’s logged, not judged. Your best run was {formatElapsed(props.elapsed)} — you’ve already proved
-          you can do this once. End the period from the Log screen whenever you’re ready to start again.
+          That’s logged, not judged. Your best run was {formatElapsed(props.longestStreak.elapsed)} — you’ve
+          already proved you can do this once. End the period from the Log screen whenever you’re ready to
+          start again.
         </Text>
       </View>
     );

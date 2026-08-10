@@ -96,6 +96,24 @@ describe('buildTimeline', () => {
     expect(result.anchors.fast).toBe('2026-08-07T22:00:00+02:00');
   });
 
+  it('buildTimeline_openSmokingPeriod_reportsALongestStreakThatDoesNotFollowTheClock', () => {
+    // Arrange — smoking again since 1 August, i.e. 36 clean days before that
+    const smoking: QuitState = {
+      ...state,
+      periods: [{ id: 1, startedAt: '2026-08-01T08:00:00+02:00', endedAt: null, averageCigarettesPerDay: 20, note: null }],
+    };
+    const muchLater = new Date('2026-10-08T08:00:00+02:00');
+
+    // Act
+    const result = buildTimeline({ state: smoking, milestones, phases, now: NOW });
+    const later = buildTimeline({ state: smoking, milestones, phases, now: muchLater });
+
+    // Assert — the cumulative-anchor headline keeps climbing, the best run must not
+    expect(result.longestStreak.elapsed.days).toBe(36);
+    expect(later.longestStreak.elapsed.days).toBe(36);
+    expect(later.elapsed.days).toBeGreaterThan(result.elapsed.days);
+  });
+
   it('buildTimeline_allMilestonesReached_returnsNullNextMilestone', () => {
     // Arrange
     const now = new Date(new Date(QUIT).getTime() + 4000 * MS_PER_DAY);

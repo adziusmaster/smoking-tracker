@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { elapsedSince } from './elapsed';
+import { elapsedBetween, elapsedSince } from './elapsed';
 
 describe('elapsedSince', () => {
   it('elapsedSince_fortyThreeDaysAndSixHours_returnsBrokenDownDuration', () => {
@@ -39,5 +39,33 @@ describe('elapsedSince', () => {
     // Assert — 47 absolute hours, so 1 day and 23 hours
     expect(result.days).toBe(1);
     expect(result.hours).toBe(23);
+  });
+});
+
+describe('elapsedBetween', () => {
+  it('elapsedBetween_twoClosedTimestamps_returnsTheirBrokenDownDistance', () => {
+    // Arrange
+    const start = '2026-06-26T08:00:00+02:00';
+    const end = '2026-07-10T11:45:00+02:00';
+
+    // Act
+    const result = elapsedBetween(start, end);
+
+    // Assert
+    expect(result.days).toBe(14);
+    expect(result.hours).toBe(3);
+    expect(result.minutes).toBe(45);
+  });
+
+  it('elapsedBetween_endBeforeStart_returnsAllZeros', () => {
+    // Arrange
+    const start = '2026-07-10T00:00:00Z';
+    const end = '2026-06-26T00:00:00Z';
+
+    // Act
+    const result = elapsedBetween(start, end);
+
+    // Assert
+    expect(result).toEqual({ totalMs: 0, days: 0, hours: 0, minutes: 0 });
   });
 });

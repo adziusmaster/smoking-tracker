@@ -44,6 +44,16 @@ export interface Elapsed {
   minutes: number;  // remainder after hours
 }
 
+/** One smoke-free run, bounded by the quit date and the smoking periods around it. */
+export interface Streak {
+  startedAt: string;
+  /** Where the run stopped: a smoking period's `startedAt`, or `now` while it is still running. */
+  endedAt: string;
+  elapsed: Elapsed;
+  /** True only for the run that is still going, i.e. the one ending at `now`. */
+  isCurrent: boolean;
+}
+
 export interface Anchors {
   /** Most recent nicotine intake; falls back to quitDate. Drives `restarts` milestones. */
   fast: string;
@@ -113,6 +123,8 @@ export interface Chapter {
 
 export interface TimelineViewModel {
   elapsed: Elapsed;
+  /** Longest smoke-free run so far. Fixed while a smoking period is open — see `streaks.ts`. */
+  longestStreak: Streak;
   savings: Savings;
   anchors: Anchors;
   currentPhase: Phase;

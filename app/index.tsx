@@ -115,6 +115,7 @@ export default function Timeline() {
 
         <Hero
           elapsed={timeline.elapsed}
+          longestStreak={timeline.longestStreak}
           savings={timeline.savings}
           currency={state.settings.currency}
           phaseName={currentPhase.name}

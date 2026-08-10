@@ -130,7 +130,10 @@ export default function Log() {
 
       <Text style={styles.h2}>{currentlySmoking ? 'Start again' : 'I’ve gone back to smoking'}</Text>
       {currentlySmoking ? (
-        <Text style={styles.hint}>Ends the current smoking period. Your long-term recovery clocks restart from today; your best previous streak is kept.</Text>
+        <Text style={styles.hint}>
+          Ends the current smoking period. Your long-term recovery clocks restart from today, and your
+          longest smoke-free run so far stays on record — nothing you already did is erased.
+        </Text>
       ) : (
         <>
           <Text style={styles.hint}>Not a slip — a return to regular smoking. Roughly how many a day?</Text>
