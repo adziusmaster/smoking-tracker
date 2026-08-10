@@ -42,7 +42,7 @@ npm start          # expo start
 npm run android    # expo start --android
 ```
 
-81 tests currently pass across 11 files.
+102 tests currently pass across 13 files.
 
 ## Spec and plan
 
