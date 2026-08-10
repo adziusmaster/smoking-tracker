@@ -7,7 +7,10 @@ import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SOURCES } from '@/content/sources';
 import { deleteEverything, exportAll, saveSettings } from '@/data/repositories';
+import { estimateCigarettesBeforeQuitting } from '@/domain/lifetime';
+import { formatCount } from '@/domain/format';
 import { parseMinorUnits, parsePositiveInt } from '@/domain/parse';
+import QuitMomentPicker from '@/ui/QuitMomentPicker';
 import { theme } from '@/ui/theme';
 import { useQuitState } from '@/ui/useQuitState';
 
@@ -32,6 +35,7 @@ export default function Settings() {
 
   const [perDay, setPerDay] = useState('');
   const [price, setPrice] = useState('');
+  const [quitMoment, setQuitMoment] = useState<Date | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
 
   const storedPerDay = state?.settings.cigarettesPerDay ?? null;
@@ -49,6 +53,11 @@ export default function Settings() {
     setPrice((storedPriceMinor / 100).toFixed(2));
   }, [storedPerDay, storedPriceMinor]);
 
+  useEffect(() => {
+    if (!state) return;
+    setQuitMoment(new Date(state.settings.quitDate));
+  }, [state]);
+
   const save = async () => {
     if (!state) return;
     const cigarettesPerDay = parsePositiveInt(perDay);
@@ -56,9 +65,21 @@ export default function Settings() {
 
     if (cigarettesPerDay === null) return setStatus({ text: 'Cigarettes per day must be a whole number above zero.', tone: 'error' });
     if (packPriceMinor === null) return setStatus({ text: 'Pack price must look like 11 or 11.50.', tone: 'error' });
+    if (quitMoment !== null && quitMoment.getTime() > Date.now()) {
+      return setStatus({ text: 'Your quit date cannot be in the future.', tone: 'error' });
+    }
 
     try {
-      await saveSettings(db, { ...state.settings, cigarettesPerDay, packPriceMinor }, new Date());
+      await saveSettings(
+        db,
+        {
+          ...state.settings,
+          cigarettesPerDay,
+          packPriceMinor,
+          ...(quitMoment ? { quitDate: quitMoment.toISOString() } : {}),
+        },
+        new Date(),
+      );
       await reload();
       setStatus({ text: 'Saved. Every figure has been recalculated.', tone: 'ok' });
     } catch {
@@ -117,11 +138,19 @@ export default function Settings() {
           is never shown to the user as if it were their own figure. */}
       {state ? (
         <>
+          <Text style={styles.label}>When you quit</Text>
+          {quitMoment ? (
+            <QuitMomentPicker value={quitMoment} onChange={setQuitMoment} maximumDate={new Date()} />
+          ) : null}
           <Text style={styles.label}>Cigarettes per day</Text>
           <TextInput style={styles.input} value={perDay} onChangeText={setPerDay} keyboardType="number-pad" accessibilityLabel="Cigarettes per day" />
           <Text style={styles.label}>Price per pack</Text>
           <TextInput style={styles.input} value={price} onChangeText={setPrice} keyboardType="decimal-pad" accessibilityLabel="Price per pack" />
           <Pressable style={styles.cta} onPress={save}><Text style={styles.ctaText}>Save</Text></Pressable>
+          <Text style={styles.hint}>
+            Estimated lifetime total: {formatCount(estimateCigarettesBeforeQuitting(state.settings))} cigarettes
+            before you quit, worked out from your daily rate. An estimate, not a count.
+          </Text>
         </>
       ) : (
         <Text style={styles.hint}>

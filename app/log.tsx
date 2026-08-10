@@ -7,11 +7,14 @@ import {
   addSlip,
   endSmokingPeriod,
   listCheckins,
+  loadQuitState,
   saveCheckin,
   startSmokingPeriod,
   type CheckinRow,
 } from '@/data/repositories';
+import { formatCount } from '@/domain/format';
 import { parsePositiveInt } from '@/domain/parse';
+import { computeSavings } from '@/domain/savings';
 import type { SlipTrigger } from '@/domain/types';
 import { CravingChart } from '@/ui/CravingChart';
 import { theme } from '@/ui/theme';
@@ -59,7 +62,15 @@ export default function Log() {
       const parsed = parsePositiveInt(slipCount) ?? 1;
       await addSlip(db, { occurredAt: new Date().toISOString(), cigaretteCount: parsed, trigger: slipTrigger, note: null }, new Date());
       await reload();
-      setStatus({ text: 'Slip logged. Your fast clocks restarted; the long ones did not.', tone: 'ok' });
+      const refreshed = await loadQuitState(db);
+      const total = refreshed ? computeSavings(refreshed, new Date()).lifetimeTotal : null;
+      setStatus({
+        text:
+          total === null
+            ? 'Slip logged. Your fast clocks restarted; the long ones did not.'
+            : `Slip logged. Your fast clocks restarted; the long ones did not. That brings your estimated lifetime total to ${formatCount(total)}.`,
+        tone: 'ok',
+      });
     } catch {
       setStatus({ text: 'Couldn’t save that slip. Nothing was recorded — please try again.', tone: 'error' });
     } finally {
