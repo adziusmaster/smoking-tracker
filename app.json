@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Smoke Free",
+    "slug": "smoking-tracker",
+    "scheme": "smokefree",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f3d2e"
+    },
+    "android": {
+      "package": "com.adzius.smokefree",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png"
+      },
+      "permissions": ["POST_NOTIFICATIONS"],
+      "blockedPermissions": ["android.permission.INTERNET"]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      "expo-notifications",
+      "expo-sharing"
+    ]
+  }
+}

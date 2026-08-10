@@ -23,7 +23,7 @@ Every task's requirements implicitly include this section.
 - **Life-expectancy constant:** `MINUTES_LOST_PER_CIGARETTE = 20` (Jackson et al., *Addiction*, 2025). Displayed as "time not lost", never "life regained".
 - **Danger window:** `DANGER_WINDOW_DAYS = 19`.
 - **Default `cigarettesPerPack` is 20; default currency is `EUR`.**
-- **Test naming:** `function_stateUnderTest_expectedBehavior`. Strict AAA with `// Arrange` / `// Act` / `// Assert` comments.
+- **Test naming:** `function_stateUnderTest_expectedBehavior`. Strict AAA with `// Arrange` / `// Act` / `// Assert` comments — except that a test with no distinct arrange step (typically one that filters a static constant) may combine them as `// Arrange & Act`. Padding such a test with an empty Arrange section to satisfy the letter of the rule is worse than combining.
 - **Commit after every task.** Repo identity is already set to `adziusmaster / adzius.lech@gmail.com` — do not change it, and never add a `Co-Authored-By` trailer.
 
 ## File Structure
@@ -2257,15 +2257,27 @@ describe('DELETE_ALL', () => {
 });
 ```
 
-- [ ] **Step 4: Run the tests and confirm they fail**
+- [ ] **Step 4: Run the tests**
+
+Run: `npm test -- src/data/sql.test.ts && npm run typecheck`
+Expected: all passing. If `better-sqlite3` fails to load with a `NODE_MODULE_VERSION` error, rebuild it for the local Node: `npm rebuild better-sqlite3`.
+
+This task writes the SQL before its tests, unlike the domain tasks, because the SQL *is* the
+specification — there is no interface to design first. That makes the tests vulnerable to passing
+vacuously, so Step 5 proves they bite.
+
+- [ ] **Step 5: Prove the tests are not vacuous**
+
+Temporarily delete `CHECK (id = 1)` from the `settings` table in `src/data/schema.ts` and re-run:
 
 Run: `npm test -- src/data/sql.test.ts`
-Expected: FAIL — cannot resolve `./schema`.
+Expected: FAIL on `settings_secondRowWithDifferentId_isRejectedByCheckConstraint`.
 
-- [ ] **Step 5: Run the tests again after creating both files**
+Then temporarily change `SELECT_SLIPS` to `ORDER BY occurred_at ASC` and re-run:
 
-Run: `npm test && npm run typecheck`
-Expected: all passing. If `better-sqlite3` fails to load with a `NODE_MODULE_VERSION` error, rebuild it for the local Node: `npm rebuild better-sqlite3`.
+Expected: FAIL on `SELECT_SLIPS_multipleRows_returnsMostRecentFirst`.
+
+Restore both, confirm green again. Do not commit either temporary change.
 
 - [ ] **Step 6: Commit**
 
@@ -3876,8 +3888,13 @@ npx expo install expo-file-system expo-sharing
 
 - [ ] **Step 2: Write `app/settings.tsx`**
 
+**expo-file-system API note (SDK 54+):** the function-based API (`FileSystem.cacheDirectory`,
+`writeAsStringAsync`) moved to the `expo-file-system/legacy` import path. Use the current
+class-based API instead — `new File(Paths.cache, name)`, `file.create()`, `file.write(text)` —
+and hand `file.uri` to `Sharing.shareAsync`.
+
 ```tsx
-import * as FileSystem from 'expo-file-system';
+import { File, Paths } from 'expo-file-system';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -3921,13 +3938,17 @@ export default function Settings() {
 
   const exportData = async () => {
     const json = await exportAll(db);
-    const path = `${FileSystem.cacheDirectory}smokefree-export.json`;
-    await FileSystem.writeAsStringAsync(path, json);
+
+    const file = new File(Paths.cache, 'smokefree-export.json');
+    // The cache file is overwritten on every export, so delete any previous one first.
+    if (file.exists) file.delete();
+    file.create();
+    file.write(json);
 
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(path, { mimeType: 'application/json', dialogTitle: 'Export your data' });
+      await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'Export your data' });
     } else {
-      setStatus(`Saved to ${path}`);
+      setStatus(`Saved to ${file.uri}`);
     }
   };
 
