@@ -30,8 +30,8 @@ The codebase is split into four layers with a strict one-way dependency rule:
   contain no domain arithmetic: every displayed figure — elapsed time, savings, streaks,
   milestone status — is computed in `src/domain/`. Input parsing (`domain/parse.ts`) and
   formatting (`domain/format.ts`) also live there and are called from the screens, so the
-  arithmetic a screen does perform is limited to composing those results (e.g. subtracting
-  `MS_PER_DAY` per backdated day when onboarding turns "days ago" into a quit date).
+  arithmetic a screen does perform is limited to composing those results (e.g. combining
+  the years-and-months inputs onboarding collects into a single `smokedForMonths` value).
 
 ## Commands
 

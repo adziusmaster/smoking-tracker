@@ -2,6 +2,9 @@
 
 **Date:** 2026-08-08
 **Status:** Approved
+**Superseded in part by:** `docs/superpowers/specs/2026-08-10-onboarding-inputs-design.md`,
+which replaces the onboarding "days ago" and lifetime-baseline fields, the `Settings` shape,
+and the lifetime-total display described below.
 
 ## Summary
 
@@ -121,8 +124,12 @@ social, boredom, routine, other), `note` (nullable), `created_at`.
 `average_cigarettes_per_day`, `note`, `created_at`.
 
 **`milestone_events`** — which milestone was reached when.
-`id`, `milestone_id`, `reached_at`, `notified_at` (nullable).
-Persisted so notifications never re-fire and the timeline shows real dates.
+`id`, `milestone_id`, `reached_at`, `notified_at` (nullable, reserved and currently unused —
+nothing writes or reads it).
+Persisted so the timeline shows real dates. Notifications are prevented from re-firing not
+by this column but structurally: already-reached milestones are never scheduled, and
+`syncNotifications` cancels and rebuilds the entire OS notification queue from the current
+state on every sync.
 
 **`craving_checkins`** — the daily log.
 `id`, `logged_on` (date, unique), `craving_intensity` (1–5), `mood` (1–5), `note`.
@@ -151,7 +158,7 @@ at zero.
 | Cigarettes not smoked | `avoided` |
 | Money saved | `avoided ÷ cigarettes_per_pack × pack_price` |
 | Time not lost | `avoided × 20 minutes` |
-| Lifetime cigarette total | user-supplied baseline + all logged slips and relapse cigarettes |
+| Lifetime cigarette total (estimate) | derived from `smoked_for_months` × `cigarettes_per_day`, plus all logged slips and relapse cigarettes — see the superseding spec |
 
 **Time not lost** uses the current best estimate of ~20 minutes of life expectancy per
 cigarette (Jackson et al., *Addiction*, 2025), superseding the 11-minute BMJ 2000
@@ -261,9 +268,11 @@ The danger-window tip set overlays and overrides the current phase's tips while 
 
 ## Screens
 
-1. **Onboarding** — quit date (defaults to now, backdating allowed), cigarettes per day,
-   pack price and currency, cigarettes per pack, optional lifetime baseline. Explains up
-   front that nothing leaves the device.
+1. **Onboarding** — quit date and time via a native picker (defaults to now, backdating
+   allowed, future dates blocked), cigarettes per day, pack price and currency, cigarettes
+   per pack, and optionally how long the user smoked (years and months), from which a
+   lifetime-cigarette estimate is derived rather than entered directly — see the
+   superseding spec. Explains up front that nothing leaves the device.
 2. **Timeline** (home) — now-anchored and phase-chaptered, one continuous scroll. Opens
    at the user's current phase: past chapters collapsed to one-line receipts with the
    dates they were hit, the active milestone expanded with a progress bar, future
@@ -284,8 +293,9 @@ The danger-window tip set overlays and overrides the current phase's tips while 
 
 ## Notifications
 
-Local only, via `expo-notifications`. Milestone-reached alerts (deduplicated through
-`milestone_events.notified_at`), a daily check-in prompt at a user-chosen time, and
+Local only, via `expo-notifications`. Milestone-reached alerts (never scheduled for a
+milestone already reached; `syncNotifications` cancels and rebuilds the whole OS queue
+from current state, so nothing re-fires), a daily check-in prompt at a user-chosen time, and
 increased-frequency supportive check-ins during an active danger window. All
 individually switchable, and the app is fully usable with every one of them off.
 
