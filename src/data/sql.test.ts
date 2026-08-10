@@ -19,7 +19,7 @@ let db: Database.Database;
 const NOW = '2026-08-08T08:00:00.000Z';
 
 const insertSettings = (quitDate = '2026-06-26T08:00:00+02:00') =>
-  db.prepare(UPSERT_SETTINGS).run(quitDate, 15, 20, 1100, 'EUR', 'Europe/Amsterdam', 43_800, NOW, NOW);
+  db.prepare(UPSERT_SETTINGS).run(quitDate, 15, 20, 1100, 'EUR', 'Europe/Amsterdam', 96, NOW, NOW);
 
 beforeEach(() => {
   db = new Database(':memory:');
@@ -74,6 +74,29 @@ describe('settings', () => {
 
     // Assert
     expect(act).toThrow(/CHECK constraint failed/);
+  });
+
+  it('UPSERT_SETTINGS_thenSelect_roundTripsSmokedForMonthsWithoutTransposingNeighbours', () => {
+    // Arrange — 77 cannot collide with any other numeric column in this row
+    const createdAt = '2026-08-08T08:00:00.000Z';
+
+    // Act
+    db.prepare(UPSERT_SETTINGS).run(
+      '2026-06-26T08:00:00+02:00', 15, 20, 1100, 'EUR', 'Europe/Amsterdam', 77, createdAt, createdAt,
+    );
+    const row = db.prepare('SELECT * FROM settings WHERE id = 1').get() as {
+      smoked_for_months: number;
+      timezone: string;
+      pack_price_minor: number;
+      created_at: string;
+    };
+
+    // Assert — asserting the neighbours is what catches a transposed bind, not just a
+    // missing column
+    expect(row.smoked_for_months).toBe(77);
+    expect(row.timezone).toBe('Europe/Amsterdam');
+    expect(row.pack_price_minor).toBe(1100);
+    expect(row.created_at).toBe(createdAt);
   });
 });
 
