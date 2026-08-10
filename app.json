@@ -7,11 +7,6 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0f3d2e"
-    },
     "android": {
       "package": "com.adzius.smokefree",
       "versionCode": 1,
@@ -19,14 +14,26 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png"
       },
-      "permissions": ["POST_NOTIFICATIONS"],
-      "blockedPermissions": ["android.permission.INTERNET"]
+      "permissions": [
+        "POST_NOTIFICATIONS"
+      ],
+      "blockedPermissions": [
+        "android.permission.INTERNET"
+      ]
     },
     "plugins": [
       "expo-router",
       "expo-sqlite",
       "expo-notifications",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0f3d2e"
+        }
+      ]
     ]
   }
 }
