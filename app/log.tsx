@@ -11,6 +11,7 @@ import {
   startSmokingPeriod,
   type CheckinRow,
 } from '@/data/repositories';
+import { parsePositiveInt } from '@/domain/parse';
 import type { SlipTrigger } from '@/domain/types';
 import { CravingChart } from '@/ui/CravingChart';
 import { theme } from '@/ui/theme';
@@ -18,6 +19,8 @@ import { useQuitState } from '@/ui/useQuitState';
 
 const TRIGGERS: SlipTrigger[] = ['alcohol', 'stress', 'social', 'boredom', 'routine', 'other'];
 const SCALE = [1, 2, 3, 4, 5];
+
+type Status = { text: string; tone: 'ok' | 'error' };
 
 export default function Log() {
   const db = useSQLiteContext();
@@ -31,7 +34,7 @@ export default function Log() {
   const [craving, setCraving] = useState(3);
   const [mood, setMood] = useState(3);
   const [relapseAvg, setRelapseAvg] = useState('15');
-  const [status, setStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<Status | null>(null);
   const [submitting, setSubmitting] = useState(false);
   // `submittingRef` is the actual correctness guard: it is checked and set
   // synchronously before any `await`, so two taps in the same tick (before
@@ -53,10 +56,12 @@ export default function Log() {
     submittingRef.current = true;
     setSubmitting(true);
     try {
-      const parsed = /^\d+$/.test(slipCount.trim()) ? Math.max(1, Number(slipCount)) : 1;
+      const parsed = parsePositiveInt(slipCount) ?? 1;
       await addSlip(db, { occurredAt: new Date().toISOString(), cigaretteCount: parsed, trigger: slipTrigger, note: null }, new Date());
       await reload();
-      setStatus('Slip logged. Your fast clocks restarted; the long ones did not.');
+      setStatus({ text: 'Slip logged. Your fast clocks restarted; the long ones did not.', tone: 'ok' });
+    } catch {
+      setStatus({ text: 'Couldn’t save that slip. Nothing was recorded — please try again.', tone: 'error' });
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
@@ -73,7 +78,9 @@ export default function Log() {
       const today = new Date().toISOString().slice(0, 10);
       await saveCheckin(db, { loggedOn: today, cravingIntensity: craving, mood, note: null }, new Date());
       await loadCheckins();
-      setStatus('Check-in saved.');
+      setStatus({ text: 'Check-in saved.', tone: 'ok' });
+    } catch {
+      setStatus({ text: 'Couldn’t save today’s check-in. Nothing was recorded — please try again.', tone: 'error' });
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
@@ -87,13 +94,18 @@ export default function Log() {
     try {
       if (currentlySmoking) {
         await endSmokingPeriod(db, new Date().toISOString());
-        setStatus('Welcome back. Your long-term clocks restart from today.');
+        setStatus({ text: 'Welcome back. Your long-term clocks restart from today.', tone: 'ok' });
       } else {
-        const parsed = /^\d+$/.test(relapseAvg.trim()) ? Math.max(1, Number(relapseAvg)) : 15;
+        const parsed = parsePositiveInt(relapseAvg) ?? 15;
         await startSmokingPeriod(db, { startedAt: new Date().toISOString(), averageCigarettesPerDay: parsed, note: null }, new Date());
-        setStatus('Logged. Nothing here is a verdict on you — come back when you are ready.');
+        setStatus({ text: 'Logged. Nothing here is a verdict on you — come back when you are ready.', tone: 'ok' });
       }
       await reload();
+    } catch {
+      // The concrete failure this catches: if the device clock is corrected backwards while
+      // a period is open, END_OPEN_SMOKING_PERIOD violates the `ended_at >= started_at`
+      // CHECK. Without this the period silently stayed open and the user was told nothing.
+      setStatus({ text: 'Couldn’t update your smoking period. Nothing changed — check your phone’s date and time, then try again.', tone: 'error' });
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
@@ -148,7 +160,9 @@ export default function Log() {
         <Text style={styles.ctaText}>{currentlySmoking ? 'I’ve stopped again' : 'Log a relapse'}</Text>
       </Pressable>
 
-      {status ? <Text style={styles.status}>{status}</Text> : null}
+      {status ? (
+        <Text style={[styles.status, status.tone === 'error' && styles.statusError]}>{status.text}</Text>
+      ) : null}
     </ScrollView>
   );
 }
@@ -188,5 +202,6 @@ const styles = StyleSheet.create({
   ctaMuted: { backgroundColor: theme.color.textFaint },
   ctaDisabled: { opacity: 0.5 },
   ctaText: { color: theme.color.heroText, fontSize: theme.font.body, fontWeight: '700' },
-  status: { fontSize: theme.font.small, color: theme.color.done, marginTop: theme.space.md },
+  status: { fontSize: theme.font.small, color: theme.color.done, marginTop: theme.space.md, lineHeight: 19 },
+  statusError: { color: theme.color.danger },
 });

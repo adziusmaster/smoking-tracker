@@ -1,10 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { addSlip } from '@/data/repositories';
 import { SOS_STEPS } from '@/content/sos';
+import { parsePositiveInt } from '@/domain/parse';
 import type { SlipTrigger } from '@/domain/types';
 import { theme } from '@/ui/theme';
 
@@ -20,6 +21,14 @@ export default function Sos() {
   const [outcome, setOutcome] = useState<'running' | 'passed' | 'slipped'>('running');
   const [count, setCount] = useState('1');
   const [trigger, setTrigger] = useState<SlipTrigger | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  // `submittingRef` is the correctness guard, matching app/log.tsx: it is checked and set
+  // synchronously before any `await`, so two taps in the same tick (before React re-renders
+  // with the updated state) cannot both insert a slip row. Two rows would reset the fast
+  // clock twice and charge the savings figures twice. The `submitting` state only drives
+  // the visual disabled/opacity and may lag a render behind without weakening the guard.
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (outcome !== 'running') return;
@@ -39,13 +48,23 @@ export default function Sos() {
   }, [remaining, stepIndex]);
 
   const logSlip = async () => {
-    const parsed = /^\d+$/.test(count.trim()) ? Number(count) : 1;
-    await addSlip(
-      db,
-      { occurredAt: new Date().toISOString(), cigaretteCount: Math.max(1, parsed), trigger, note: null },
-      new Date(),
-    );
-    router.replace('/');
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    setFailure(null);
+    try {
+      await addSlip(
+        db,
+        { occurredAt: new Date().toISOString(), cigaretteCount: parsePositiveInt(count) ?? 1, trigger, note: null },
+        new Date(),
+      );
+      router.replace('/');
+    } catch {
+      setFailure('Couldn’t save that. Nothing was recorded — try again, and it still counts as logged honestly.');
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
   };
 
   if (outcome === 'slipped') {
@@ -75,9 +94,11 @@ export default function Sos() {
           ))}
         </View>
 
-        <Pressable style={styles.cta} onPress={logSlip}>
+        <Pressable style={[styles.cta, submitting && styles.ctaDisabled]} onPress={logSlip} disabled={submitting}>
           <Text style={styles.ctaText}>Log it and carry on</Text>
         </Pressable>
+
+        {failure ? <Text style={styles.failure}>{failure}</Text> : null}
       </ScrollView>
     );
   }
@@ -138,6 +159,8 @@ const styles = StyleSheet.create({
   chipTextActive: { color: theme.color.heroText, fontWeight: '600' },
   cta: { backgroundColor: theme.color.heroBg, borderRadius: theme.radius.md, paddingVertical: theme.space.md, alignItems: 'center', marginTop: theme.space.lg },
   ctaText: { color: theme.color.heroText, fontSize: theme.font.body, fontWeight: '700' },
+  ctaDisabled: { opacity: 0.5 },
+  failure: { fontSize: theme.font.small, color: theme.color.danger, marginTop: theme.space.md, lineHeight: 19 },
   secondary: { backgroundColor: theme.color.done, borderRadius: theme.radius.md, paddingVertical: theme.space.md, alignItems: 'center' },
   secondaryText: { color: '#fff', fontSize: theme.font.body, fontWeight: '700' },
   tertiary: { paddingVertical: theme.space.md, alignItems: 'center' },
