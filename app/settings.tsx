@@ -147,9 +147,14 @@ export default function Settings() {
           <Text style={styles.label}>Price per pack</Text>
           <TextInput style={styles.input} value={price} onChangeText={setPrice} keyboardType="decimal-pad" accessibilityLabel="Price per pack" />
           <Pressable style={styles.cta} onPress={save}><Text style={styles.ctaText}>Save</Text></Pressable>
+          {/* Deliberately NOT called a "lifetime total": that phrase is used on the SOS and
+              Log screens for the running figure, which adds every slip and relapse cigarette
+              logged since the quit date. This one stops at the quit date. */}
           <Text style={styles.hint}>
-            Estimated lifetime total: {formatCount(estimateCigarettesBeforeQuitting(state.settings))} cigarettes
-            before you quit, worked out from your daily rate. An estimate, not a count.
+            Estimated cigarettes smoked before you quit:{' '}
+            {formatCount(estimateCigarettesBeforeQuitting(state.settings))}. Worked out from your daily rate
+            and how long you smoked — an estimate, not a count. It stops at the moment you quit, so anything
+            you have logged since is not included.
           </Text>
         </>
       ) : (
