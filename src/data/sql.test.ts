@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { MIGRATIONS } from './schema';
+import { MIGRATIONS, SCHEMA_VERSION } from './schema';
 import {
   DELETE_ALL,
   END_OPEN_SMOKING_PERIOD,
@@ -165,6 +165,62 @@ describe('craving_checkins', () => {
 
     // Assert
     expect(act).toThrow(/CHECK constraint failed/);
+  });
+});
+
+describe('migration v2', () => {
+  it('MIGRATIONS_appliedToAV1Database_addsSmokedForMonthsAndBackfillsIt', () => {
+    // Arrange — a v1 database holding a real lifetime_baseline, as a tester's would
+    const old = new Database(':memory:');
+    const v1 = MIGRATIONS.find((m) => m.version === 1);
+    old.exec(v1?.up ?? '');
+    old.prepare(
+      `INSERT INTO settings (id, quit_date, cigarettes_per_day, cigarettes_per_pack,
+         pack_price_minor, currency, timezone, lifetime_baseline, created_at, updated_at)
+       VALUES (1, ?, 15, 20, 1100, 'EUR', 'Europe/Amsterdam', 43800, ?, ?)`,
+    ).run('2026-06-26T06:00:00.000Z', NOW, NOW);
+
+    // Act
+    const v2 = MIGRATIONS.find((m) => m.version === 2);
+    old.exec(v2?.up ?? '');
+    const row = old.prepare('SELECT smoked_for_months, quit_date, cigarettes_per_day FROM settings WHERE id = 1')
+      .get() as { smoked_for_months: number; quit_date: string; cigarettes_per_day: number };
+
+    // Assert — 43800 / (15 x 30.44) = 95.9... rounds to 96
+    expect(row.smoked_for_months).toBe(96);
+    expect(row.quit_date).toBe('2026-06-26T06:00:00.000Z');
+    expect(row.cigarettes_per_day).toBe(15);
+  });
+
+  it('MIGRATIONS_appliedToAV1DatabaseWithNoBaseline_leavesSmokedForMonthsZero', () => {
+    // Arrange
+    const old = new Database(':memory:');
+    old.exec(MIGRATIONS.find((m) => m.version === 1)?.up ?? '');
+    old.prepare(
+      `INSERT INTO settings (id, quit_date, cigarettes_per_day, cigarettes_per_pack,
+         pack_price_minor, currency, timezone, lifetime_baseline, created_at, updated_at)
+       VALUES (1, ?, 15, 20, 1100, 'EUR', 'UTC', 0, ?, ?)`,
+    ).run('2026-06-26T06:00:00.000Z', NOW, NOW);
+
+    // Act
+    old.exec(MIGRATIONS.find((m) => m.version === 2)?.up ?? '');
+    const row = old.prepare('SELECT smoked_for_months FROM settings WHERE id = 1').get() as { smoked_for_months: number };
+
+    // Assert
+    expect(row.smoked_for_months).toBe(0);
+  });
+
+  it('SCHEMA_VERSION_afterAddingV2_isTwo', () => {
+    // Arrange & Act & Assert
+    expect(SCHEMA_VERSION).toBe(2);
+  });
+
+  it('MIGRATIONS_freshDatabase_hasSmokedForMonthsColumn', () => {
+    // Arrange & Act — the suite's beforeEach already applied every migration
+    const cols = db.prepare("SELECT name FROM pragma_table_info('settings')").all() as { name: string }[];
+
+    // Assert
+    expect(cols.map((c) => c.name)).toContain('smoked_for_months');
   });
 });
 
