@@ -13,6 +13,12 @@ import { useQuitState } from '@/ui/useQuitState';
 
 type Status = { text: string; tone: 'ok' | 'error' };
 
+/**
+ * The same policy Google Play links from the store listing. Hosted publicly because Play
+ * requires a reachable URL, and kept in sync with docs/privacy-policy.md in this repo.
+ */
+const PRIVACY_POLICY_URL = 'https://adziusmaster.github.io/smokefree-privacy/';
+
 const HELP_LINKS = [
   { label: 'Ikstopnu.nl — Dutch national quit support', url: 'https://www.ikstopnu.nl/' },
   { label: 'NHS Better Health — Quit Smoking', url: 'https://www.nhs.uk/better-health/quit-smoking/' },
@@ -130,6 +136,9 @@ export default function Settings() {
       </Text>
       <Pressable style={[styles.cta, styles.ctaMuted]} onPress={exportData}><Text style={styles.ctaText}>Export as JSON</Text></Pressable>
       <Pressable style={[styles.cta, styles.ctaDanger]} onPress={confirmDelete}><Text style={styles.ctaText}>Delete everything</Text></Pressable>
+      <Pressable onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}>
+        <Text style={styles.source}>Read the full privacy policy</Text>
+      </Pressable>
 
       <Text style={styles.h2}>Where the claims come from</Text>
       <Text style={styles.hint}>
