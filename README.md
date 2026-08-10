@@ -30,8 +30,8 @@ The codebase is split into four layers with a strict one-way dependency rule:
   contain no domain arithmetic: every displayed figure — elapsed time, savings, streaks,
   milestone status — is computed in `src/domain/`. Input parsing (`domain/parse.ts`) and
   formatting (`domain/format.ts`) also live there and are called from the screens, so the
-  arithmetic a screen does perform is limited to composing those results (e.g. subtracting
-  `MS_PER_DAY` per backdated day when onboarding turns "days ago" into a quit date).
+  arithmetic a screen does perform is limited to composing those results (e.g. combining
+  the years-and-months inputs onboarding collects into a single `smokedForMonths` value).
 
 ## Commands
 
@@ -42,12 +42,17 @@ npm start          # expo start
 npm run android    # expo start --android
 ```
 
-102 tests currently pass across 13 files.
+118 tests currently pass across 14 files.
 
-## Spec and plan
+## Specs and plans
 
 - Design spec: `docs/superpowers/specs/2026-08-08-smoking-tracker-design.md`
 - Implementation plan (18 tasks): `docs/superpowers/plans/2026-08-08-smoking-tracker.md`
+- Onboarding inputs design spec (supersedes parts of the above — the quit date and time
+  picker, "how long did you smoke?", and where the lifetime figures are shown):
+  `docs/superpowers/specs/2026-08-10-onboarding-inputs-design.md`
+- Onboarding inputs implementation plan (6 tasks):
+  `docs/superpowers/plans/2026-08-10-onboarding-inputs.md`
 
 ## Content honesty
 

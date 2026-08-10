@@ -5,9 +5,12 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { addSlip } from '@/data/repositories';
 import { SOS_STEPS } from '@/content/sos';
-import { parsePositiveInt } from '@/domain/parse';
+import { formatCount } from '@/domain/format';
+import { parseNonNegativeInt, parsePositiveInt } from '@/domain/parse';
+import { computeSavings } from '@/domain/savings';
 import type { SlipTrigger } from '@/domain/types';
 import { theme } from '@/ui/theme';
+import { useQuitState } from '@/ui/useQuitState';
 
 const TRIGGERS: SlipTrigger[] = ['alcohol', 'stress', 'social', 'boredom', 'routine', 'other'];
 
@@ -15,6 +18,7 @@ export default function Sos() {
   const db = useSQLiteContext();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { state } = useQuitState();
 
   const [stepIndex, setStepIndex] = useState(0);
   const [remaining, setRemaining] = useState(SOS_STEPS[0]?.seconds ?? 60);
@@ -68,6 +72,11 @@ export default function Sos() {
   };
 
   if (outcome === 'slipped') {
+    const parsedCount = parseNonNegativeInt(count) ?? 1;
+    const lifetimeAfterSlip = state
+      ? computeSavings(state, new Date()).lifetimeTotal + Math.max(1, parsedCount)
+      : null;
+
     return (
       <ScrollView contentContainerStyle={[styles.page, { paddingTop: insets.top + theme.space.xl }]}>
         <Text style={styles.h1}>Alright. Let’s log it accurately.</Text>
@@ -77,6 +86,11 @@ export default function Sos() {
           years keeps running, because those depend on cumulative exposure and this barely registers
           against it.
         </Text>
+        {lifetimeAfterSlip !== null ? (
+          <Text style={styles.body}>
+            That brings your estimated lifetime total to {formatCount(lifetimeAfterSlip)}.
+          </Text>
+        ) : null}
 
         <Text style={styles.label}>How many did you smoke?</Text>
         <TextInput style={styles.input} value={count} onChangeText={setCount} keyboardType="number-pad" accessibilityLabel="Number of cigarettes" />

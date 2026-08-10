@@ -27,7 +27,7 @@ interface SettingsRow {
   pack_price_minor: number;
   currency: string;
   timezone: string;
-  lifetime_baseline: number;
+  smoked_for_months: number;
 }
 
 interface SlipRow {
@@ -67,7 +67,7 @@ export async function loadQuitState(db: SQLiteDatabase): Promise<QuitState | nul
     packPriceMinor: settingsRow.pack_price_minor,
     currency: settingsRow.currency,
     timezone: settingsRow.timezone,
-    lifetimeBaseline: settingsRow.lifetime_baseline,
+    smokedForMonths: settingsRow.smoked_for_months,
   };
 
   const slips: Slip[] = slipRows.map((row) => ({
@@ -99,7 +99,7 @@ export async function saveSettings(db: SQLiteDatabase, settings: Settings, now: 
     settings.packPriceMinor,
     settings.currency,
     settings.timezone,
-    settings.lifetimeBaseline,
+    settings.smokedForMonths,
     stamp,
     stamp,
   );

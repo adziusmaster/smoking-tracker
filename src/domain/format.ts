@@ -29,3 +29,12 @@ export function formatMilestoneDate(iso: string): string {
   const date = new Date(iso);
   return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
+
+/**
+ * A cigarette count with thousands separators. Fixed to en-GB rather than the device
+ * locale so the grouping character is stable and testable — the surrounding copy is
+ * English anyway.
+ */
+export function formatCount(value: number): string {
+  return value.toLocaleString('en-GB');
+}

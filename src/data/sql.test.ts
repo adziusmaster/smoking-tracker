@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { MIGRATIONS } from './schema';
+import { MIGRATIONS, migrationsToApply, SCHEMA_VERSION } from './schema';
 import {
   DELETE_ALL,
   END_OPEN_SMOKING_PERIOD,
@@ -19,7 +19,7 @@ let db: Database.Database;
 const NOW = '2026-08-08T08:00:00.000Z';
 
 const insertSettings = (quitDate = '2026-06-26T08:00:00+02:00') =>
-  db.prepare(UPSERT_SETTINGS).run(quitDate, 15, 20, 1100, 'EUR', 'Europe/Amsterdam', 43_800, NOW, NOW);
+  db.prepare(UPSERT_SETTINGS).run(quitDate, 15, 20, 1100, 'EUR', 'Europe/Amsterdam', 96, NOW, NOW);
 
 beforeEach(() => {
   db = new Database(':memory:');
@@ -74,6 +74,30 @@ describe('settings', () => {
 
     // Assert
     expect(act).toThrow(/CHECK constraint failed/);
+  });
+
+  it('UPSERT_SETTINGS_thenSelect_roundTripsSmokedForMonthsWithoutTransposingNeighbours', () => {
+    // Arrange — 77 cannot collide with any other numeric column in this row
+    const createdAt = '2026-08-08T08:00:00.000Z';
+
+    // Act
+    db.prepare(UPSERT_SETTINGS).run(
+      '2026-06-26T08:00:00+02:00', 15, 20, 1100, 'EUR', 'Europe/Amsterdam', 77, createdAt, createdAt,
+    );
+    const row = db.prepare(SELECT_SETTINGS).get() as {
+      smoked_for_months: number;
+      timezone: string;
+      pack_price_minor: number;
+      cigarettes_per_day: number;
+    };
+
+    // Assert — asserting the neighbours is what catches a transposed bind, not just a
+    // missing column; reading via SELECT_SETTINGS (not SELECT *) also exercises that
+    // query's own column list, not just the write side
+    expect(row.smoked_for_months).toBe(77);
+    expect(row.timezone).toBe('Europe/Amsterdam');
+    expect(row.pack_price_minor).toBe(1100);
+    expect(row.cigarettes_per_day).toBe(15);
   });
 });
 
@@ -165,6 +189,123 @@ describe('craving_checkins', () => {
 
     // Assert
     expect(act).toThrow(/CHECK constraint failed/);
+  });
+});
+
+describe('migration v2', () => {
+  it('MIGRATIONS_appliedToAV1Database_addsSmokedForMonthsAndBackfillsIt', () => {
+    // Arrange — a v1 database holding a real lifetime_baseline, as a tester's would
+    const old = new Database(':memory:');
+    const v1 = MIGRATIONS.find((m) => m.version === 1);
+    old.exec(v1?.up ?? '');
+    old.prepare(
+      `INSERT INTO settings (id, quit_date, cigarettes_per_day, cigarettes_per_pack,
+         pack_price_minor, currency, timezone, lifetime_baseline, created_at, updated_at)
+       VALUES (1, ?, 15, 20, 1100, 'EUR', 'Europe/Amsterdam', 43800, ?, ?)`,
+    ).run('2026-06-26T06:00:00.000Z', NOW, NOW);
+
+    // Act
+    const v2 = MIGRATIONS.find((m) => m.version === 2);
+    old.exec(v2?.up ?? '');
+    const row = old.prepare('SELECT smoked_for_months, quit_date, cigarettes_per_day FROM settings WHERE id = 1')
+      .get() as { smoked_for_months: number; quit_date: string; cigarettes_per_day: number };
+
+    // Assert — 43800 / (15 x 30.44) = 95.9... rounds to 96
+    expect(row.smoked_for_months).toBe(96);
+    expect(row.quit_date).toBe('2026-06-26T06:00:00.000Z');
+    expect(row.cigarettes_per_day).toBe(15);
+  });
+
+  it('MIGRATIONS_appliedToAV1DatabaseWithNoBaseline_leavesSmokedForMonthsZero', () => {
+    // Arrange
+    const old = new Database(':memory:');
+    old.exec(MIGRATIONS.find((m) => m.version === 1)?.up ?? '');
+    old.prepare(
+      `INSERT INTO settings (id, quit_date, cigarettes_per_day, cigarettes_per_pack,
+         pack_price_minor, currency, timezone, lifetime_baseline, created_at, updated_at)
+       VALUES (1, ?, 15, 20, 1100, 'EUR', 'UTC', 0, ?, ?)`,
+    ).run('2026-06-26T06:00:00.000Z', NOW, NOW);
+
+    // Act
+    old.exec(MIGRATIONS.find((m) => m.version === 2)?.up ?? '');
+    const row = old.prepare('SELECT smoked_for_months FROM settings WHERE id = 1').get() as { smoked_for_months: number };
+
+    // Assert
+    expect(row.smoked_for_months).toBe(0);
+  });
+
+  it('SCHEMA_VERSION_afterAddingV2_isTwo', () => {
+    // Arrange & Act & Assert
+    expect(SCHEMA_VERSION).toBe(2);
+  });
+
+  it('MIGRATIONS_freshDatabase_hasSmokedForMonthsColumn', () => {
+    // Arrange & Act — the suite's beforeEach already applied every migration
+    const cols = db.prepare("SELECT name FROM pragma_table_info('settings')").all() as { name: string }[];
+
+    // Assert
+    expect(cols.map((c) => c.name)).toContain('smoked_for_months');
+  });
+});
+
+describe('migrationsToApply', () => {
+  // `src/data/db.ts` cannot be loaded under Vitest (expo-sqlite is a native module), so the
+  // rule that keeps its runner idempotent is tested here through the pure helper the runner
+  // now calls. Applying the selection against a real better-sqlite3 database is what proves
+  // the no-op claim, rather than just asserting on an array.
+  const schemaSnapshot = (target: Database.Database): string =>
+    JSON.stringify(
+      target.prepare("SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name").all(),
+    );
+
+  it('migrationsToApply_fromZero_selectsEveryMigrationInAscendingVersionOrder', () => {
+    // Arrange & Act
+    const selected = migrationsToApply(0);
+
+    // Assert
+    expect(selected.map((m) => m.version)).toEqual([1, 2]);
+  });
+
+  it('migrationsToApply_fromAV1Database_selectsOnlyV2', () => {
+    // Arrange & Act
+    const selected = migrationsToApply(1);
+
+    // Assert
+    expect(selected.map((m) => m.version)).toEqual([2]);
+  });
+
+  it('migrationsToApply_afterTheWholeSetHasBeenApplied_selectsNothingSoASecondPassIsANoOp', () => {
+    // Arrange — a database brought fully up to date exactly the way the runner does it,
+    // holding a real settings row so a stray UPDATE would be visible too
+    const fresh = new Database(':memory:');
+    for (const migration of migrationsToApply(0)) fresh.exec(migration.up);
+    fresh.prepare(UPSERT_SETTINGS).run('2026-06-26T08:00:00+02:00', 15, 20, 1100, 'EUR', 'Europe/Amsterdam', 96, NOW, NOW);
+    const before = schemaSnapshot(fresh);
+    const rowBefore = fresh.prepare(SELECT_SETTINGS).get();
+
+    // Act — the second pass, under the same guard the runner applies
+    const secondPass = migrationsToApply(SCHEMA_VERSION);
+    for (const migration of secondPass) fresh.exec(migration.up);
+
+    // Assert — nothing was selected, so nothing ran and neither schema nor data moved
+    expect(secondPass).toEqual([]);
+    expect(schemaSnapshot(fresh)).toBe(before);
+    expect(fresh.prepare(SELECT_SETTINGS).get()).toEqual(rowBefore);
+  });
+
+  it('migrationsToApply_selectionIgnored_replayingV2ThrowsDuplicateColumn', () => {
+    // Arrange — this is what makes the guard load-bearing rather than decorative: if
+    // user_version were bumped outside the migration's own transaction and the bump were
+    // lost, the next launch would re-select v2 and hit a hard failure, not a no-op
+    const fresh = new Database(':memory:');
+    for (const migration of migrationsToApply(0)) fresh.exec(migration.up);
+    const v2 = MIGRATIONS.find((m) => m.version === 2);
+
+    // Act
+    const act = () => fresh.exec(v2?.up ?? '');
+
+    // Assert
+    expect(act).toThrow(/duplicate column name: smoked_for_months/);
   });
 });
 

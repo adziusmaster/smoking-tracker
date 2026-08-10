@@ -15,6 +15,8 @@ export const MIGRATIONS: Migration[] = [
         pack_price_minor     INTEGER NOT NULL CHECK (pack_price_minor >= 0),
         currency             TEXT    NOT NULL DEFAULT 'EUR',
         timezone             TEXT    NOT NULL,
+        -- Superseded by smoked_for_months (migration v2). Retained because dropping a
+        -- column is destructive and buys only tidiness. Nothing reads this.
         lifetime_baseline    INTEGER NOT NULL DEFAULT 0 CHECK (lifetime_baseline >= 0),
         created_at           TEXT    NOT NULL,
         updated_at           TEXT    NOT NULL
@@ -63,6 +65,33 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    version: 2,
+    up: `
+      ALTER TABLE settings ADD COLUMN smoked_for_months INTEGER NOT NULL DEFAULT 0;
+
+      -- Invert the old derivation so an existing answer survives the change of shape:
+      -- lifetime_baseline was a raw cigarette count, smoked_for_months is a duration.
+      UPDATE settings
+         SET smoked_for_months = CAST(
+               ROUND(lifetime_baseline / (cigarettes_per_day * 30.44)) AS INTEGER)
+       WHERE lifetime_baseline > 0;
+    `,
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]?.version ?? 0;
+
+/**
+ * Selects the migrations a database at `current` still needs, in ascending version order.
+ *
+ * Pure and exported so the selection rule that makes the runner idempotent can be tested
+ * in Node: `db.ts` itself cannot be exercised under Vitest because `expo-sqlite` is native.
+ * Re-running the set after a successful upgrade must select nothing — that is what stops a
+ * second launch from replaying `ALTER TABLE` and failing with `duplicate column name`.
+ */
+export function migrationsToApply(current: number): Migration[] {
+  return MIGRATIONS.filter((migration) => migration.version > current).sort(
+    (a, b) => a.version - b.version,
+  );
+}

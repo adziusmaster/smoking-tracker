@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { saveSettings } from '@/data/repositories';
 import { parseMinorUnits, parseNonNegativeInt, parsePositiveInt } from '@/domain/parse';
-import { MS_PER_DAY } from '@/domain/types';
+import QuitMomentPicker from '@/ui/QuitMomentPicker';
 import { theme } from '@/ui/theme';
 
 export default function Onboarding() {
@@ -13,39 +13,44 @@ export default function Onboarding() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [daysAgo, setDaysAgo] = useState('0');
+  const [quitMoment, setQuitMoment] = useState(() => new Date());
   const [perDay, setPerDay] = useState('15');
   const [perPack, setPerPack] = useState('20');
   const [price, setPrice] = useState('11.00');
-  const [baseline, setBaseline] = useState('');
+  const [years, setYears] = useState('');
+  const [months, setMonths] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
     const cigarettesPerDay = parsePositiveInt(perDay);
     const cigarettesPerPack = parsePositiveInt(perPack);
     const packPriceMinor = parseMinorUnits(price);
-    const backdatedDays = parseNonNegativeInt(daysAgo);
 
     if (cigarettesPerDay === null) return setError('Cigarettes per day must be a whole number above zero.');
     if (cigarettesPerPack === null) return setError('Cigarettes per pack must be a whole number above zero.');
     if (packPriceMinor === null) return setError('Pack price must look like 11 or 11.50.');
-    if (backdatedDays === null) return setError('Days ago must be a whole number, or 0 if you are quitting now.');
+
+    // Blank means "not given", which is 0 — but a non-empty unreadable value is an error
+    // rather than a silent zero, so a typo cannot quietly become a wrong lifetime total.
+    const yearsValue = years.trim() === '' ? 0 : parseNonNegativeInt(years);
+    const monthsValue = months.trim() === '' ? 0 : parseNonNegativeInt(months);
+    if (yearsValue === null) return setError('Years smoked must be a whole number, or left blank.');
+    if (monthsValue === null) return setError('Months smoked must be a whole number, or left blank.');
 
     const now = new Date();
-    const quitDate = new Date(now.getTime() - backdatedDays * MS_PER_DAY);
+    if (quitMoment.getTime() > now.getTime()) return setError('Your quit date cannot be in the future.');
 
     try {
       await saveSettings(
         db,
         {
-          quitDate: quitDate.toISOString(),
+          quitDate: quitMoment.toISOString(),
           cigarettesPerDay,
           cigarettesPerPack,
           packPriceMinor,
           currency: 'EUR',
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          // An empty optional field means "I don't know", which the domain reads as 0.
-          lifetimeBaseline: parseNonNegativeInt(baseline) ?? 0,
+          smokedForMonths: yearsValue * 12 + monthsValue,
         },
         now,
       );
@@ -64,17 +69,39 @@ export default function Onboarding() {
         leaves the device.
       </Text>
 
-      <Field label="How many days ago did you quit?" hint="0 if you’re quitting right now." value={daysAgo} onChange={setDaysAgo} keyboardType="number-pad" />
+      <View style={styles.field}>
+        <Text style={styles.label}>When did you quit?</Text>
+        <Text style={styles.hint}>Defaults to right now. Tap to change either part.</Text>
+        <QuitMomentPicker value={quitMoment} onChange={setQuitMoment} maximumDate={new Date()} />
+      </View>
       <Field label="Cigarettes per day" hint="Roughly what you smoked before quitting." value={perDay} onChange={setPerDay} keyboardType="number-pad" />
       <Field label="Cigarettes per pack" value={perPack} onChange={setPerPack} keyboardType="number-pad" />
       <Field label="Price per pack (€)" value={price} onChange={setPrice} keyboardType="decimal-pad" />
-      <Field
-        label="Cigarettes smoked in your life (optional)"
-        hint="A rough guess is fine. Used only for your lifetime total."
-        value={baseline}
-        onChange={setBaseline}
-        keyboardType="number-pad"
-      />
+      <View style={styles.field}>
+        <Text style={styles.label}>How long did you smoke? (optional)</Text>
+        <Text style={styles.hint}>
+          Used only for an estimate of your lifetime total, worked out from the daily rate above.
+          Leave blank to skip.
+        </Text>
+        <View style={styles.duo}>
+          <TextInput
+            style={[styles.input, styles.duoInput]}
+            value={years}
+            onChangeText={setYears}
+            keyboardType="number-pad"
+            placeholder="years"
+            accessibilityLabel="Years smoked"
+          />
+          <TextInput
+            style={[styles.input, styles.duoInput]}
+            value={months}
+            onChangeText={setMonths}
+            keyboardType="number-pad"
+            placeholder="months"
+            accessibilityLabel="Additional months smoked"
+          />
+        </View>
+      </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -117,6 +144,8 @@ const styles = StyleSheet.create({
   h1: { fontSize: theme.font.title, fontWeight: '700', color: theme.color.text },
   lede: { fontSize: theme.font.body, color: theme.color.textMuted, lineHeight: 21, marginBottom: theme.space.sm },
   field: { gap: theme.space.xs },
+  duo: { flexDirection: 'row', gap: theme.space.sm },
+  duoInput: { flex: 1 },
   label: { fontSize: theme.font.small, fontWeight: '600', color: theme.color.text },
   hint: { fontSize: theme.font.tiny, color: theme.color.textFaint },
   input: {

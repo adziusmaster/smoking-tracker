@@ -10,7 +10,7 @@ const baseState = (overrides: Partial<QuitState> = {}): QuitState => ({
     packPriceMinor: 1100,
     currency: 'EUR',
     timezone: 'Europe/Amsterdam',
-    lifetimeBaseline: 43_800,
+    smokedForMonths: 96,
   },
   slips: [],
   periods: [],
@@ -30,7 +30,7 @@ describe('computeSavings', () => {
     expect(result.cigarettesAvoided).toBe(645);
     expect(result.moneySavedMinor).toBe(35_475);
     expect(result.minutesNotLost).toBe(12_900);
-    expect(result.lifetimeTotal).toBe(43_800);
+    expect(result.lifetimeTotal).toBe(43_834);
   });
 
   it('computeSavings_withSlip_subtractsOnlyTheCigarettesSmoked', () => {
@@ -45,7 +45,7 @@ describe('computeSavings', () => {
 
     // Assert
     expect(result.cigarettesAvoided).toBe(642);
-    expect(result.lifetimeTotal).toBe(43_803);
+    expect(result.lifetimeTotal).toBe(43_837);
   });
 
   it('computeSavings_withCompletedRelapsePeriod_subtractsPeriodConsumption', () => {
@@ -66,7 +66,7 @@ describe('computeSavings', () => {
 
     // Assert
     expect(result.cigarettesAvoided).toBe(445);
-    expect(result.lifetimeTotal).toBe(44_000);
+    expect(result.lifetimeTotal).toBe(44_034);
   });
 
   it('computeSavings_relapseLongerThanQuitAttempt_clampsAvoidedAtZero', () => {

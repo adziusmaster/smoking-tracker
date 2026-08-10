@@ -14,7 +14,8 @@ built.
 2. The lifetime-cigarettes question is replaced by "how long did you smoke?" in years and
    months. The lifetime total is derived from that duration and the daily rate.
 3. The lifetime total is rendered in the slip confirmation, which the original spec promised
-   and the implementation never delivered.
+   and the implementation never delivered — and the pre-quit estimate alone is shown in
+   Settings, next to the inputs it derives from, under a label that keeps the two apart.
 
 ## The gap this fixes
 
@@ -101,12 +102,22 @@ responsibility.
 
 ## 4. Display
 
-The total appears in the **slip confirmation only**:
+Two different figures are displayed, and they must not share a label. The **running total** —
+the pre-quit estimate plus every slip and relapse cigarette logged since — appears in the slip
+confirmation:
 
 - `app/sos.tsx`, on the slip-logging path.
 - `app/log.tsx`, in the status line after a slip is logged.
 
 Wording: *"That brings your estimated lifetime total to 43,803."*
+
+The **pre-quit estimate alone** appears in Settings, under the numbers it is derived from,
+because that is where the inputs that drive it are edited (the plan mandates it there). It is
+labelled *"Estimated cigarettes smoked before you quit"* and says explicitly that it stops at
+the quit moment — calling it a "lifetime total" there would put two different numbers under one
+phrase: 96 months at 15/day with a 60-day relapse at 20/day is 43,834 in Settings and 45,038 in
+the slip confirmation. "Lifetime total" is reserved for the running figure; "estimated" appears
+in all three places, per the Honesty constraint below.
 
 The figure is thousands-grouped. `src/domain/format.ts` has no plain-integer formatter today,
 so one is added there alongside the existing formatters — pure, tested, and reused by both
@@ -171,10 +182,26 @@ derivation is live rather than frozen at onboarding); the result is a non-negati
 and still accrues past the point where `cigarettesAvoided` clamps at zero.
 
 **SQL, via better-sqlite3.** Apply v1, insert a settings row with a `lifetime_baseline`, then
-apply v2 and assert: the column exists; the back-fill arithmetic is correct; the pre-existing
-row's other fields are untouched; and applying the migration list twice is a no-op. This is
-the load-bearing test — it is the only thing standing between a tester's data and a silent
-loss.
+apply v2 and assert: the column exists; the back-fill arithmetic is correct; and the
+pre-existing row's other fields are untouched. This is the load-bearing test — it is the only
+thing standing between a tester's data and a silent loss.
+
+**Migration selection.** Idempotence is a property of the *selection*, not of the SQL: v2's
+`ALTER TABLE` throws `duplicate column name` if replayed. `migrateDbIfNeeded` therefore cannot
+be re-run safely on its own, and `db.ts` cannot be loaded under Vitest at all because
+`expo-sqlite` is native. The rule is instead extracted into a pure exported helper,
+`migrationsToApply(current)` in `src/data/schema.ts`, which `db.ts` calls; tests cover it
+directly: from 0 it selects v1 then v2 in ascending order, from 1 only v2, and from
+`SCHEMA_VERSION` it selects nothing — applied against a real in-memory database, leaving both
+schema and data byte-identical. A companion test replays v2 with the guard bypassed and asserts
+the `duplicate column name` failure, so the guard is demonstrably load-bearing rather than
+decorative.
+
+Because that failure mode would be a permanent, unrecoverable launch failure if the version
+bump were ever lost, `migrateDbIfNeeded` runs the selected migrations *and* the
+`PRAGMA user_version` bump inside one `db.withTransactionAsync`, so a database can never be
+left with the new column and an old `user_version`. `PRAGMA foreign_keys = ON` stays outside
+the transaction — it is connection-level. That wiring rests on code review, not on a test.
 
 **Screens** are not unit-tested, per the standing decision that React Native cannot load
 under Vitest. Verification is `npm run typecheck`, the full suite, a successful

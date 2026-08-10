@@ -12,7 +12,7 @@ const state = (periods: SmokingPeriod[] = []): QuitState => ({
     packPriceMinor: 1100,
     currency: 'EUR',
     timezone: 'Europe/Amsterdam',
-    lifetimeBaseline: 0,
+    smokedForMonths: 0,
   },
   slips: [],
   periods,

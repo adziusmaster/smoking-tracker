@@ -1,7 +1,7 @@
 export const UPSERT_SETTINGS = `
   INSERT INTO settings (
     id, quit_date, cigarettes_per_day, cigarettes_per_pack, pack_price_minor,
-    currency, timezone, lifetime_baseline, created_at, updated_at
+    currency, timezone, smoked_for_months, created_at, updated_at
   )
   VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   ON CONFLICT (id) DO UPDATE SET
@@ -11,13 +11,13 @@ export const UPSERT_SETTINGS = `
     pack_price_minor    = excluded.pack_price_minor,
     currency            = excluded.currency,
     timezone            = excluded.timezone,
-    lifetime_baseline   = excluded.lifetime_baseline,
+    smoked_for_months   = excluded.smoked_for_months,
     updated_at          = excluded.updated_at
 `;
 
 export const SELECT_SETTINGS = `
   SELECT quit_date, cigarettes_per_day, cigarettes_per_pack, pack_price_minor,
-         currency, timezone, lifetime_baseline
+         currency, timezone, smoked_for_months
   FROM settings WHERE id = 1
 `;
 
