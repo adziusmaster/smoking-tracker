@@ -53,6 +53,13 @@ export function MilestoneNode(props: { state: MilestoneState; compact: boolean }
           </View>
         ) : null}
 
+        {state.conservativelyAnchored ? (
+          <Text style={styles.note}>
+            Measured in people who quit smoking. Counted from your final quit date, which is conservative if
+            you stopped cigarettes earlier.
+          </Text>
+        ) : null}
+
         <Text style={styles.badge}>{BEHAVIOUR_LABEL[milestone.slipBehavior]}</Text>
       </View>
     </View>
@@ -74,6 +81,7 @@ const styles = StyleSheet.create({
   bar: { height: 4, backgroundColor: theme.color.border, borderRadius: 3, marginTop: theme.space.sm, overflow: 'hidden' },
   barFill: { height: '100%', backgroundColor: theme.color.active },
   badge: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4, color: theme.color.textFaint, marginTop: theme.space.sm },
+  note: { fontSize: 10, color: theme.color.textFaint, lineHeight: 14, marginTop: theme.space.sm },
   compact: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm, paddingVertical: 5 },
   tick: { color: theme.color.done, fontWeight: '700', fontSize: theme.font.small },
   compactText: { flex: 1, fontSize: theme.font.tiny, color: theme.color.textMuted },

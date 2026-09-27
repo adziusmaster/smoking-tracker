@@ -141,6 +141,7 @@ export default function Timeline() {
   }
 
   const { dangerWindow, currentPhase } = timeline;
+  const content = PRODUCT_CONTENT[state.settings.product];
 
   return (
     <View style={{ flex: 1 }}>
@@ -157,6 +158,9 @@ export default function Timeline() {
           currency={state.settings.currency}
           phaseName={currentPhase.name}
           currentlySmoking={timeline.anchors.isCurrentlySmoking}
+          freeWord={content.freeWord}
+          avoidedLabel={content.avoidedLabel}
+          relapseTitle={content.relapseTitle}
         />
 
         {dangerWindow.active ? (
@@ -190,7 +194,7 @@ export default function Timeline() {
       </ScrollView>
 
       <Pressable style={[styles.sos, { bottom: insets.bottom + theme.space.lg }]} onPress={() => router.push('/sos')}>
-        <Text style={styles.sosText}>I want to smoke</Text>
+        <Text style={styles.sosText}>{content.cravingButton}</Text>
       </Pressable>
     </View>
   );

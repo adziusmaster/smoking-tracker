@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -14,11 +14,13 @@ import {
 } from '@/data/repositories';
 import { formatCount } from '@/domain/format';
 import { parsePositiveInt } from '@/domain/parse';
-import { computeSavings } from '@/domain/savings';
+import { lifetimeAfterSlip } from '@/domain/savings';
 import type { SlipTrigger } from '@/domain/types';
+import { PRODUCT_CONTENT } from '@/content/products';
 import { CravingChart } from '@/ui/CravingChart';
 import { theme } from '@/ui/theme';
 import { useQuitState } from '@/ui/useQuitState';
+import { useSubmitGuard } from '@/ui/useSubmitGuard';
 
 const TRIGGERS: SlipTrigger[] = ['alcohol', 'stress', 'social', 'boredom', 'routine', 'other'];
 const SCALE = [1, 2, 3, 4, 5];
@@ -38,13 +40,7 @@ export default function Log() {
   const [mood, setMood] = useState(3);
   const [relapseAvg, setRelapseAvg] = useState('15');
   const [status, setStatus] = useState<Status | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  // `submittingRef` is the actual correctness guard: it is checked and set
-  // synchronously before any `await`, so two taps in the same tick (before
-  // React re-renders with the updated state) cannot both pass the check. The
-  // `submitting` state exists only to drive the visual disabled/opacity —
-  // it can lag a render behind the ref without weakening the guard.
-  const submittingRef = useRef(false);
+  const { submitting, run } = useSubmitGuard();
 
   const loadCheckins = useCallback(async () => {
     setCheckins(await listCheckins(db, 30));
@@ -54,74 +50,65 @@ export default function Log() {
 
   const currentlySmoking = state?.periods.some((period) => period.endedAt === null) ?? false;
 
-  const submitSlip = async () => {
-    if (submittingRef.current) return;
-    submittingRef.current = true;
-    setSubmitting(true);
-    try {
-      const parsed = parsePositiveInt(slipCount) ?? 1;
-      await addSlip(db, { occurredAt: new Date().toISOString(), unitCount: parsed, trigger: slipTrigger, note: null }, new Date());
-      await reload();
-      const refreshed = await loadQuitState(db);
-      const total = refreshed ? computeSavings(refreshed, new Date()).lifetimeCigarettes : null;
-      setStatus({
-        text:
-          total === null
-            ? 'Slip logged. Your fast clocks restarted; the long ones did not.'
-            : `Slip logged. Your fast clocks restarted; the long ones did not. That brings your estimated lifetime total to ${formatCount(total)}.`,
-        tone: 'ok',
-      });
-    } catch {
-      setStatus({ text: 'Couldn’t save that slip. Nothing was recorded — please try again.', tone: 'error' });
-    } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
-    }
-  };
+  const content = PRODUCT_CONTENT[state?.settings.product ?? 'cigarettes'];
 
-  const submitCheckin = async () => {
-    if (submittingRef.current) return;
-    submittingRef.current = true;
-    setSubmitting(true);
-    try {
-      // `.slice(0, 10)` on an ISO string yields the UTC calendar date, which can differ
-      // from the user's local date near midnight. Accepted tradeoff for v1 — see brief.
-      const today = new Date().toISOString().slice(0, 10);
-      await saveCheckin(db, { loggedOn: today, cravingIntensity: craving, mood, note: null }, new Date());
-      await loadCheckins();
-      setStatus({ text: 'Check-in saved.', tone: 'ok' });
-    } catch {
-      setStatus({ text: 'Couldn’t save today’s check-in. Nothing was recorded — please try again.', tone: 'error' });
-    } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
-    }
-  };
-
-  const toggleRelapse = async () => {
-    if (submittingRef.current) return;
-    submittingRef.current = true;
-    setSubmitting(true);
-    try {
-      if (currentlySmoking) {
-        await endSmokingPeriod(db, new Date().toISOString());
-        setStatus({ text: 'Welcome back. Your long-term clocks restart from today.', tone: 'ok' });
-      } else {
-        const parsed = parsePositiveInt(relapseAvg) ?? 15;
-        await startSmokingPeriod(db, { startedAt: new Date().toISOString(), averageUnitsPerDay: parsed, note: null }, new Date());
-        setStatus({ text: 'Logged. Nothing here is a verdict on you — come back when you are ready.', tone: 'ok' });
+  const submitSlip = () =>
+    run(async () => {
+      try {
+        const units = content.countsSlips ? (parsePositiveInt(slipCount) ?? 1) : 1;
+        await addSlip(db, { occurredAt: new Date().toISOString(), unitCount: units, trigger: slipTrigger, note: null }, new Date());
+        await reload();
+        const refreshed = await loadQuitState(db);
+        const total = refreshed ? lifetimeAfterSlip(refreshed, 0, new Date()) : null;
+        setStatus({
+          text:
+            total === null
+              ? 'Slip logged. Your fast clocks restarted; the long ones did not.'
+              : `Slip logged. Your fast clocks restarted; the long ones did not. That brings your estimated lifetime cigarette total to ${formatCount(total)}.`,
+          tone: 'ok',
+        });
+      } catch {
+        setStatus({ text: 'Couldn’t save that slip. Nothing was recorded — please try again.', tone: 'error' });
       }
-      await reload();
-    } catch {
-      // The concrete failure this catches: if the device clock is corrected backwards while
-      // a period is open, END_OPEN_SMOKING_PERIOD violates the `ended_at >= started_at`
-      // CHECK. Without this the period silently stayed open and the user was told nothing.
-      setStatus({ text: 'Couldn’t update your smoking period. Nothing changed — check your phone’s date and time, then try again.', tone: 'error' });
-    } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
-    }
-  };
+    });
+
+  const submitCheckin = () =>
+    run(async () => {
+      try {
+        // `.slice(0, 10)` on an ISO string yields the UTC calendar date, which can differ
+        // from the user's local date near midnight. Accepted tradeoff for v1 — see brief.
+        const today = new Date().toISOString().slice(0, 10);
+        await saveCheckin(db, { loggedOn: today, cravingIntensity: craving, mood, note: null }, new Date());
+        await loadCheckins();
+        setStatus({ text: 'Check-in saved.', tone: 'ok' });
+      } catch {
+        setStatus({ text: 'Couldn’t save today’s check-in. Nothing was recorded — please try again.', tone: 'error' });
+      }
+    });
+
+  const toggleRelapse = () =>
+    run(async () => {
+      try {
+        if (currentlySmoking) {
+          await endSmokingPeriod(db, new Date().toISOString());
+          setStatus({ text: 'Welcome back. Your long-term clocks restart from today.', tone: 'ok' });
+        } else {
+          const parsed = parsePositiveInt(relapseAvg) ?? 15;
+          await startSmokingPeriod(db, { startedAt: new Date().toISOString(), averageUnitsPerDay: parsed, note: null }, new Date());
+          setStatus({ text: 'Logged. Nothing here is a verdict on you — come back when you are ready.', tone: 'ok' });
+        }
+        await reload();
+      } catch {
+        // The concrete failure this catches: if the device clock is corrected backwards while
+        // a period is open, END_OPEN_SMOKING_PERIOD violates the `ended_at >= started_at`
+        // CHECK. Without this the period silently stayed open and the user was told nothing.
+        setStatus({ text: 'Couldn’t update your smoking period. Nothing changed — check your phone’s date and time, then try again.', tone: 'error' });
+      }
+    });
+
+  const relapsePrompt = content.countsSlips
+    ? `Not a slip — a return to regular use. Roughly how many ${content.unit.many} a day?`
+    : 'Not a slip — a return to regular use. Roughly how many times a day?';
 
   return (
     <ScrollView contentContainerStyle={[styles.page, { paddingTop: insets.top + theme.space.lg }]}>
@@ -138,8 +125,20 @@ export default function Log() {
       <CravingChart checkins={checkins} />
 
       <Text style={styles.h2}>Log a slip</Text>
-      <Text style={styles.hint}>A few cigarettes, still quit. This subtracts exactly what you smoked — nothing more.</Text>
-      <TextInput style={styles.input} value={slipCount} onChangeText={setSlipCount} keyboardType="number-pad" accessibilityLabel="Cigarettes smoked" />
+      <Text style={styles.hint}>
+        {content.countsSlips
+          ? `A few ${content.unit.many}, still quit. This subtracts exactly what you used — nothing more.`
+          : 'A slip, still quit. It restarts the fast clocks and nothing else.'}
+      </Text>
+      {content.countsSlips ? (
+        <TextInput
+          style={styles.input}
+          value={slipCount}
+          onChangeText={setSlipCount}
+          keyboardType="number-pad"
+          accessibilityLabel={`Number of ${content.unit.many}`}
+        />
+      ) : null}
       <View style={styles.chips}>
         {TRIGGERS.map((option) => (
           <Pressable key={option} onPress={() => setSlipTrigger(slipTrigger === option ? null : option)} style={[styles.chip, slipTrigger === option && styles.chipActive]}>
@@ -151,7 +150,7 @@ export default function Log() {
         <Text style={styles.ctaText}>Log slip</Text>
       </Pressable>
 
-      <Text style={styles.h2}>{currentlySmoking ? 'Start again' : 'I’ve gone back to smoking'}</Text>
+      <Text style={styles.h2}>{currentlySmoking ? 'Start again' : 'I’ve gone back to it'}</Text>
       {currentlySmoking ? (
         <Text style={styles.hint}>
           Ends the current smoking period. Your long-term recovery clocks restart from today, and your
@@ -159,8 +158,8 @@ export default function Log() {
         </Text>
       ) : (
         <>
-          <Text style={styles.hint}>Not a slip — a return to regular smoking. Roughly how many a day?</Text>
-          <TextInput style={styles.input} value={relapseAvg} onChangeText={setRelapseAvg} keyboardType="number-pad" accessibilityLabel="Average cigarettes per day" />
+          <Text style={styles.hint}>{relapsePrompt}</Text>
+          <TextInput style={styles.input} value={relapseAvg} onChangeText={setRelapseAvg} keyboardType="number-pad" accessibilityLabel={relapsePrompt} />
         </>
       )}
       <Pressable
