@@ -1,174 +1,134 @@
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PRODUCT_CONTENT } from '@/content/products';
 import { saveSettings } from '@/data/repositories';
-import { parseMinorUnits, parseNonNegativeInt, parsePositiveInt } from '@/domain/parse';
+import { defaultValues, parseSetupForm, type SetupFormValues } from '@/domain/setupForm';
+import type { ProductId } from '@/domain/types';
+import { formStyles } from '@/ui/formStyles';
+import { ProductPicker } from '@/ui/ProductPicker';
 import QuitMomentPicker from '@/ui/QuitMomentPicker';
 import { theme } from '@/ui/theme';
+import { UsageFields } from '@/ui/UsageFields';
+
+const STEPS = ['What are you quitting?', 'How much did you use?', 'Your smoking history', 'When did you quit?'] as const;
 
 export default function Onboarding() {
   const db = useSQLiteContext();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  const [step, setStep] = useState(0);
+  const [values, setValues] = useState<SetupFormValues | null>(null);
   const [quitMoment, setQuitMoment] = useState(() => new Date());
-  const [perDay, setPerDay] = useState('15');
-  const [perPack, setPerPack] = useState('20');
-  const [price, setPrice] = useState('11.00');
-  const [years, setYears] = useState('');
-  const [months, setMonths] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  const chooseProduct = (product: ProductId) => {
+    setError(null);
+    // Only reset when the product actually changes, so going back a step never wipes answers.
+    if (values?.product === product) return;
+    setValues(defaultValues(product, PRODUCT_CONTENT[product].defaultPerPack));
+  };
+
+  const next = () => {
+    setError(null);
+    if (step === 0 && values === null) return setError('Pick what you are quitting to continue.');
+    setStep((current) => Math.min(current + 1, STEPS.length - 1));
+  };
+
+  const back = () => {
+    setError(null);
+    setStep((current) => Math.max(current - 1, 0));
+  };
+
   const submit = async () => {
-    const cigarettesPerDay = parsePositiveInt(perDay);
-    const cigarettesPerPack = parsePositiveInt(perPack);
-    const packPriceMinor = parseMinorUnits(price);
-
-    if (cigarettesPerDay === null) return setError('Cigarettes per day must be a whole number above zero.');
-    if (cigarettesPerPack === null) return setError('Cigarettes per pack must be a whole number above zero.');
-    if (packPriceMinor === null) return setError('Pack price must look like 11 or 11.50.');
-
-    // Blank means "not given", which is 0 — but a non-empty unreadable value is an error
-    // rather than a silent zero, so a typo cannot quietly become a wrong lifetime total.
-    const yearsValue = years.trim() === '' ? 0 : parseNonNegativeInt(years);
-    const monthsValue = months.trim() === '' ? 0 : parseNonNegativeInt(months);
-    if (yearsValue === null) return setError('Years smoked must be a whole number, or left blank.');
-    if (monthsValue === null) return setError('Months smoked must be a whole number, or left blank.');
-
+    if (values === null) return setStep(0);
+    const content = PRODUCT_CONTENT[values.product];
     const now = new Date();
-    if (quitMoment.getTime() > now.getTime()) return setError('Your quit date cannot be in the future.');
+    const result = parseSetupForm(values, {
+      quitMoment,
+      now,
+      currency: 'EUR',
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      labels: { perDay: content.perDayLabel, perPack: content.perPackLabel, packPrice: content.packPriceLabel },
+    });
+    if (!result.ok) return setError(result.error);
 
     try {
-      await saveSettings(
-        db,
-        {
-          quitDate: quitMoment.toISOString(),
-          product: 'cigarettes',
-          unitsPerDay: cigarettesPerDay,
-          cost: { kind: 'pack', unitsPerPack: cigarettesPerPack, packPriceMinor },
-          currency: 'EUR',
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          cigaretteHistory:
-            yearsValue * 12 + monthsValue > 0
-              ? { months: yearsValue * 12 + monthsValue, cigarettesPerDay }
-              : null,
-        },
-        now,
-      );
+      await saveSettings(db, result.settings, now);
     } catch {
       return setError('Couldn’t save your setup. Nothing was stored — please try again.');
     }
-
     router.replace('/');
   };
 
+  const isLast = step === STEPS.length - 1;
+
   return (
     <ScrollView contentContainerStyle={[styles.page, { paddingTop: insets.top + theme.space.xl }]}>
-      <Text style={styles.h1}>Let’s set this up</Text>
-      <Text style={styles.lede}>
-        Five numbers and you’re done. Everything stays on this phone — no account, no server, nothing
-        leaves the device.
-      </Text>
+      <Text style={styles.stepCount}>Step {step + 1} of {STEPS.length}</Text>
+      <Text style={styles.h1}>{STEPS[step]}</Text>
 
-      <View style={styles.field}>
-        <Text style={styles.label}>When did you quit?</Text>
-        <Text style={styles.hint}>Defaults to right now. Tap to change either part.</Text>
-        <QuitMomentPicker value={quitMoment} onChange={setQuitMoment} maximumDate={new Date()} />
-      </View>
-      <Field label="Cigarettes per day" hint="Roughly what you smoked before quitting." value={perDay} onChange={setPerDay} keyboardType="number-pad" />
-      <Field label="Cigarettes per pack" value={perPack} onChange={setPerPack} keyboardType="number-pad" />
-      <Field label="Price per pack (€)" value={price} onChange={setPrice} keyboardType="decimal-pad" />
-      <View style={styles.field}>
-        <Text style={styles.label}>How long did you smoke? (optional)</Text>
-        <Text style={styles.hint}>
-          Used only for an estimate of your lifetime total, worked out from the daily rate above.
-          Leave blank to skip.
-        </Text>
-        <View style={styles.duo}>
-          <TextInput
-            style={[styles.input, styles.duoInput]}
-            value={years}
-            onChangeText={setYears}
-            keyboardType="number-pad"
-            placeholder="years"
-            accessibilityLabel="Years smoked"
-          />
-          <TextInput
-            style={[styles.input, styles.duoInput]}
-            value={months}
-            onChangeText={setMonths}
-            keyboardType="number-pad"
-            placeholder="months"
-            accessibilityLabel="Additional months smoked"
-          />
+      {step === 0 ? (
+        <>
+          <Text style={styles.lede}>
+            Everything stays on this phone — no account, no server, nothing leaves the device.
+          </Text>
+          <ProductPicker value={values?.product ?? null} onChange={chooseProduct} />
+        </>
+      ) : null}
+
+      {step === 1 && values ? <UsageFields values={values} onChange={setValues} section="usage" /> : null}
+      {step === 2 && values ? <UsageFields values={values} onChange={setValues} section="history" /> : null}
+
+      {step === 3 ? (
+        <View style={formStyles.field}>
+          <Text style={formStyles.hint}>Defaults to right now. Tap to change either part.</Text>
+          <QuitMomentPicker value={quitMoment} onChange={setQuitMoment} maximumDate={new Date()} />
         </View>
-      </View>
+      ) : null}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Pressable style={styles.cta} onPress={submit} accessibilityRole="button">
-        <Text style={styles.ctaText}>Start tracking</Text>
-      </Pressable>
+      <View style={styles.nav}>
+        {step > 0 ? (
+          <Pressable style={[styles.cta, styles.ctaSecondary]} onPress={back} accessibilityRole="button">
+            <Text style={[styles.ctaText, styles.ctaTextSecondary]}>Back</Text>
+          </Pressable>
+        ) : null}
+        <Pressable style={styles.cta} onPress={isLast ? submit : next} accessibilityRole="button">
+          <Text style={styles.ctaText}>{isLast ? 'Start tracking' : 'Next'}</Text>
+        </Pressable>
+      </View>
 
-      <Text style={styles.disclaimer}>
-        This app is not medical advice. If you want real support, your GP or a national quitline will
-        do more for your odds than any app.
-      </Text>
+      {isLast ? (
+        <Text style={styles.disclaimer}>
+          This app is not medical advice. If you want real support, your GP or a national quitline will
+          do more for your odds than any app.
+        </Text>
+      ) : null}
     </ScrollView>
-  );
-}
-
-function Field(props: {
-  label: string;
-  hint?: string;
-  value: string;
-  onChange: (next: string) => void;
-  keyboardType: 'number-pad' | 'decimal-pad';
-}) {
-  return (
-    <View style={styles.field}>
-      <Text style={styles.label}>{props.label}</Text>
-      {props.hint ? <Text style={styles.hint}>{props.hint}</Text> : null}
-      <TextInput
-        style={styles.input}
-        value={props.value}
-        onChangeText={props.onChange}
-        keyboardType={props.keyboardType}
-        accessibilityLabel={props.label}
-      />
-    </View>
   );
 }
 
 const styles = StyleSheet.create({
   page: { padding: theme.space.lg, paddingBottom: theme.space.xxl, gap: theme.space.md },
+  stepCount: { fontSize: theme.font.tiny, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, color: theme.color.textFaint },
   h1: { fontSize: theme.font.title, fontWeight: '700', color: theme.color.text },
-  lede: { fontSize: theme.font.body, color: theme.color.textMuted, lineHeight: 21, marginBottom: theme.space.sm },
-  field: { gap: theme.space.xs },
-  duo: { flexDirection: 'row', gap: theme.space.sm },
-  duoInput: { flex: 1 },
-  label: { fontSize: theme.font.small, fontWeight: '600', color: theme.color.text },
-  hint: { fontSize: theme.font.tiny, color: theme.color.textFaint },
-  input: {
-    borderWidth: 1,
-    borderColor: theme.color.border,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.color.surface,
-    paddingHorizontal: theme.space.md,
-    paddingVertical: theme.space.sm,
-    fontSize: theme.font.body,
-    color: theme.color.text,
-  },
+  lede: { fontSize: theme.font.body, color: theme.color.textMuted, lineHeight: 21 },
   error: { color: theme.color.danger, fontSize: theme.font.small },
+  nav: { flexDirection: 'row', gap: theme.space.sm, marginTop: theme.space.sm },
   cta: {
+    flex: 1,
     backgroundColor: theme.color.heroBg,
     borderRadius: theme.radius.md,
     paddingVertical: theme.space.md,
     alignItems: 'center',
-    marginTop: theme.space.sm,
   },
+  ctaSecondary: { backgroundColor: theme.color.surface, borderWidth: 1, borderColor: theme.color.border },
   ctaText: { color: theme.color.heroText, fontSize: theme.font.body, fontWeight: '700' },
+  ctaTextSecondary: { color: theme.color.text },
   disclaimer: { fontSize: theme.font.tiny, color: theme.color.textFaint, lineHeight: 16, marginTop: theme.space.md },
 });
