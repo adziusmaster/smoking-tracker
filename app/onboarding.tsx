@@ -45,12 +45,15 @@ export default function Onboarding() {
         db,
         {
           quitDate: quitMoment.toISOString(),
-          cigarettesPerDay,
-          cigarettesPerPack,
-          packPriceMinor,
+          product: 'cigarettes',
+          unitsPerDay: cigarettesPerDay,
+          cost: { kind: 'pack', unitsPerPack: cigarettesPerPack, packPriceMinor },
           currency: 'EUR',
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          smokedForMonths: yearsValue * 12 + monthsValue,
+          cigaretteHistory:
+            yearsValue * 12 + monthsValue > 0
+              ? { months: yearsValue * 12 + monthsValue, cigarettesPerDay }
+              : null,
         },
         now,
       );

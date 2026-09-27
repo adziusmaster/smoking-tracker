@@ -38,8 +38,8 @@ export default function Settings() {
   const [quitMoment, setQuitMoment] = useState<Date | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
 
-  const storedPerDay = state?.settings.cigarettesPerDay ?? null;
-  const storedPriceMinor = state?.settings.packPriceMinor ?? null;
+  const storedPerDay = state?.settings.unitsPerDay ?? null;
+  const storedPriceMinor = state?.settings.cost.kind === 'pack' ? state.settings.cost.packPriceMinor : null;
 
   // `useQuitState` loads asynchronously, so the first render has `state === null`. Seeding
   // these inputs with `useState` alone froze whatever default was in scope on screen, and
@@ -58,6 +58,8 @@ export default function Settings() {
     setQuitMoment(new Date(state.settings.quitDate));
   }, [state]);
 
+  const lifetimeEstimate = state ? estimateCigarettesBeforeQuitting(state.settings) : null;
+
   const save = async () => {
     if (!state) return;
     const cigarettesPerDay = parsePositiveInt(perDay);
@@ -74,8 +76,8 @@ export default function Settings() {
         db,
         {
           ...state.settings,
-          cigarettesPerDay,
-          packPriceMinor,
+          unitsPerDay: cigarettesPerDay,
+          cost: state.settings.cost.kind === 'pack' ? { ...state.settings.cost, packPriceMinor } : state.settings.cost,
           ...(quitMoment ? { quitDate: quitMoment.toISOString() } : {}),
         },
         new Date(),
@@ -150,12 +152,12 @@ export default function Settings() {
           {/* Deliberately NOT called a "lifetime total": that phrase is used on the SOS and
               Log screens for the running figure, which adds every slip and relapse cigarette
               logged since the quit date. This one stops at the quit date. */}
-          <Text style={styles.hint}>
+          {lifetimeEstimate !== null ? <Text style={styles.hint}>
             Estimated cigarettes smoked before you quit:{' '}
-            {formatCount(estimateCigarettesBeforeQuitting(state.settings))}. Worked out from your daily rate
+            {formatCount(lifetimeEstimate)}. Worked out from your daily rate
             and how long you smoked — an estimate, not a count. It stops at the moment you quit, so anything
             you have logged since is not included.
-          </Text>
+          </Text> : null}
         </>
       ) : (
         <Text style={styles.hint}>

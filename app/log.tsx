@@ -60,10 +60,10 @@ export default function Log() {
     setSubmitting(true);
     try {
       const parsed = parsePositiveInt(slipCount) ?? 1;
-      await addSlip(db, { occurredAt: new Date().toISOString(), cigaretteCount: parsed, trigger: slipTrigger, note: null }, new Date());
+      await addSlip(db, { occurredAt: new Date().toISOString(), unitCount: parsed, trigger: slipTrigger, note: null }, new Date());
       await reload();
       const refreshed = await loadQuitState(db);
-      const total = refreshed ? computeSavings(refreshed, new Date()).lifetimeTotal : null;
+      const total = refreshed ? computeSavings(refreshed, new Date()).lifetimeCigarettes : null;
       setStatus({
         text:
           total === null
@@ -108,7 +108,7 @@ export default function Log() {
         setStatus({ text: 'Welcome back. Your long-term clocks restart from today.', tone: 'ok' });
       } else {
         const parsed = parsePositiveInt(relapseAvg) ?? 15;
-        await startSmokingPeriod(db, { startedAt: new Date().toISOString(), averageCigarettesPerDay: parsed, note: null }, new Date());
+        await startSmokingPeriod(db, { startedAt: new Date().toISOString(), averageUnitsPerDay: parsed, note: null }, new Date());
         setStatus({ text: 'Logged. Nothing here is a verdict on you — come back when you are ready.', tone: 'ok' });
       }
       await reload();

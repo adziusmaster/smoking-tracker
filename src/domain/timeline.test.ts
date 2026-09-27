@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { cigaretteSettings } from './testSettings';
 import { buildTimeline } from './timeline';
 import { MS_PER_DAY, type Milestone, type Phase, type QuitState } from './types';
 
@@ -18,15 +19,7 @@ const milestones: Milestone[] = [
 ];
 
 const state: QuitState = {
-  settings: {
-    quitDate: QUIT,
-    cigarettesPerDay: 15,
-    cigarettesPerPack: 20,
-    packPriceMinor: 1100,
-    currency: 'EUR',
-    timezone: 'Europe/Amsterdam',
-    smokedForMonths: 96,
-  },
+  settings: cigaretteSettings({ quitDate: QUIT }),
   slips: [],
   periods: [],
 };
@@ -41,7 +34,7 @@ describe('buildTimeline', () => {
 
     // Assert
     expect(result.elapsed.days).toBe(43);
-    expect(result.savings.cigarettesAvoided).toBe(645);
+    expect(result.savings.unitsAvoided).toBe(645);
     expect(result.currentPhase.id).toBe('consolidation');
     expect(result.dangerWindow.active).toBe(false);
   });
@@ -77,7 +70,7 @@ describe('buildTimeline', () => {
     // Arrange — slip 10 hours before now, so the 24 h CO milestone is unreached again
     const withSlip: QuitState = {
       ...state,
-      slips: [{ id: 1, occurredAt: '2026-08-07T22:00:00+02:00', cigaretteCount: 3, trigger: 'alcohol', note: null }],
+      slips: [{ id: 1, occurredAt: '2026-08-07T22:00:00+02:00', unitCount: 3, trigger: 'alcohol', note: null }],
     };
 
     // Act
@@ -100,7 +93,7 @@ describe('buildTimeline', () => {
     // Arrange — smoking again since 1 August, i.e. 36 clean days before that
     const smoking: QuitState = {
       ...state,
-      periods: [{ id: 1, startedAt: '2026-08-01T08:00:00+02:00', endedAt: null, averageCigarettesPerDay: 20, note: null }],
+      periods: [{ id: 1, startedAt: '2026-08-01T08:00:00+02:00', endedAt: null, averageUnitsPerDay: 20, note: null }],
     };
     const muchLater = new Date('2026-10-08T08:00:00+02:00');
 

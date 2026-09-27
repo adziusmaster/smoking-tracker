@@ -1,19 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { cigaretteSettings } from './testSettings';
 import { resolveAnchors } from './anchors';
 import type { QuitState } from './types';
 
 const QUIT = '2026-06-26T08:00:00+02:00';
 
 const state = (overrides: Partial<QuitState> = {}): QuitState => ({
-  settings: {
-    quitDate: QUIT,
-    cigarettesPerDay: 15,
-    cigarettesPerPack: 20,
-    packPriceMinor: 1100,
-    currency: 'EUR',
-    timezone: 'Europe/Amsterdam',
-    smokedForMonths: 0,
-  },
+  settings: cigaretteSettings({ quitDate: QUIT, cigaretteHistory: null }),
   slips: [],
   periods: [],
   ...overrides,
@@ -38,7 +31,7 @@ describe('resolveAnchors', () => {
   it('resolveAnchors_withSlip_movesFastAnchorButNotCumulative', () => {
     // Arrange
     const slipAt = '2026-08-05T22:00:00+02:00';
-    const input = state({ slips: [{ id: 1, occurredAt: slipAt, cigaretteCount: 3, trigger: 'social', note: null }] });
+    const input = state({ slips: [{ id: 1, occurredAt: slipAt, unitCount: 3, trigger: 'social', note: null }] });
 
     // Act
     const result = resolveAnchors(input, now);
@@ -52,8 +45,8 @@ describe('resolveAnchors', () => {
     // Arrange
     const input = state({
       slips: [
-        { id: 1, occurredAt: '2026-07-04T20:00:00+02:00', cigaretteCount: 1, trigger: null, note: null },
-        { id: 2, occurredAt: '2026-08-05T22:00:00+02:00', cigaretteCount: 3, trigger: null, note: null },
+        { id: 1, occurredAt: '2026-07-04T20:00:00+02:00', unitCount: 1, trigger: null, note: null },
+        { id: 2, occurredAt: '2026-08-05T22:00:00+02:00', unitCount: 3, trigger: null, note: null },
       ],
     });
 
@@ -68,7 +61,7 @@ describe('resolveAnchors', () => {
     // Arrange
     const endedAt = '2026-07-11T00:00:00+02:00';
     const input = state({
-      periods: [{ id: 1, startedAt: '2026-07-01T00:00:00+02:00', endedAt, averageCigarettesPerDay: 20, note: null }],
+      periods: [{ id: 1, startedAt: '2026-07-01T00:00:00+02:00', endedAt, averageUnitsPerDay: 20, note: null }],
     });
 
     // Act
@@ -83,7 +76,7 @@ describe('resolveAnchors', () => {
   it('resolveAnchors_openRelapsePeriod_reportsCurrentlySmoking', () => {
     // Arrange
     const input = state({
-      periods: [{ id: 1, startedAt: '2026-08-04T08:00:00+02:00', endedAt: null, averageCigarettesPerDay: 20, note: null }],
+      periods: [{ id: 1, startedAt: '2026-08-04T08:00:00+02:00', endedAt: null, averageUnitsPerDay: 20, note: null }],
     });
 
     // Act
@@ -96,8 +89,8 @@ describe('resolveAnchors', () => {
   it('resolveAnchors_slipOlderThanRelapseEnd_prefersTheRelapseEndForFastAnchor', () => {
     // Arrange
     const input = state({
-      slips: [{ id: 1, occurredAt: '2026-07-02T12:00:00+02:00', cigaretteCount: 2, trigger: null, note: null }],
-      periods: [{ id: 1, startedAt: '2026-07-01T00:00:00+02:00', endedAt: '2026-07-11T00:00:00+02:00', averageCigarettesPerDay: 20, note: null }],
+      slips: [{ id: 1, occurredAt: '2026-07-02T12:00:00+02:00', unitCount: 2, trigger: null, note: null }],
+      periods: [{ id: 1, startedAt: '2026-07-01T00:00:00+02:00', endedAt: '2026-07-11T00:00:00+02:00', averageUnitsPerDay: 20, note: null }],
     });
 
     // Act
@@ -112,8 +105,8 @@ describe('resolveAnchors', () => {
     const periodEnd = '2026-07-11T00:00:00+02:00';
     const slipAt = '2026-08-05T22:00:00+02:00';
     const input = state({
-      periods: [{ id: 1, startedAt: '2026-07-01T00:00:00+02:00', endedAt: periodEnd, averageCigarettesPerDay: 20, note: null }],
-      slips: [{ id: 1, occurredAt: slipAt, cigaretteCount: 2, trigger: null, note: null }],
+      periods: [{ id: 1, startedAt: '2026-07-01T00:00:00+02:00', endedAt: periodEnd, averageUnitsPerDay: 20, note: null }],
+      slips: [{ id: 1, occurredAt: slipAt, unitCount: 2, trigger: null, note: null }],
     });
 
     // Act

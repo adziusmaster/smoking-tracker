@@ -13,7 +13,7 @@ export function smokedDuringPeriods(periods: SmokingPeriod[], now: Date): number
     const start = new Date(period.startedAt).getTime();
     const end = period.endedAt ? new Date(period.endedAt).getTime() : now.getTime();
     const days = Math.max(0, end - start) / MS_PER_DAY;
-    return total + days * period.averageCigarettesPerDay;
+    return total + days * period.averageUnitsPerDay;
   }, 0);
 }
 
@@ -21,19 +21,23 @@ export function computeSavings(state: QuitState, now: Date): Savings {
   const { settings, slips, periods } = state;
 
   const elapsedDays = Math.max(0, now.getTime() - new Date(settings.quitDate).getTime()) / MS_PER_DAY;
-  const wouldHaveSmoked = elapsedDays * settings.cigarettesPerDay;
+  const wouldHaveSmoked = elapsedDays * settings.unitsPerDay;
 
-  const slipCigarettes = slips.reduce((total, slip) => total + slip.cigaretteCount, 0);
-  const periodCigarettes = smokedDuringPeriods(periods, now);
-  const actuallySmoked = slipCigarettes + periodCigarettes;
+  const slipUnits = slips.reduce((total, slip) => total + slip.unitCount, 0);
+  const periodUnits = smokedDuringPeriods(periods, now);
+  const actuallySmoked = slipUnits + periodUnits;
 
-  const cigarettesAvoided = Math.max(0, Math.round(wouldHaveSmoked - actuallySmoked));
+  const unitsAvoided = Math.max(0, Math.round(wouldHaveSmoked - actuallySmoked));
+  const { cost } = settings;
+  const before = estimateCigarettesBeforeQuitting(settings);
 
   return {
-    cigarettesAvoided,
+    unitsAvoided,
     // Integer arithmetic first, then divide, so pack price never drifts through a float.
-    moneySavedMinor: Math.round((cigarettesAvoided * settings.packPriceMinor) / settings.cigarettesPerPack),
-    minutesNotLost: cigarettesAvoided * MINUTES_LOST_PER_CIGARETTE,
-    lifetimeTotal: estimateCigarettesBeforeQuitting(settings) + Math.round(actuallySmoked),
+    moneySavedMinor: cost.kind === 'pack'
+      ? Math.round((unitsAvoided * cost.packPriceMinor) / cost.unitsPerPack)
+      : Math.round((unitsAvoided * cost.weeklySpendMinor) / (7 * settings.unitsPerDay)),
+    minutesNotLost: unitsAvoided * MINUTES_LOST_PER_CIGARETTE,
+    lifetimeCigarettes: before === null ? null : before + Math.round(actuallySmoked),
   };
 }

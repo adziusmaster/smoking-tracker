@@ -59,7 +59,7 @@ export default function Sos() {
     try {
       await addSlip(
         db,
-        { occurredAt: new Date().toISOString(), cigaretteCount: parsePositiveInt(count) ?? 1, trigger, note: null },
+        { occurredAt: new Date().toISOString(), unitCount: parsePositiveInt(count) ?? 1, trigger, note: null },
         new Date(),
       );
       router.replace('/');
@@ -73,9 +73,8 @@ export default function Sos() {
 
   if (outcome === 'slipped') {
     const parsedCount = parseNonNegativeInt(count) ?? 1;
-    const lifetimeAfterSlip = state
-      ? computeSavings(state, new Date()).lifetimeTotal + Math.max(1, parsedCount)
-      : null;
+    const lifetimeBefore = state ? computeSavings(state, new Date()).lifetimeCigarettes : null;
+    const lifetimeAfterSlip = lifetimeBefore === null ? null : lifetimeBefore + Math.max(1, parsedCount);
 
     return (
       <ScrollView contentContainerStyle={[styles.page, { paddingTop: insets.top + theme.space.xl }]}>

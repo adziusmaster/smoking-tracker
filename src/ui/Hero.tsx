@@ -31,8 +31,10 @@ export function Hero(props: {
       <Text style={styles.sub}>smoke-free · {props.phaseName}</Text>
       <View style={styles.row}>
         <Stat value={formatMoneyMinor(props.savings.moneySavedMinor, props.currency)} label="saved" />
-        <Stat value={String(props.savings.cigarettesAvoided)} label="not smoked" />
-        <Stat value={formatMinutesNotLost(props.savings.minutesNotLost)} label="time not lost" />
+        <Stat value={String(props.savings.unitsAvoided)} label="not smoked" />
+        {props.savings.minutesNotLost !== null ? (
+          <Stat value={formatMinutesNotLost(props.savings.minutesNotLost)} label="time not lost" />
+        ) : null}
       </View>
     </View>
   );

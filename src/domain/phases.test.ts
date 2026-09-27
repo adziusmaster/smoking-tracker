@@ -17,7 +17,7 @@ const anchors = (overrides: Partial<Anchors> = {}): Anchors => ({
   ...overrides,
 });
 
-const slip = (occurredAt: string, id = 1): Slip => ({ id, occurredAt, cigaretteCount: 3, trigger: null, note: null });
+const slip = (occurredAt: string, id = 1): Slip => ({ id, occurredAt, unitCount: 3, trigger: null, note: null });
 
 describe('resolvePhase', () => {
   it('resolvePhase_dayOne_returnsTheCrash', () => {

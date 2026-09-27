@@ -4,25 +4,42 @@ export type PhaseId = 'crash' | 'fog' | 'consolidation' | 'long-haul' | 'non-smo
 export type MilestoneStatus = 'reached' | 'in-progress' | 'future';
 export type SourceTier = 'a' | 'b';
 
+export type ProductId = 'cigarettes' | 'roll-your-own' | 'heated' | 'vape' | 'snus' | 'pouches';
+
+export const PRODUCT_IDS: readonly ProductId[] = ['cigarettes', 'roll-your-own', 'heated', 'vape', 'snus', 'pouches'];
+
+/** Pack-priced products (cigarettes, sticks, cans of pouches) or a weekly spend (vape). */
+export type CostModel =
+  | { kind: 'pack'; unitsPerPack: number; packPriceMinor: number }
+  | { kind: 'weekly'; weeklySpendMinor: number };
+
+export interface CigaretteHistory {
+  months: number;
+  cigarettesPerDay: number;
+}
+
 export interface Settings {
   quitDate: string;            // always `date.toISOString()` — UTC, ending 'Z'
-  cigarettesPerDay: number;
-  cigarettesPerPack: number;
-  packPriceMinor: number;      // integer minor units
+  product: ProductId;
+  /** Cigarettes, sticks, pouches or vape uses per day, in the product's own unit. */
+  unitsPerDay: number;
+  /** 'weekly' exactly when product is 'vape'. */
+  cost: CostModel;
   currency: string;            // ISO 4217
   timezone: string;            // IANA
   /**
-   * How long the user smoked before quitting, in whole months. 0 if not given.
-   * The lifetime cigarette total is DERIVED from this and cigarettesPerDay — see
-   * src/domain/lifetime.ts — so correcting the daily rate corrects the total.
+   * Cigarette smoking history, or null if none was given. The lifetime cigarette estimate is
+   * DERIVED from it (see src/domain/lifetime.ts). For cigarettes and roll-your-own the rate is
+   * the current unitsPerDay, so correcting the daily rate corrects the total.
    */
-  smokedForMonths: number;
+  cigaretteHistory: CigaretteHistory | null;
 }
 
 export interface Slip {
   id: number;
   occurredAt: string;
-  cigaretteCount: number;
+  /** Units of the product being quit (cigarettes, sticks, pouches; 1 for a vape session). */
+  unitCount: number;
   trigger: SlipTrigger | null;
   note: string | null;
 }
@@ -31,7 +48,7 @@ export interface SmokingPeriod {
   id: number;
   startedAt: string;
   endedAt: string | null;      // null means currently smoking
-  averageCigarettesPerDay: number;
+  averageUnitsPerDay: number;
   note: string | null;
 }
 
@@ -68,10 +85,12 @@ export interface Anchors {
 }
 
 export interface Savings {
-  cigarettesAvoided: number;
+  unitsAvoided: number;
   moneySavedMinor: number;
-  minutesNotLost: number;
-  lifetimeTotal: number;
+  /** null unless the product is combustible — the 20-minute figure is measured in cigarettes. */
+  minutesNotLost: number | null;
+  /** Estimated cigarettes smoked in total; null when there is no cigarette history. */
+  lifetimeCigarettes: number | null;
 }
 
 export interface Source {

@@ -78,6 +78,21 @@ export const MIGRATIONS: Migration[] = [
        WHERE lifetime_baseline > 0;
     `,
   },
+  {
+    version: 3,
+    up: `
+      -- What the user is quitting. Existing rows default to cigarettes, which is exactly
+      -- what they were before this column existed.
+      ALTER TABLE settings ADD COLUMN product TEXT NOT NULL DEFAULT 'cigarettes'
+        CHECK (product IN ('cigarettes','roll-your-own','heated','vape','snus','pouches'));
+      -- Vape cost model. NULL for every pack-priced product.
+      ALTER TABLE settings ADD COLUMN weekly_spend_minor INTEGER NULL CHECK (weekly_spend_minor >= 0);
+      -- Cigarette rate before switching, for non-combustible products only. For cigarettes
+      -- and roll-your-own the history rate IS cigarettes_per_day, so this stays NULL.
+      ALTER TABLE settings ADD COLUMN prior_cigarettes_per_day INTEGER NULL
+        CHECK (prior_cigarettes_per_day > 0);
+    `,
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]?.version ?? 0;
