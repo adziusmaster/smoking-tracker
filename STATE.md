@@ -134,6 +134,9 @@ The app is free, no ads, no purchases — a deliberate decision, not a TODO.
   cigarettes becomes 5 pouches). The screen warns before saving; nothing is converted.
 - **Heated tobacco has no heart-rate milestone** — deliberately; no study measures it. See the
   spec's amendment note.
+- **Settings save can claim success after a failed refresh.** `useQuitState().reload()` catches
+  its own errors, so the "Saved, but couldn't refresh" branch in `app/settings.tsx` never runs.
+  Fix by having `reload` report success; it needs a hook test harness this repo does not have.
 - **The upload-key reset (below) status is unknown** as of 2026-09-28 — check Play Console.
 
 - **`expo-doctor` 19/20** — the patch drift above.

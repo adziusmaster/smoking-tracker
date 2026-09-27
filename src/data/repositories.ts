@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import type { QuitState, Settings, Slip, SlipTrigger, SmokingPeriod } from '@/domain/types';
-import { rowToSettings, settingsToParams, type SettingsRow } from './settingsMapping';
+import { readableSettingsOrRaw, rowToSettings, settingsToParams, type SettingsRow } from './settingsMapping';
 import {
   DELETE_ALL,
   END_OPEN_SMOKING_PERIOD,
@@ -129,8 +129,20 @@ export async function listCheckins(db: SQLiteDatabase, limit: number): Promise<C
 // calculation, and it lives in `data/`, not `domain/`.
 /** Everything the user has stored, as JSON. This is the only "backup" v1 offers. */
 export async function exportAll(db: SQLiteDatabase): Promise<string> {
-  const state = await loadQuitState(db);
   const checkins = await listCheckins(db, 100_000);
+  const settingsRow = await db.getFirstAsync<SettingsRow>(SELECT_SETTINGS);
+  const settings = settingsRow ? readableSettingsOrRaw(settingsRow) : null;
+  if (settings !== null && !settings.readable) {
+    // The app cannot interpret its own settings, but the user's history must still be exportable.
+    const slips = await db.getAllAsync(SELECT_SLIPS);
+    const periods = await db.getAllAsync(SELECT_SMOKING_PERIODS);
+    return JSON.stringify(
+      { exportedAt: new Date().toISOString(), unreadableSettings: settings, rawSlips: slips, rawPeriods: periods, checkins },
+      null,
+      2,
+    );
+  }
+  const state = await loadQuitState(db);
   return JSON.stringify({ exportedAt: new Date().toISOString(), state, checkins }, null, 2);
 }
 

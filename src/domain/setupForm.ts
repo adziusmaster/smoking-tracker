@@ -131,5 +131,14 @@ export function defaultValues(product: ProductId, defaultPerPack: number | null)
  */
 export function switchProduct(values: SetupFormValues, product: ProductId, defaultPerPack: number | null): SetupFormValues {
   const unitsPerPack = values.unitsPerPack.trim() === '' && defaultPerPack !== null ? String(defaultPerPack) : values.unitsPerPack;
-  return { ...values, product, unitsPerPack };
+  const next = { ...values, product, unitsPerPack };
+
+  // A smoker moving to a non-combustible product keeps their cigarette history: it is what the
+  // long-term milestones measure. Without this the "smoked before?" answer defaults to No and
+  // saving silently deletes the history.
+  const hadHistory = values.historyYears.trim() !== '' || values.historyMonths.trim() !== '';
+  if (isCombustible(values.product) && !isCombustible(product) && hadHistory) {
+    return { ...next, smokedBefore: true, priorPerDay: values.priorPerDay.trim() === '' ? values.unitsPerDay : values.priorPerDay };
+  }
+  return next;
 }

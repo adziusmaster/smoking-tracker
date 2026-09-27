@@ -195,3 +195,29 @@ describe('switchProduct', () => {
     expect(after.unitsPerDay).toBe('12');
   });
 });
+
+describe('switchProduct from a combustible product', () => {
+  it('switchProduct_smokerToHeated_carriesCigaretteHistoryAcross', () => {
+    // Arrange — a 10-year, 15-a-day smoker as Settings seeds them
+    const smoker = valuesFromSettings(cigaretteSettings({ cigaretteHistory: { months: 120, cigarettesPerDay: 15 } }));
+
+    // Act
+    const switched = switchProduct(smoker, 'heated', 20);
+    const result = parseSetupForm(switched, { ...context, labels: STICKS });
+
+    // Assert
+    expect(switched.smokedBefore).toBe(true);
+    expect(result.ok && result.settings.cigaretteHistory).toEqual({ months: 120, cigarettesPerDay: 15 });
+  });
+
+  it('switchProduct_smokerWithoutHistoryToVape_leavesSmokedBeforeUnset', () => {
+    // Arrange
+    const smoker = valuesFromSettings(cigaretteSettings({ cigaretteHistory: null }));
+
+    // Act
+    const switched = switchProduct(smoker, 'vape', null);
+
+    // Assert
+    expect(switched.smokedBefore).toBe(false);
+  });
+});

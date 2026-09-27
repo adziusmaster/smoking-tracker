@@ -60,6 +60,20 @@ export function rowToSettings(row: SettingsRow): Settings {
   };
 }
 
+/**
+ * For the export only: a row the app cannot read must still leave the building, because the
+ * export is the user's only backup. Normal loading keeps failing loudly via rowToSettings.
+ */
+export function readableSettingsOrRaw(
+  row: SettingsRow,
+): { readable: true; settings: Settings } | { readable: false; row: SettingsRow; reason: string } {
+  try {
+    return { readable: true, settings: rowToSettings(row) };
+  } catch (caught) {
+    return { readable: false, row, reason: caught instanceof Error ? caught.message : String(caught) };
+  }
+}
+
 /** Positional parameters for UPSERT_SETTINGS, minus the two trailing timestamps. */
 export function settingsToParams(
   settings: Settings,

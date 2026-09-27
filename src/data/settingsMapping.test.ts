@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rowToSettings, settingsToParams, type SettingsRow } from './settingsMapping';
+import { readableSettingsOrRaw, rowToSettings, settingsToParams, type SettingsRow } from './settingsMapping';
 
 const row = (overrides: Partial<SettingsRow> = {}): SettingsRow => ({
   quit_date: '2026-06-26T06:00:00.000Z',
@@ -84,5 +84,26 @@ describe('settingsToParams', () => {
     // Assert
     expect(params[9]).toBeNull();
     expect(params[6]).toBe(96);
+  });
+});
+
+describe('readableSettingsOrRaw', () => {
+  it('readableSettingsOrRaw_validRow_returnsSettings', () => {
+    // Arrange & Act
+    const result = readableSettingsOrRaw(row());
+
+    // Assert
+    expect(result).toEqual({ readable: true, settings: rowToSettings(row()) });
+  });
+
+  it('readableSettingsOrRaw_corruptVapeRow_returnsTheRawRowWithTheReason', () => {
+    // Arrange — the export must still work when the app cannot read its own settings
+    const corrupt = row({ product: 'vape', weekly_spend_minor: null });
+
+    // Act
+    const result = readableSettingsOrRaw(corrupt);
+
+    // Assert
+    expect(result).toEqual({ readable: false, row: corrupt, reason: 'vape settings row has no weekly_spend_minor' });
   });
 });
