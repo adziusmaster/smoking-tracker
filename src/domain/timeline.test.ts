@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { cigaretteSettings } from './testSettings';
 import { buildTimeline } from './timeline';
-import { MS_PER_DAY, type Milestone, type Phase, type QuitState } from './types';
+import { MILESTONES } from '@/content/milestones';
+import { PHASES } from '@/content/phases';
+import { MS_PER_DAY, type Milestone, type Phase, type QuitState, type Settings, type TimelineViewModel } from './types';
 
 const QUIT = '2026-06-26T08:00:00+02:00';
 const NOW = new Date('2026-08-08T08:00:00+02:00');
@@ -116,5 +118,75 @@ describe('buildTimeline', () => {
 
     // Assert
     expect(result.nextMilestone).toBeNull();
+  });
+});
+
+describe('buildTimeline by product', () => {
+  const buildReal = (settings: Settings, now: Date = NOW): TimelineViewModel =>
+    buildTimeline({ state: { settings, slips: [], periods: [] }, milestones: MILESTONES, phases: PHASES, now });
+  const ids = (vm: TimelineViewModel) => vm.chapters.flatMap((c) => c.milestones.map((s) => s.milestone.id));
+  const find = (vm: TimelineViewModel, id: string) => vm.chapters.flatMap((c) => c.milestones).find((s) => s.milestone.id === id);
+  const heatedSwitcher = cigaretteSettings({ quitDate: QUIT, product: 'heated', cigaretteHistory: { months: 60, cigarettesPerDay: 10 } });
+  const vapeNoHistory = cigaretteSettings({ quitDate: QUIT, product: 'vape', cost: { kind: 'weekly', weeklySpendMinor: 1500 }, cigaretteHistory: null });
+
+  it('timeline_heatedWithHistory_showsLongTermButNotCarbonMonoxide', () => {
+    // Arrange & Act
+    const vm = buildReal(heatedSwitcher);
+
+    // Assert
+    expect(ids(vm)).toContain('heart-attack-risk');
+    expect(ids(vm)).not.toContain('carbon-monoxide');
+    expect(ids(vm)).not.toContain('long-term-unknown');
+  });
+
+  it('timeline_heatedSwitcher_marksOnlyLongTermMilestonesConservative', () => {
+    // Arrange & Act
+    const vm = buildReal(heatedSwitcher);
+
+    // Assert
+    expect(find(vm, 'heart-attack-risk')?.conservativelyAnchored).toBe(true);
+    expect(find(vm, 'nicotine-cleared')?.conservativelyAnchored).toBe(false);
+  });
+
+  it('timeline_cigarettes_neverMarksMilestonesConservative', () => {
+    // Arrange & Act
+    const vm = buildReal(cigaretteSettings({ quitDate: QUIT }));
+
+    // Assert
+    expect(vm.chapters.flatMap((c) => c.milestones).some((s) => s.conservativelyAnchored)).toBe(false);
+  });
+
+  it('timeline_vapeWithoutHistory_showsUnknownLongTermAndNoAcsRiskMilestone', () => {
+    // Arrange & Act
+    const vm = buildReal(vapeNoHistory);
+
+    // Assert
+    expect(ids(vm)).toContain('long-term-unknown');
+    expect(ids(vm)).not.toContain('lung-cancer-halved');
+  });
+
+  it('timeline_heatedThirtyMinutesIn_heartRateMilestoneNotYetReached', () => {
+    // Arrange — cigarettes reach it at 20 minutes; heated tobacco only after about an hour
+    const settings = cigaretteSettings({ product: 'heated', quitDate: '2026-08-08T07:30:00+02:00', cigaretteHistory: null });
+
+    // Act
+    const vm = buildReal(settings);
+
+    // Assert
+    expect(find(vm, 'heart-rate')?.status).toBe('future');
+  });
+
+  it('timeline_snusVsPouches_onlySnusSeesMucosaMilestone', () => {
+    // Arrange
+    const snus = cigaretteSettings({ quitDate: QUIT, product: 'snus', cigaretteHistory: null });
+    const pouches = cigaretteSettings({ quitDate: QUIT, product: 'pouches', cigaretteHistory: null });
+
+    // Act
+    const snusIds = ids(buildReal(snus));
+    const pouchIds = ids(buildReal(pouches));
+
+    // Assert
+    expect(snusIds).toContain('snus-mucosa');
+    expect(pouchIds).not.toContain('snus-mucosa');
   });
 });

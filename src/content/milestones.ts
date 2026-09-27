@@ -1,5 +1,19 @@
 import { MS_PER_DAY, MS_PER_HOUR, MS_PER_MINUTE, type Milestone } from '@/domain/types';
 
+/*
+ * Audiences follow the research recorded in
+ * docs/superpowers/specs/2026-09-28-nicotine-products-design.md. Deliberately EXCLUDED:
+ *  - carbon-monoxide milestones for heated, vape, snus and pouches (their CO is already at
+ *    environmental level — FDA IQOS order, Hartmann-Boyce 2023);
+ *  - any dated cancer or heart milestone for non-combustible products without cigarette history
+ *    (FDA, WHO and Cochrane all say it is not established);
+ *  - lung, cilia and taste recovery for non-combustible products (no data);
+ *  - "blood pressure improves" for snus or pouches (af Geijerstam 2025 measured a small rise);
+ *  - "gums grow back" (recession is structural); pancreatic-cancer claims for snus either way;
+ *  - "X% safer" / "95% less harmful"; "one shisha session equals 100 cigarettes".
+ * Roll-your-own shares every cigarette claim: equal CO and carcinogen exposure (ryo-harm).
+ */
+
 const DAYS = (n: number) => n * MS_PER_DAY;
 const YEARS = (n: number) => n * 365.25 * MS_PER_DAY;
 const MONTHS = (n: number) => n * 30.44 * MS_PER_DAY;
@@ -14,7 +28,11 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'restarts',
     sourceId: 'acs',
     phaseId: 'crash',
-    audience: 'all',
+    audience: 'inhaled',
+    overrides: {
+      heated: { offsetMs: MS_PER_HOUR, offsetEndMs: null, sourceId: 'nicotine-hr-acute' },
+      vape: { offsetMs: MS_PER_HOUR, offsetEndMs: null, sourceId: 'nicotine-hr-acute' },
+    },
   },
   {
     id: 'carbon-monoxide',
@@ -25,7 +43,7 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'restarts',
     sourceId: 'acs',
     phaseId: 'crash',
-    audience: 'all',
+    audience: 'smoked',
   },
   {
     id: 'nicotine-cleared',
@@ -34,19 +52,55 @@ export const MILESTONES: Milestone[] = [
     offsetMs: DAYS(3),
     offsetEndMs: null,
     slipBehavior: 'restarts',
-    sourceId: 'co-halflife',
+    sourceId: 'benowitz-2009',
     phaseId: 'crash',
     audience: 'all',
   },
   {
     id: 'withdrawal-peak',
     title: 'The withdrawal peak is behind you',
-    body: 'Symptoms usually start within 4–24 hours and peak around day 3. This is the hardest it gets, and it is now behind you.',
+    body: 'Symptoms usually start within 4–24 hours and peak around day 3. This is the hardest it gets, and it is now behind you. Measured in smokers and vapers; for heated tobacco and pouches it is inferred from how nicotine works.',
     offsetMs: DAYS(3),
     offsetEndMs: null,
     slipBehavior: 'restarts',
     sourceId: 'withdrawal-peak',
     phaseId: 'crash',
+    audience: 'all',
+    overrides: {
+      vape: { offsetMs: DAYS(3), offsetEndMs: null, sourceId: 'hughes-2020' },
+    },
+  },
+  {
+    id: 'first-week',
+    title: 'The first week is usually the roughest for sleep',
+    body: 'More night waking is a normal part of early withdrawal. It is temporary: sleep is typically settling by the end of the first month.',
+    offsetMs: DAYS(7),
+    offsetEndMs: null,
+    slipBehavior: 'restarts',
+    sourceId: 'jaehne-2015',
+    phaseId: 'fog',
+    audience: 'all',
+  },
+  {
+    id: 'oral-heart-rate',
+    title: 'Your resting heart rate typically dips this week',
+    body: 'People who stopped snus or nicotine pouches had a lower resting pulse after one week. In the same study it drifted back toward its earlier level by week eight, so treat this as a short-term change.',
+    offsetMs: DAYS(7),
+    offsetEndMs: null,
+    slipBehavior: 'restarts',
+    sourceId: 'af-geijerstam-2025',
+    phaseId: 'fog',
+    audience: 'oral',
+  },
+  {
+    id: 'two-week-window',
+    title: 'Past the highest-risk window',
+    body: 'Any use in the first two weeks is the strongest early predictor of going back. Two clean weeks puts that behind you. Measured in smokers; for other products it is inferred.',
+    offsetMs: DAYS(14),
+    offsetEndMs: null,
+    slipBehavior: 'restarts',
+    sourceId: 'kenford-1994',
+    phaseId: 'fog',
     audience: 'all',
   },
   {
@@ -57,6 +111,17 @@ export const MILESTONES: Milestone[] = [
     offsetEndMs: null,
     slipBehavior: 'cumulative',
     sourceId: 'taste-smell',
+    phaseId: 'fog',
+    audience: 'smoked',
+  },
+  {
+    id: 'withdrawal-fades',
+    title: 'Most withdrawal symptoms have faded',
+    body: 'Irritability, restlessness, poor concentration and low mood peak in week one and usually fade over two to four weeks. For some people a few linger longer, and that is still normal.',
+    offsetMs: DAYS(14),
+    offsetEndMs: DAYS(28),
+    slipBehavior: 'restarts',
+    sourceId: 'hughes-2007',
     phaseId: 'fog',
     audience: 'all',
   },
@@ -72,6 +137,50 @@ export const MILESTONES: Milestone[] = [
     audience: 'all',
   },
   {
+    id: 'cravings-rarer',
+    title: 'Cravings usually come far less often',
+    body: 'Somewhere between week four and week six most people notice cravings have become occasional rather than constant. Each one still lasts only a few minutes.',
+    offsetMs: DAYS(28),
+    offsetEndMs: DAYS(42),
+    slipBehavior: 'restarts',
+    sourceId: 'hse-cravings',
+    phaseId: 'consolidation',
+    audience: 'all',
+  },
+  {
+    id: 'snus-mucosa',
+    title: 'The lining where you held snus is healing',
+    body: 'The white, wrinkled patch where snus sat often heals within weeks of stopping; studies found normal tissue by three to six months. Gum recession is different and does not reverse, so mention it to your dentist.',
+    offsetMs: DAYS(42),
+    offsetEndMs: null,
+    slipBehavior: 'restarts',
+    sourceId: 'snus-lesions-2026',
+    phaseId: 'consolidation',
+    audience: 'snus',
+  },
+  {
+    id: 'mood-lifts',
+    title: 'Mood, anxiety and stress tend to be better than if you had kept going',
+    body: 'Studies following people for six weeks or more found less anxiety, depression and stress after quitting than in people who carried on. Measured in people who quit smoking.',
+    offsetMs: DAYS(42),
+    offsetEndMs: null,
+    slipBehavior: 'cumulative',
+    sourceId: 'taylor-2021',
+    phaseId: 'consolidation',
+    audience: 'all',
+  },
+  {
+    id: 'appetite',
+    title: 'Appetite changes settle',
+    body: 'A bigger appetite is common after stopping nicotine, and most of any weight change happens in the first three months. It varies widely between people — this is a heads-up, not a forecast.',
+    offsetMs: MONTHS(1),
+    offsetEndMs: MONTHS(3),
+    slipBehavior: 'cumulative',
+    sourceId: 'aubin-2012',
+    phaseId: 'consolidation',
+    audience: 'all',
+  },
+  {
     id: 'cough-breathlessness',
     title: 'Coughing and breathlessness decrease',
     body: 'The cilia lining your airways have regrown enough to clear tar, which is also why the cough can get worse before it gets better.',
@@ -80,7 +189,23 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'cumulative',
     sourceId: 'acs',
     phaseId: 'consolidation',
-    audience: 'all',
+    audience: 'smoked',
+  },
+  {
+    id: 'long-term-unknown',
+    title: 'Long-term effects are not yet known',
+    body: 'No health authority publishes a recovery timeline for this product, because it has not been studied for long enough. What is certain is that stopping ends the ongoing exposure — so there are no dated milestones here, only that.',
+    offsetMs: null,
+    offsetEndMs: null,
+    slipBehavior: 'qualitative',
+    sourceId: 'who-htp-2020',
+    phaseId: 'long-haul',
+    audience: 'unknown-long-term',
+    overrides: {
+      vape: { offsetMs: null, offsetEndMs: null, sourceId: 'cochrane-ecig-2025' },
+      snus: { offsetMs: null, offsetEndMs: null, sourceId: 'fda-snus-mrtp' },
+      pouches: { offsetMs: null, offsetEndMs: null, sourceId: 'fda-zyn-mrtp' },
+    },
   },
   {
     id: 'heart-attack-risk',
@@ -91,7 +216,7 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'cumulative',
     sourceId: 'acs',
     phaseId: 'long-haul',
-    audience: 'all',
+    audience: 'smoking-history',
   },
   {
     id: 'oral-cancer-stroke',
@@ -102,7 +227,7 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'cumulative',
     sourceId: 'acs',
     phaseId: 'long-haul',
-    audience: 'all',
+    audience: 'smoking-history',
   },
   {
     id: 'lung-cancer-halved',
@@ -113,7 +238,7 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'cumulative',
     sourceId: 'acs',
     phaseId: 'non-smoker',
-    audience: 'all',
+    audience: 'smoking-history',
   },
   {
     id: 'chd-nonsmoker',
@@ -124,7 +249,7 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'cumulative',
     sourceId: 'acs',
     phaseId: 'non-smoker',
-    audience: 'all',
+    audience: 'smoking-history',
   },
   {
     id: 'multi-cancer-nonsmoker',
@@ -135,6 +260,6 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'cumulative',
     sourceId: 'acs',
     phaseId: 'non-smoker',
-    audience: 'all',
+    audience: 'smoking-history',
   },
 ];

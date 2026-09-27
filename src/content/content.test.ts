@@ -2,6 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { MILESTONES } from './milestones';
 import { SOURCES } from './sources';
 import { PHASES } from './phases';
+import { applicableMilestones, audienceIncludes } from '@/domain/products';
+import { cigaretteSettings } from '@/domain/testSettings';
+import type { ProductId, Settings } from '@/domain/types';
+
+const PRODUCTS: ProductId[] = ['cigarettes', 'roll-your-own', 'heated', 'vape', 'snus', 'pouches'];
+const settingsFor = (product: ProductId, withHistory: boolean): Settings =>
+  cigaretteSettings({
+    product,
+    cost: product === 'vape' ? { kind: 'weekly', weeklySpendMinor: 1500 } : { kind: 'pack', unitsPerPack: 20, packPriceMinor: 1000 },
+    cigaretteHistory: withHistory ? { months: 60, cigarettesPerDay: 10 } : null,
+  });
+const everyProfile = PRODUCTS.flatMap((p) => [settingsFor(p, false), settingsFor(p, true)]);
+const label = (s: Settings) => `${s.product}/${s.cigaretteHistory ? 'history' : 'none'}`;
 
 describe('MILESTONES', () => {
   it('MILESTONES_everyRecord_hasResolvableSourceId', () => {
@@ -117,5 +130,77 @@ describe('PHASES', () => {
 
     // Assert
     expect(orphans.map((m) => m.id)).toEqual([]);
+  });
+});
+
+describe('MILESTONES by product', () => {
+  it('MILESTONES_everyOverride_hasResolvableSourceId', () => {
+    // Arrange
+    const known = new Set(Object.keys(SOURCES));
+
+    // Act
+    const unresolved = MILESTONES.flatMap((m) =>
+      Object.values(m.overrides ?? {}).filter((o) => !known.has(o.sourceId)).map(() => m.id));
+
+    // Assert
+    expect(unresolved).toEqual([]);
+  });
+
+  it('MILESTONES_everyProfile_hasADatedMilestoneInEachEarlyPhase', () => {
+    // Arrange
+    const earlyPhases = ['crash', 'fog', 'consolidation'] as const;
+
+    // Act
+    const gaps = everyProfile.flatMap((settings) => {
+      const visible = applicableMilestones(MILESTONES, settings);
+      return earlyPhases
+        .filter((phaseId) => !visible.some((m) => m.phaseId === phaseId && m.offsetMs !== null))
+        .map((phaseId) => `${label(settings)}/${phaseId}`);
+    });
+
+    // Assert
+    expect(gaps).toEqual([]);
+  });
+
+  it('MILESTONES_smokedAudience_neverReachesANonCombustibleProduct', () => {
+    // Arrange
+    const nonCombustible = everyProfile.filter((s) => s.product !== 'cigarettes' && s.product !== 'roll-your-own');
+
+    // Act
+    const leaks = nonCombustible.filter((s) => audienceIncludes('smoked', s));
+
+    // Assert
+    expect(leaks).toEqual([]);
+  });
+
+  it('MILESTONES_carbonMonoxide_isVisibleOnlyToCombustibleProducts', () => {
+    // Arrange & Act
+    const seeing = everyProfile
+      .filter((s) => applicableMilestones(MILESTONES, s).some((m) => m.id === 'carbon-monoxide'))
+      .map((s) => s.product);
+
+    // Assert
+    expect([...new Set(seeing)]).toEqual(['cigarettes', 'roll-your-own']);
+  });
+
+  it('MILESTONES_longTermUnknown_appearsExactlyWhenNoSmokingHistory', () => {
+    // Arrange & Act
+    const seeing = everyProfile
+      .filter((s) => applicableMilestones(MILESTONES, s).some((m) => m.id === 'long-term-unknown'))
+      .map(label);
+
+    // Assert
+    expect(seeing).toEqual(['heated/none', 'vape/none', 'snus/none', 'pouches/none']);
+  });
+
+  it('MILESTONES_bannedOverclaims_areAbsentFromEveryTitleAndBody', () => {
+    // Arrange — excluded by the research for this release, see the spec
+    const banned = ['95%', 'safer', 'gums grow', 'recession reverses', 'blood pressure normal', 'healing lost'];
+
+    // Act
+    const offending = MILESTONES.filter((m) => banned.some((b) => `${m.title} ${m.body}`.toLowerCase().includes(b)));
+
+    // Assert
+    expect(offending.map((m) => m.id)).toEqual([]);
   });
 });

@@ -142,6 +142,8 @@ export interface MilestoneState {
   projectedAt: string | null;
   /** 0..1, only for an in-progress ranged milestone; null otherwise. */
   progress: number | null;
+  /** A switcher's smoking-recovery milestone, counted conservatively from the final quit date. */
+  conservativelyAnchored: boolean;
 }
 
 export interface Phase {

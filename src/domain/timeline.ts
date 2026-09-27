@@ -1,6 +1,7 @@
 import { resolveAnchors } from './anchors';
 import { elapsedSince } from './elapsed';
 import { resolveMilestones } from './milestones';
+import { applicableMilestones, isConservativelyAnchored } from './products';
 import { resolveDangerWindow, resolvePhase } from './phases';
 import { computeSavings } from './savings';
 import { longestSmokeFreeStreak } from './streaks';
@@ -32,7 +33,14 @@ function pickNext(states: MilestoneState[]): MilestoneState | null {
 export function buildTimeline({ state, milestones, phases, now }: TimelineInput): TimelineViewModel {
   const anchors = resolveAnchors(state, now);
   const currentPhase = resolvePhase(phases, anchors, now);
-  const milestoneStates = resolveMilestones(milestones, anchors, now);
+  // Filter and apply per-product overrides BEFORE resolving, so nothing downstream —
+  // chapters, nextMilestone, notification planning — can see a claim that does not apply.
+  const milestoneStates = resolveMilestones(applicableMilestones(milestones, state.settings), anchors, now).map(
+    (milestoneState) => ({
+      ...milestoneState,
+      conservativelyAnchored: isConservativelyAnchored(milestoneState.milestone, state.settings),
+    }),
+  );
 
   const currentIndex = phases.findIndex((phase) => phase.id === currentPhase.id);
 
