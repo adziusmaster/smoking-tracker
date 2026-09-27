@@ -1,6 +1,6 @@
 # STATE — Smoke Free
 
-Resume point. Last updated 2026-08-11.
+Resume point. Last updated 2026-09-28.
 
 `main` is green and pushed. The app is feature-complete for v1 and nothing is published yet —
 **there are zero installs anywhere**, which matters for several decisions below.
@@ -8,13 +8,34 @@ Resume point. Last updated 2026-08-11.
 | | |
 | --- | --- |
 | Repo | `adziusmaster/smoking-tracker` (private) |
-| Branch | `main`, all work merged, tree clean |
-| Tests | 118 passing across 14 files |
+| Branch | `feat/nicotine-products` (multi-product support, not yet merged); `main` is the v1 cigarettes-only app |
+| Tests | 207 passing across 17 files |
+| Schema | version 3 (adds `product`, `weekly_spend_minor`, `prior_cigarettes_per_day`) |
 | Typecheck | clean |
-| `expo-doctor` | 19/20 — see Known items |
+| `expo-doctor` | 20/21 — the same patch drift, see Known items |
 | Package name | `com.adziusmaster.smokefree` (permanent once published) |
 | EAS project | `@adrzej-dev/smoking-tracker` · `b8ec62ea-af25-4199-99e4-b3fbf9962e00` |
 | Last `versionCode` | 4 (EAS-managed, `appVersionSource: remote`) |
+
+## Release roadmap (decided 2026-09-28)
+
+The owner chose to **build everything before closed testing** (the 14-day clock starts at the
+end). Sub-projects, each with its own spec → plan → build:
+
+1. **Nicotine products** — done on `feat/nicotine-products`: cigarettes, roll-your-own, heated,
+   vape, snus, pouches; product-filtered, citation-checked milestones
+   (`docs/citation-check-2026-09.md`).
+2. **Design system + new icon** — full restyle, dark mode. Moved ahead of features so later
+   screens are built once.
+3. **Something new every day** — daily card, savings goal, reasons, stronger SOS, cravings beaten.
+4. **Insights & journal.**
+5. **Notification preferences + backup/restore to file.**
+6. **Home-screen widget** (native module — riskiest for EAS builds, so last).
+7. **Store assets** — new display name (**"Smoke Free" collides with an established Play app**),
+   listing (draft: `store-assets/listing-draft.md`), icon, feature graphic, captioned device
+   screenshots built the way PurePrep/CoreChoice do it.
+
+The app is free, no ads, no purchases — a deliberate decision, not a TODO.
 
 ## Do these next, in this order
 
@@ -109,6 +130,12 @@ Resume point. Last updated 2026-08-11.
 
 ## Known items, none blocking
 
+- **Changing product in Settings reinterprets logged slips** in the new unit (a slip of 5
+  cigarettes becomes 5 pouches). The screen warns before saving; nothing is converted.
+- **Heated tobacco has no heart-rate milestone** — deliberately; no study measures it. See the
+  spec's amendment note.
+- **The upload-key reset (below) status is unknown** as of 2026-09-28 — check Play Console.
+
 - **`expo-doctor` 19/20** — the patch drift above.
 - **`longestStreak` reads 0** if the only smoking period starts on the quit date, so Hero
   shows "your best run was 0 minutes". Accurate but graceless for someone who relapsed the
@@ -116,18 +143,13 @@ Resume point. Last updated 2026-08-11.
 - **Chapter header after a slip** reads "The Crash — Behind you" with a green tick while every
   milestone inside it reads "Ahead of you". Semantically correct — the phase tracks sustained
   abstinence, the milestones track the last cigarette — but it reads as a contradiction.
-- **Settings save** reports a write failure if `saveSettings` succeeds and the following
-  `reload()` throws.
 - **Double-tap protection is UI-only.** `INSERT_SLIP` has no DB-level uniqueness guard; both
-  slip paths (`app/sos.tsx`, `app/log.tsx`) hold a `useRef` gate. Repeat slips are legitimate,
+  slip paths use `src/ui/useSubmitGuard.ts`. Repeat slips are legitimate,
   so a DB constraint would be wrong.
-- **Slip logging is duplicated** between `app/sos.tsx` and `app/log.tsx` — same shape twice.
-  One helper would do.
 - **`app/log.tsx` loads state twice per slip** (`reload()` then `loadQuitState`).
 - **`milestone_events.reached_at` goes stale** if the quit date is edited in Settings
   (`UPSERT_MILESTONE_EVENT` is `DO NOTHING`). Unobservable today because nothing reads that
   table; becomes a bug the moment something does.
-- **Years input has no upper bound** — "500" years is accepted.
 - **Migration v2's back-fill will never fire.** With zero installs, no row will ever hold a
   `lifetime_baseline > 0`. It stays as a safety net for a case that can no longer arise.
 - **The migration's transaction wiring is unverified by tests.** `src/data/db.ts` imports

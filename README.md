@@ -1,10 +1,11 @@
 # Smoke Free
 
-A local-first, offline quit-smoking tracker for Android, built with Expo SDK 57 and
-`expo-router`. It tracks how long you have gone without a cigarette, what that is doing
-to your body according to sourced medical literature, and what to expect next — money
-saved, cigarettes not smoked, time not lost, a phase-based coping timeline, and a timed
-craving intervention (SOS). There is no account, no server, and no network call anywhere
+A local-first, offline quit tracker for Android, built with Expo SDK 57 and `expo-router`,
+for cigarettes, roll-your-own, heated tobacco, vapes, snus and nicotine pouches. It tracks how
+long you have gone without nicotine, what that is doing to your body according to sourced
+medical literature — filtered to what is evidenced for the product you quit — and what to
+expect next: money saved, units not used, a phase-based coping timeline, and a timed craving
+intervention (SOS). There is no account, no server, and no network call anywhere
 in the app. See `docs/privacy-policy.md` for the policy this claim is backed by.
 
 **Picking the work back up?** Start with [STATE.md](STATE.md) — it holds the release status,
