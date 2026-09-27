@@ -152,8 +152,34 @@ export interface Phase {
   startMs: number;
   endMs: number | null;        // null means open-ended
   whatsHappening: string;
+  /** Replaces whatsHappening for products that burn nothing. */
+  whatsHappeningNicotine: string;
+  /** Replaces the nicotine text for snus and pouches, where one exists. */
+  whatsHappeningOral: string | null;
   whyYouFeelThisWay: string;
-  howToCope: string[];
+  howToCope: readonly string[];
+  /** Appended to howToCope only for combustible products (cilia, tar). */
+  howToCopeSmokeOnly: readonly string[];
+  /** Replaces name for non-combustible products ("Non-Smoker" → "Nicotine-Free"). */
+  nameNicotine: string | null;
+}
+
+export interface UnitWords {
+  one: string;
+  many: string;
+}
+
+export interface TipContent {
+  whatsHappening: string;
+  whyYouFeelThisWay: string;
+  howToCope: readonly string[];
+}
+
+/** The post-slip tip set. Its first line names carbon monoxide, hence the variants. */
+export interface DangerTips {
+  whatsHappening: CopyVariants<string>;
+  whyYouFeelThisWay: string;
+  howToCope: readonly string[];
 }
 
 export interface DangerWindow {
@@ -179,6 +205,9 @@ export interface TimelineViewModel {
   dangerWindow: DangerWindow;
   chapters: Chapter[];
   nextMilestone: MilestoneState | null;
+  /** Tips for the current chapter: the danger-window set while it is open, else the phase's own. */
+  currentTips: TipContent;
+  currentTipsAreDangerWindow: boolean;
 }
 
 export const MINUTES_LOST_PER_CIGARETTE = 20;

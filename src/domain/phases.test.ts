@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { resolveDangerWindow, resolvePhase } from './phases';
+import { PHASES } from '@/content/phases';
+import { resolveDangerWindow, resolvePhase, resolvePhaseCopy } from './phases';
+import { cigaretteSettings } from './testSettings';
 import { MS_PER_DAY, type Anchors, type Phase, type Slip } from './types';
 
 const QUIT = '2026-06-26T08:00:00+02:00';
 
 const phases: Phase[] = [
-  { id: 'crash', name: 'The Crash', startMs: 0, endMs: 3 * MS_PER_DAY, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'] },
-  { id: 'fog', name: 'The Fog', startMs: 3 * MS_PER_DAY, endMs: 28 * MS_PER_DAY, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'] },
-  { id: 'consolidation', name: 'Consolidation', startMs: 28 * MS_PER_DAY, endMs: null, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'] },
+  { id: 'crash', name: 'The Crash', startMs: 0, endMs: 3 * MS_PER_DAY, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [] },
+  { id: 'fog', name: 'The Fog', startMs: 3 * MS_PER_DAY, endMs: 28 * MS_PER_DAY, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [] },
+  { id: 'consolidation', name: 'Consolidation', startMs: 28 * MS_PER_DAY, endMs: null, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [] },
 ];
 
 const anchors = (overrides: Partial<Anchors> = {}): Anchors => ({
@@ -116,5 +118,84 @@ describe('resolveDangerWindow', () => {
     // Assert
     expect(result.active).toBe(true);
     expect(result.triggeredBySlipId).toBe(2);
+  });
+});
+
+describe('resolvePhaseCopy', () => {
+  const unit = { one: 'vape', many: 'vapes' };
+  const vape = cigaretteSettings({ product: 'vape', cost: { kind: 'weekly', weeklySpendMinor: 1 }, cigaretteHistory: null });
+  const phase = (id: string): Phase => {
+    const found = PHASES.find((p) => p.id === id);
+    if (!found) throw new Error(`fixture: no phase ${id}`);
+    return found;
+  };
+
+  it('resolvePhaseCopy_vapeInCrash_usesNicotineText', () => {
+    // Arrange
+    const crash = phase('crash');
+
+    // Act
+    const resolved = resolvePhaseCopy(crash, vape, unit);
+
+    // Assert
+    expect(resolved.whatsHappening).toBe(crash.whatsHappeningNicotine);
+    expect(resolved.whatsHappening.toLowerCase()).not.toContain('carbon monoxide');
+  });
+
+  it('resolvePhaseCopy_heatedSwitcherInLongHaul_usesSmokeText', () => {
+    // Arrange
+    const longHaul = phase('long-haul');
+    const settings = cigaretteSettings({ product: 'heated', cigaretteHistory: { months: 12, cigarettesPerDay: 10 } });
+
+    // Act
+    const resolved = resolvePhaseCopy(longHaul, settings, unit);
+
+    // Assert
+    expect(resolved.whatsHappening).toBe(longHaul.whatsHappening);
+  });
+
+  it('resolvePhaseCopy_pouchesInCrash_usesOralText', () => {
+    // Arrange
+    const crash = phase('crash');
+    const settings = cigaretteSettings({ product: 'pouches', cigaretteHistory: null });
+
+    // Act
+    const resolved = resolvePhaseCopy(crash, settings, unit);
+
+    // Assert
+    expect(resolved.whatsHappening).toBe(crash.whatsHappeningOral);
+  });
+
+  it('resolvePhaseCopy_nonCombustibleFinalPhase_isRenamed', () => {
+    // Arrange
+    const last = phase('non-smoker');
+
+    // Act
+    const resolved = resolvePhaseCopy(last, vape, unit);
+
+    // Assert
+    expect(resolved.name).toBe('Nicotine-Free');
+  });
+
+  it('resolvePhaseCopy_consolidationForVape_dropsSmokeOnlyTip', () => {
+    // Arrange
+    const consolidation = phase('consolidation');
+
+    // Act
+    const resolved = resolvePhaseCopy(consolidation, vape, unit);
+
+    // Assert
+    expect(resolved.howToCope.join(' ')).not.toMatch(/tar|cilia/i);
+  });
+
+  it('resolvePhaseCopy_cigarettesInConsolidation_keepsSmokeOnlyTip', () => {
+    // Arrange
+    const consolidation = phase('consolidation');
+
+    // Act
+    const resolved = resolvePhaseCopy(consolidation, cigaretteSettings(), { one: 'cigarette', many: 'cigarettes' });
+
+    // Assert
+    expect(resolved.howToCope.join(' ')).toMatch(/cilia/);
   });
 });

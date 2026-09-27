@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { MILESTONES } from './milestones';
 import { SOURCES } from './sources';
-import { PHASES } from './phases';
+import { DANGER_WINDOW_TIPS, PHASES } from './phases';
+import { PRODUCT_CONTENT } from './products';
+import { SLIP_REASSURANCE, SOS_STEPS } from './sos';
 import { applicableMilestones, audienceIncludes } from '@/domain/products';
 import { cigaretteSettings } from '@/domain/testSettings';
 import type { ProductId, Settings } from '@/domain/types';
@@ -202,5 +204,59 @@ describe('MILESTONES by product', () => {
 
     // Assert
     expect(offending.map((m) => m.id)).toEqual([]);
+  });
+});
+
+describe('PRODUCT_CONTENT', () => {
+  it('PRODUCT_CONTENT_everyProduct_hasAnEntryWithMatchingId', () => {
+    // Arrange & Act
+    const mismatched = PRODUCTS.filter((p) => PRODUCT_CONTENT[p].id !== p);
+
+    // Assert
+    expect(mismatched).toEqual([]);
+  });
+
+  it('PRODUCT_CONTENT_packProducts_havePackLabelsAndVapeHasNone', () => {
+    // Arrange & Act
+    const missing = PRODUCTS.filter((p) => p !== 'vape' && PRODUCT_CONTENT[p].perPackLabel === null);
+
+    // Assert
+    expect(missing).toEqual([]);
+    expect(PRODUCT_CONTENT.vape.perPackLabel).toBeNull();
+  });
+
+  it('PRODUCT_CONTENT_onlyCombustibleProducts_saySmokeFree', () => {
+    // Arrange & Act
+    const smokeFree = PRODUCTS.filter((p) => PRODUCT_CONTENT[p].freeWord === 'smoke-free');
+
+    // Assert
+    expect(smokeFree).toEqual(['cigarettes', 'roll-your-own']);
+  });
+
+  it('content_unitTokens_onlyUseKnownTokenNames', () => {
+    // Arrange
+    const texts = [
+      ...SOS_STEPS.map((s) => s.instruction), SLIP_REASSURANCE.smoke, SLIP_REASSURANCE.nicotine,
+      ...DANGER_WINDOW_TIPS.howToCope, ...PHASES.flatMap((p) => [...p.howToCope, ...p.howToCopeSmokeOnly]),
+    ];
+
+    // Act
+    const unknown = texts.flatMap((t) => [...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1])).filter((name) => name !== 'unit' && name !== 'units');
+
+    // Assert
+    expect(unknown).toEqual([]);
+  });
+
+  it('PHASES_nicotineVariants_neverMentionSmokeMarkers', () => {
+    // Arrange
+    const markers = /carbon monoxide|tar\b|cilia|smoke/i;
+
+    // Act
+    const offending = PHASES.filter((p) => markers.test(p.whatsHappeningNicotine) || (p.whatsHappeningOral !== null && markers.test(p.whatsHappeningOral)))
+      .map((p) => p.id);
+
+    // Assert
+    expect(offending).toEqual([]);
+    expect(markers.test(DANGER_WINDOW_TIPS.whatsHappening.nicotine)).toBe(false);
   });
 });

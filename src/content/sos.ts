@@ -1,3 +1,5 @@
+import type { CopyVariants } from '@/domain/types';
+
 export interface SosStep {
   id: string;
   seconds: number;
@@ -23,7 +25,7 @@ export const SOS_STEPS: SosStep[] = [
     id: 'drink',
     seconds: 60,
     heading: 'Drink water',
-    instruction: 'Get a full glass and finish it slowly. It occupies your hands and your mouth, which is most of what a cigarette was doing.',
+    instruction: 'Get a full glass and finish it slowly. It occupies your hands and your mouth, which is most of what a {unit} was doing.',
   },
   {
     id: 'distract',
@@ -34,3 +36,11 @@ export const SOS_STEPS: SosStep[] = [
 ];
 
 export const SOS_TOTAL_SECONDS = SOS_STEPS.reduce((total, step) => total + step.seconds, 0);
+
+/** Shown on the slip screen. The smoke variant names carbon monoxide; the other cannot. */
+export const SLIP_REASSURANCE: CopyVariants<string> = {
+  smoke:
+    'One {unit} is not a failed quit attempt — treating it as one is what turns it into a relapse. Your carbon monoxide and nicotine clocks restart from this. Everything measured in months and years keeps running, because those depend on cumulative exposure and this barely registers against it.',
+  nicotine:
+    'One {unit} is not a failed quit attempt — treating it as one is what turns it into a relapse. Your nicotine clocks restart from this. Everything measured in weeks and months keeps running.',
+};

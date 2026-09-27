@@ -9,6 +9,7 @@ import { buildTimeline } from '@/domain/timeline';
 import type { MilestoneState } from '@/domain/types';
 import { MILESTONES } from '@/content/milestones';
 import { DANGER_WINDOW_TIPS, PHASES } from '@/content/phases';
+import { PRODUCT_CONTENT } from '@/content/products';
 import { SOURCES } from '@/content/sources';
 import { syncNotifications } from '@/notifications/schedule';
 import { ChapterBlock } from '@/ui/ChapterBlock';
@@ -54,7 +55,17 @@ export default function Timeline() {
   }, [loading, error, state, router]);
 
   const timeline = useMemo(
-    () => (state ? buildTimeline({ state, milestones: MILESTONES, phases: PHASES, now }) : null),
+    () =>
+      state
+        ? buildTimeline({
+            state,
+            milestones: MILESTONES,
+            phases: PHASES,
+            dangerTips: DANGER_WINDOW_TIPS,
+            unit: PRODUCT_CONTENT[state.settings.product].unit,
+            now,
+          })
+        : null,
     [state, now],
   );
 
@@ -167,18 +178,8 @@ export default function Timeline() {
           <ChapterBlock
             key={chapter.phase.id}
             chapter={chapter}
-            tips={
-              chapter.status !== 'current'
-                ? null
-                : dangerWindow.active
-                  ? DANGER_WINDOW_TIPS
-                  : {
-                      whatsHappening: chapter.phase.whatsHappening,
-                      whyYouFeelThisWay: chapter.phase.whyYouFeelThisWay,
-                      howToCope: chapter.phase.howToCope,
-                    }
-            }
-            tipsAreDangerWindow={chapter.status === 'current' && dangerWindow.active}
+            tips={chapter.status === 'current' ? timeline.currentTips : null}
+            tipsAreDangerWindow={chapter.status === 'current' && timeline.currentTipsAreDangerWindow}
           />
         ))}
 

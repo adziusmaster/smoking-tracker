@@ -2,16 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { cigaretteSettings } from './testSettings';
 import { buildTimeline } from './timeline';
 import { MILESTONES } from '@/content/milestones';
-import { PHASES } from '@/content/phases';
+import { DANGER_WINDOW_TIPS, PHASES } from '@/content/phases';
 import { MS_PER_DAY, type Milestone, type Phase, type QuitState, type Settings, type TimelineViewModel } from './types';
 
 const QUIT = '2026-06-26T08:00:00+02:00';
 const NOW = new Date('2026-08-08T08:00:00+02:00');
+const CIG = { one: 'cigarette', many: 'cigarettes' };
 
 const phases: Phase[] = [
-  { id: 'crash', name: 'The Crash', startMs: 0, endMs: 3 * MS_PER_DAY, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'] },
-  { id: 'fog', name: 'The Fog', startMs: 3 * MS_PER_DAY, endMs: 28 * MS_PER_DAY, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'] },
-  { id: 'consolidation', name: 'Consolidation', startMs: 28 * MS_PER_DAY, endMs: null, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'] },
+  { id: 'crash', name: 'The Crash', startMs: 0, endMs: 3 * MS_PER_DAY, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [] },
+  { id: 'fog', name: 'The Fog', startMs: 3 * MS_PER_DAY, endMs: 28 * MS_PER_DAY, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [] },
+  { id: 'consolidation', name: 'Consolidation', startMs: 28 * MS_PER_DAY, endMs: null, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [] },
 ];
 
 const milestones: Milestone[] = [
@@ -29,7 +30,7 @@ const state: QuitState = {
 describe('buildTimeline', () => {
   it('buildTimeline_cleanFortyThreeDays_returnsElapsedSavingsAndCurrentPhase', () => {
     // Arrange
-    const input = { state, milestones, phases, now: NOW };
+    const input = { state, milestones, phases, dangerTips: DANGER_WINDOW_TIPS, unit: CIG, now: NOW };
 
     // Act
     const result = buildTimeline(input);
@@ -43,7 +44,7 @@ describe('buildTimeline', () => {
 
   it('buildTimeline_groupsMilestonesIntoChaptersMarkingPastCurrentAndFuture', () => {
     // Arrange
-    const input = { state, milestones, phases, now: NOW };
+    const input = { state, milestones, phases, dangerTips: DANGER_WINDOW_TIPS, unit: CIG, now: NOW };
 
     // Act
     const result = buildTimeline(input);
@@ -59,7 +60,7 @@ describe('buildTimeline', () => {
 
   it('buildTimeline_nextMilestone_isTheSoonestUnreachedOne', () => {
     // Arrange
-    const input = { state, milestones, phases, now: NOW };
+    const input = { state, milestones, phases, dangerTips: DANGER_WINDOW_TIPS, unit: CIG, now: NOW };
 
     // Act
     const result = buildTimeline(input);
@@ -76,7 +77,7 @@ describe('buildTimeline', () => {
     };
 
     // Act
-    const result = buildTimeline({ state: withSlip, milestones, phases, now: NOW });
+    const result = buildTimeline({ state: withSlip, milestones, phases, dangerTips: DANGER_WINDOW_TIPS, unit: CIG, now: NOW });
 
     // Assert
     const byId = new Map(result.chapters.flatMap((c) => c.milestones).map((m) => [m.milestone.id, m.status]));
@@ -100,8 +101,8 @@ describe('buildTimeline', () => {
     const muchLater = new Date('2026-10-08T08:00:00+02:00');
 
     // Act
-    const result = buildTimeline({ state: smoking, milestones, phases, now: NOW });
-    const later = buildTimeline({ state: smoking, milestones, phases, now: muchLater });
+    const result = buildTimeline({ state: smoking, milestones, phases, dangerTips: DANGER_WINDOW_TIPS, unit: CIG, now: NOW });
+    const later = buildTimeline({ state: smoking, milestones, phases, dangerTips: DANGER_WINDOW_TIPS, unit: CIG, now: muchLater });
 
     // Assert — the cumulative-anchor headline keeps climbing, the best run must not
     expect(result.longestStreak.elapsed.days).toBe(36);
@@ -114,7 +115,7 @@ describe('buildTimeline', () => {
     const now = new Date(new Date(QUIT).getTime() + 4000 * MS_PER_DAY);
 
     // Act
-    const result = buildTimeline({ state, milestones, phases, now });
+    const result = buildTimeline({ state, milestones, phases, dangerTips: DANGER_WINDOW_TIPS, unit: CIG, now });
 
     // Assert
     expect(result.nextMilestone).toBeNull();
@@ -123,7 +124,7 @@ describe('buildTimeline', () => {
 
 describe('buildTimeline by product', () => {
   const buildReal = (settings: Settings, now: Date = NOW): TimelineViewModel =>
-    buildTimeline({ state: { settings, slips: [], periods: [] }, milestones: MILESTONES, phases: PHASES, now });
+    buildTimeline({ state: { settings, slips: [], periods: [] }, milestones: MILESTONES, phases: PHASES, dangerTips: DANGER_WINDOW_TIPS, unit: CIG, now });
   const ids = (vm: TimelineViewModel) => vm.chapters.flatMap((c) => c.milestones.map((s) => s.milestone.id));
   const find = (vm: TimelineViewModel, id: string) => vm.chapters.flatMap((c) => c.milestones).find((s) => s.milestone.id === id);
   const heatedSwitcher = cigaretteSettings({ quitDate: QUIT, product: 'heated', cigaretteHistory: { months: 60, cigarettesPerDay: 10 } });
@@ -188,5 +189,35 @@ describe('buildTimeline by product', () => {
     // Assert
     expect(snusIds).toContain('snus-mucosa');
     expect(pouchIds).not.toContain('snus-mucosa');
+  });
+});
+
+describe('buildTimeline tips', () => {
+  it('timeline_dangerWindowForVape_tipsUseNicotineVariantWithUnitFilled', () => {
+    // Arrange
+    const settings = cigaretteSettings({ quitDate: QUIT, product: 'vape', cost: { kind: 'weekly', weeklySpendMinor: 1500 }, cigaretteHistory: null });
+    const withSlip: QuitState = {
+      settings,
+      slips: [{ id: 1, occurredAt: '2026-08-07T22:00:00+02:00', unitCount: 1, trigger: null, note: null }],
+      periods: [],
+    };
+
+    // Act
+    const vm = buildTimeline({ state: withSlip, milestones: MILESTONES, phases: PHASES, dangerTips: DANGER_WINDOW_TIPS, unit: { one: 'vape', many: 'vapes' }, now: NOW });
+
+    // Assert
+    expect(vm.currentTipsAreDangerWindow).toBe(true);
+    expect(vm.currentTips.whatsHappening.toLowerCase()).not.toContain('carbon monoxide');
+    expect(vm.currentTips.howToCope.join(' ')).not.toContain('{unit}');
+    expect(vm.currentTips.howToCope.join(' ')).toContain('One vape');
+  });
+
+  it('timeline_noDangerWindow_currentTipsComeFromCurrentPhase', () => {
+    // Arrange & Act
+    const vm = buildTimeline({ state, milestones: MILESTONES, phases: PHASES, dangerTips: DANGER_WINDOW_TIPS, unit: CIG, now: NOW });
+
+    // Assert
+    expect(vm.currentTipsAreDangerWindow).toBe(false);
+    expect(vm.currentTips.whatsHappening).toBe(vm.currentPhase.whatsHappening);
   });
 });
