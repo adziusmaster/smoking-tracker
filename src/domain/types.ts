@@ -9,7 +9,7 @@ export type SourceTier = 'a' | 'b';
  * milestone table: `smoked` is short-term smoke recovery (combustible products only);
  * `smoking-history` is the long-term smoking-risk curves, which also apply to a switcher.
  */
-export type Audience = 'all' | 'inhaled' | 'smoked' | 'smoking-history' | 'snus' | 'oral' | 'unknown-long-term';
+export type Audience = 'all' | 'vape' | 'smoked' | 'smoking-history' | 'snus' | 'oral' | 'unknown-long-term';
 
 /** Copy that names smoke has a nicotine-only twin for products that burn nothing. */
 export interface CopyVariants<T> {

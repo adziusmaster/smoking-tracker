@@ -188,14 +188,16 @@ describe('resolvePhaseCopy', () => {
     expect(resolved.howToCope.join(' ')).not.toMatch(/tar|cilia/i);
   });
 
-  it('resolvePhaseCopy_cigarettesInConsolidation_keepsSmokeOnlyTip', () => {
+  it('resolvePhaseCopy_cigarettes_appendsSmokeOnlyTips', () => {
     // Arrange
-    const consolidation = phase('consolidation');
+    const withSmokeTip: Phase = { ...phase('consolidation'), howToCopeSmokeOnly: ['smoke-only tip'] };
 
     // Act
-    const resolved = resolvePhaseCopy(consolidation, cigaretteSettings(), { one: 'cigarette', many: 'cigarettes' });
+    const resolved = resolvePhaseCopy(withSmokeTip, cigaretteSettings(), { one: 'cigarette', many: 'cigarettes' });
+    const forVape = resolvePhaseCopy(withSmokeTip, vape, unit);
 
     // Assert
-    expect(resolved.howToCope.join(' ')).toMatch(/cilia/);
+    expect(resolved.howToCope).toContain('smoke-only tip');
+    expect(forVape.howToCope).not.toContain('smoke-only tip');
   });
 });

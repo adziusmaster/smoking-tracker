@@ -167,7 +167,7 @@ export default function Timeline() {
           <View style={styles.banner}>
             <Text style={styles.bannerTitle}>Danger window · {dangerWindow.daysRemaining} days left</Text>
             <Text style={styles.bannerBody}>
-              Most slips that become relapses do it within about 19 days. You’re inside that window, so the
+              On average, a slip that becomes a relapse does so within about 19 days. You’re inside that window, so the
               guidance below has changed to match.
             </Text>
             {/* The 19-day figure is a sourced claim like any milestone, so it is attributed

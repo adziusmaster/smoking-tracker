@@ -73,8 +73,8 @@ describe('audienceIncludes', () => {
   // [audience, product, withHistory, expected]
   const table: [Audience, ProductId, boolean, boolean][] = [
     ['all', 'pouches', false, true],
-    ['inhaled', 'vape', false, true],
-    ['inhaled', 'snus', false, false],
+    ['vape', 'vape', false, true],
+    ['vape', 'heated', true, false],
     ['smoked', 'roll-your-own', false, true],
     ['smoked', 'heated', true, false],
     ['smoking-history', 'heated', true, true],
@@ -103,19 +103,19 @@ describe('audienceIncludes', () => {
 describe('applicableMilestones', () => {
   it('applicableMilestones_overrideForProduct_replacesOffsetAndSource', () => {
     // Arrange
-    const m = milestone('inhaled', { overrides: { vape: { offsetMs: MS_PER_HOUR, offsetEndMs: null, sourceId: 'nicotine-hr-acute' } } });
+    const m = milestone('all', { overrides: { vape: { offsetMs: MS_PER_HOUR, offsetEndMs: null, sourceId: 'hughes-2020' } } });
 
     // Act
     const [result] = applicableMilestones([m], as('vape', false));
 
     // Assert
     expect(result?.offsetMs).toBe(MS_PER_HOUR);
-    expect(result?.sourceId).toBe('nicotine-hr-acute');
+    expect(result?.sourceId).toBe('hughes-2020');
   });
 
   it('applicableMilestones_noOverrideForProduct_keepsDefaults', () => {
     // Arrange
-    const m = milestone('inhaled', { overrides: { vape: { offsetMs: MS_PER_HOUR, offsetEndMs: null, sourceId: 'x' } } });
+    const m = milestone('all', { overrides: { vape: { offsetMs: MS_PER_HOUR, offsetEndMs: null, sourceId: 'x' } } });
 
     // Act
     const [result] = applicableMilestones([m], as('cigarettes', false));

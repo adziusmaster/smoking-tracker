@@ -30,10 +30,10 @@ export const PHASES: Phase[] = [
     name: 'The Fog',
     startMs: DAYS(3),
     endMs: DAYS(28),
-    whatsHappening: "Physical withdrawal is fading. Taste and smell start returning around two weeks.",
+    whatsHappening: "Physical withdrawal is fading. Taste and smell often start returning within the first days and weeks.",
     whatsHappeningNicotine: "Physical withdrawal is fading. Sleep and concentration are usually the last things to settle.",
     whatsHappeningOral: null,
-    whyYouFeelThisWay: "The sharp cravings give way to something duller — broken sleep, a bigger appetite, and genuine trouble concentrating. Withdrawal insomnia usually resolves within 1–2 weeks and the rest fades over 3–4.",
+    whyYouFeelThisWay: "The sharp cravings give way to something duller — broken sleep, a bigger appetite, and genuine trouble concentrating. Withdrawal insomnia usually fades over 2–4 weeks and the rest fades over 3–4.",
     howToCope: [
       "Protect your sleep: same bedtime, no caffeine after mid-afternoon, screens down early.",
       "Eat properly and drink water. Appetite changes are normal and temporary.",
@@ -57,9 +57,7 @@ export const PHASES: Phase[] = [
       "Name your remaining triggers and have a specific answer ready for each one.",
       "Bank the money somewhere visible. Abstract savings do not motivate; a number that grows does.",
     ],
-    howToCopeSmokeOnly: [
-      "If the cough got worse before it got better, that is cilia clearing tar. It is progress, not damage.",
-    ],
+    howToCopeSmokeOnly: [],
     nameNicotine: null,
   },
   {
@@ -70,7 +68,7 @@ export const PHASES: Phase[] = [
     whatsHappening: "The risk curves bend. Heart attack risk drops sharply in years 1–2; mouth, throat and larynx cancer risk halves across years 5–10.",
     whatsHappeningNicotine: "Nicotine has been out of your life for months. How quickly long-term risk falls after stopping this product has not been measured yet, but the exposure itself has stopped.",
     whatsHappeningOral: null,
-    whyYouFeelThisWay: "You are a non-smoker now, and it mostly feels like nothing. Occasional ambush cravings still arrive with stress, grief or alcohol, sometimes years in.",
+    whyYouFeelThisWay: "You are free of it now, and it mostly feels like nothing. Occasional ambush cravings still arrive with stress, grief or alcohol, sometimes years in.",
     howToCope: [
       "An ambush craving after two years is normal and means nothing about your progress.",
       "Do not test yourself. There is no version of one {unit} that proves you are in control.",
@@ -87,7 +85,7 @@ export const PHASES: Phase[] = [
     whatsHappening: "Lung cancer risk is about half a smoker’s. By year 15 coronary heart disease risk is close to someone who never smoked, and by year 20 several cancer risks are too.",
     whatsHappeningNicotine: "Years nicotine-free. There is nothing left to manage.",
     whatsHappeningOral: null,
-    whyYouFeelThisWay: "Nothing to manage. Smoking is something you used to do.",
+    whyYouFeelThisWay: "Nothing to manage. It is something you used to do.",
     howToCope: [
       "You are statistically close to someone who never started. That is the whole point.",
     ],
@@ -102,9 +100,9 @@ export const DANGER_WINDOW_TIPS: DangerTips = {
     smoke: "You logged a slip. The fast-moving markers — carbon monoxide and nicotine — restarted from that cigarette. Everything measured in months and years kept going, because those depend on cumulative exposure and one cigarette barely registers against it.",
     nicotine: "You logged a slip. The fast-moving markers — nicotine and withdrawal — restarted from it. Everything measured in weeks and months kept going, because one slip barely registers against them.",
   },
-  whyYouFeelThisWay: "A single slip is the strongest known predictor of a full return to smoking, and the average slide from lapse to relapse takes about 19 days. You are in that window now. The pull you are feeling is real and well documented — it is not weakness.",
+  whyYouFeelThisWay: "A slip is one of the strongest predictors of a full return, and on average the slide from lapse to relapse takes about 19 days. You are in that window now. The pull you are feeling is real and well documented — it is not weakness.",
   howToCope: [
-    "Re-commit today, not tomorrow. Immediacy is the single biggest factor in whether a slip stays a slip.",
+    "Re-commit today, not tomorrow.",
     "One {unit} is not a failed quit attempt. Treating it as one is what turns it into a relapse.",
     "Write down what actually happened before you forget — where you were, who you were with, what you felt.",
     "Remove the means. Get rid of anything you bought.",

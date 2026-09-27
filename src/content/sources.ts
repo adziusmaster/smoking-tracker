@@ -11,12 +11,6 @@ export const SOURCES: Record<string, Source> = {
     url: 'https://www.cancer.org/cancer/risk-prevention/tobacco/benefits-of-quitting-smoking-over-time.html',
     tier: 'a',
   },
-  'co-halflife': {
-    id: 'co-halflife',
-    label: 'Carbon monoxide half-life 4–5 hours; nicotine ~2 h, cotinine ~16–20 h',
-    url: 'https://www.healthline.com/health/quit-smoking/how-long-does-nicotine-stay-in-your-system',
-    tier: 'b',
-  },
   'withdrawal-peak': {
     id: 'withdrawal-peak',
     label: 'Cleveland Clinic — Nicotine withdrawal begins 4–24 h, peaks around day 3, fades over 3–4 weeks',
@@ -31,8 +25,8 @@ export const SOURCES: Record<string, Source> = {
   },
   nachr: {
     id: 'nachr',
-    label: 'Cosgrove et al. — Smoking upregulates α4β2* nicotinic receptors in the human brain (2007)',
-    url: 'https://pubmed.ncbi.nlm.nih.gov/17997038/',
+    label: 'Cosgrove et al. — β2-nicotinic acetylcholine receptor availability during acute and prolonged abstinence from tobacco smoking (Arch Gen Psychiatry, 2009)',
+    url: 'https://pubmed.ncbi.nlm.nih.gov/19487632/',
     tier: 'a',
   },
   'life-expectancy': {
@@ -43,8 +37,8 @@ export const SOURCES: Record<string, Source> = {
   },
   'lapse-relapse': {
     id: 'lapse-relapse',
-    label: 'NHS — Getting back on track after a smoking relapse',
-    url: 'https://www.nhs.uk/better-health/quit-smoking/staying-smoke-free/get-back-on-track-after-a-smoking-relapse/',
+    label: 'Perski et al. — Classification of lapses in smokers attempting to stop (Nicotine Tob Res, 2023): lapse-to-relapse averages about 19 days',
+    url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10256890/',
     tier: 'a',
   },
   // ——— Multi-product sources (2026-09). See docs/superpowers/specs/2026-09-28-nicotine-products-design.md.
@@ -57,7 +51,7 @@ export const SOURCES: Record<string, Source> = {
   'hughes-2007': {
     id: 'hughes-2007',
     label: 'Hughes — Effects of abstinence from tobacco: valid symptoms and time course (Nicotine Tob Res, 2007)',
-    url: 'https://academic.oup.com/ntr/article-pdf/9/3/315/3842403/9-3-315.pdf',
+    url: 'https://pubmed.ncbi.nlm.nih.gov/17365764/',
     tier: 'a',
   },
   'hughes-2020': {
@@ -70,12 +64,6 @@ export const SOURCES: Record<string, Source> = {
     id: 'nhs-withdrawal',
     label: 'NHS — Managing nicotine withdrawal symptoms',
     url: 'https://www.nhs.uk/better-health/quit-smoking/staying-smoke-free/managing-nicotine-withdrawal-symptoms/',
-    tier: 'a',
-  },
-  'jaehne-2015': {
-    id: 'jaehne-2015',
-    label: 'Jaehne et al. — How smoking affects sleep: a polysomnographical analysis during smoking and abstinence (Addict Biol, 2015)',
-    url: 'https://pubmed.ncbi.nlm.nih.gov/24797355/',
     tier: 'a',
   },
   'kenford-1994': {
@@ -102,33 +90,21 @@ export const SOURCES: Record<string, Source> = {
     url: 'https://pubmed.ncbi.nlm.nih.gov/22782848/',
     tier: 'a',
   },
-  'nicotine-hr-acute': {
-    id: 'nicotine-hr-acute',
-    label: 'Acute heart-rate and blood-pressure effects of nicotine e-cigarettes (J Am Heart Assoc, 2017)',
-    url: 'https://www.ahajournals.org/doi/10.1161/jaha.117.006579',
-    tier: 'a',
-  },
   'af-geijerstam-2025': {
     id: 'af-geijerstam-2025',
-    label: 'af Geijerstam et al. — Health effects of stopping snus and nicotine pouches (Harm Reduct J, 2025)',
+    label: 'af Geijerstam et al. — Cardiovascular and metabolic changes following 12 weeks of tobacco and nicotine pouch cessation (Harm Reduct J, 2025)',
     url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC12001473/',
-    tier: 'a',
-  },
-  'snus-lesions-2026': {
-    id: 'snus-lesions-2026',
-    label: 'Snus-induced oral mucosal lesions and their reversibility after cessation (Clin Oral Investig, 2026)',
-    url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC13499737/',
     tier: 'a',
   },
   'larsson-1991': {
     id: 'larsson-1991',
-    label: 'Larsson, Axéll & Andersson — Reversibility of snuff dippers’ lesions (J Oral Pathol Med, 1991)',
+    label: 'Larsson, Axéll & Andersson — Reversibility of snuff dippers’ lesion in Swedish moist snuff users: a clinical and histologic follow-up study (J Oral Pathol Med, 1991)',
     url: 'https://pubmed.ncbi.nlm.nih.gov/1890661/',
     tier: 'a',
   },
   'heshmati-2025': {
     id: 'heshmati-2025',
-    label: 'Nicotine pouch pharmacokinetics compared with cigarettes: meta-analysis (Drug Alcohol Depend Rep, 2025)',
+    label: 'Heshmati et al. — Nicotine pouch pharmacokinetics compared to smoked tobacco: a systematic review and meta-analysis (Drug Alcohol Depend Rep, 2025)',
     url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC12617622/',
     tier: 'a',
   },
@@ -140,7 +116,7 @@ export const SOURCES: Record<string, Source> = {
   },
   'who-htp-2020': {
     id: 'who-htp-2020',
-    label: 'WHO — Heated tobacco products: information sheet (2020)',
+    label: 'WHO — Heated tobacco products: information sheet (2nd edition, March 2020)',
     url: 'https://www.who.int/publications/i/item/WHO-HEP-HPR-2020.2',
     tier: 'a',
   },

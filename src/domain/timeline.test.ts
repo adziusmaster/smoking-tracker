@@ -166,15 +166,28 @@ describe('buildTimeline by product', () => {
     expect(ids(vm)).not.toContain('lung-cancer-halved');
   });
 
-  it('timeline_heatedThirtyMinutesIn_heartRateMilestoneNotYetReached', () => {
-    // Arrange — cigarettes reach it at 20 minutes; heated tobacco only after about an hour
-    const settings = cigaretteSettings({ product: 'heated', quitDate: '2026-08-08T07:30:00+02:00', cigaretteHistory: null });
+  it('timeline_heated_hasNoHeartRateMilestone', () => {
+    // Arrange — no study measures heart rate after stopping heated tobacco
+    const settings = cigaretteSettings({ quitDate: QUIT, product: 'heated', cigaretteHistory: null });
 
     // Act
     const vm = buildReal(settings);
 
     // Assert
-    expect(find(vm, 'heart-rate')?.status).toBe('future');
+    expect(ids(vm)).not.toContain('heart-rate');
+    expect(ids(vm)).not.toContain('vape-heart-rate');
+  });
+
+  it('timeline_vapeTwelveHoursIn_heartRateMilestoneNotYetReached', () => {
+    // Arrange — cigarettes reach it at 20 minutes; the vape evidence is measured over days
+    const settings = cigaretteSettings({ product: 'vape', quitDate: '2026-08-07T20:00:00+02:00', cost: { kind: 'weekly', weeklySpendMinor: 1500 }, cigaretteHistory: null });
+
+    // Act
+    const vm = buildReal(settings);
+
+    // Assert
+    expect(find(vm, 'vape-heart-rate')?.status).toBe('future');
+    expect(ids(vm)).not.toContain('heart-rate');
   });
 
   it('timeline_snusVsPouches_onlySnusSeesMucosaMilestone', () => {

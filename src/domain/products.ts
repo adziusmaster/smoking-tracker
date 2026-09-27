@@ -22,8 +22,8 @@ export function audienceIncludes(audience: Audience, settings: Settings): boolea
   switch (audience) {
     case 'all':
       return true;
-    case 'inhaled':
-      return !isOral(product);
+    case 'vape':
+      return product === 'vape';
     case 'smoked':
       return isCombustible(product);
     case 'smoking-history':

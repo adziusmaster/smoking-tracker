@@ -8,6 +8,26 @@ engagement → insights & journal → polish & trust → widget, with Play Store
 the milestone set's universal applicability, and the hero figures) and
 `2026-08-10-onboarding-inputs-design.md` (the onboarding question set).
 
+## Amendment — citation check (2026-09-28)
+
+`docs/citation-check-2026-09.md` verified every source against its page. It changed the
+milestone table below as follows; the code is the record, this note explains why:
+
+- `heart-rate` is `smoked` only (ACS, 20 min). Vapers get a separate `vape-heart-rate` at 1 day
+  (Hughes 2020 measured heart rate falling during abstinence). **Heated tobacco gets no heart-rate
+  milestone**: the JAHA 2017 paper tested non-users for ~30 minutes and never heated tobacco, so
+  `nicotine-hr-acute` was removed. The `inhaled` audience became `vape`.
+- `first-week` cites Hughes 2007 (sleep problems peak in week one, fade over 2–4 weeks); the
+  Jaehne paper measured only 24–36 h and 3 months.
+- `snus-mucosa` cites Larsson 1991 only, at 3 months ("healthy on re-check at 3–6 months"); the
+  2026 paper was a 28-day, industry-funded switching study, not cessation, and was dropped.
+- `nachr` now points to Cosgrove 2009 (the old PMID was a different paper). `lapse-relapse` now
+  points to Perski 2023, which states the ~19-day figure; the NHS page did not.
+- Unsupported phrases removed from pre-existing copy: CO "half-life 4–5 hours", cilia/tar
+  regrowth, "single biggest cardiovascular payoff", "strongest known predictor", taste and smell
+  "at two weeks", insomnia "within 1–2 weeks", and `long-term-unknown`'s "not studied long
+  enough" (false for snus).
+
 ## Summary
 
 The app today assumes cigarettes. This change lets a user quit one of five products —
