@@ -3,15 +3,18 @@ import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PRODUCT_CONTENT } from '@/content/products';
 import { SOURCES } from '@/content/sources';
 import { deleteEverything, exportAll, saveSettings } from '@/data/repositories';
 import { estimateCigarettesBeforeQuitting } from '@/domain/lifetime';
 import { formatCount } from '@/domain/format';
-import { parseMinorUnits, parsePositiveInt } from '@/domain/parse';
+import { parseSetupForm, switchProduct, valuesFromSettings, type SetupFormValues } from '@/domain/setupForm';
+import { ProductPicker } from '@/ui/ProductPicker';
 import QuitMomentPicker from '@/ui/QuitMomentPicker';
 import { theme } from '@/ui/theme';
+import { UsageFields } from '@/ui/UsageFields';
 import { useQuitState } from '@/ui/useQuitState';
 
 type Status = { text: string; tone: 'ok' | 'error' };
@@ -33,59 +36,50 @@ export default function Settings() {
   const insets = useSafeAreaInsets();
   const { state, error, reload } = useQuitState();
 
-  const [perDay, setPerDay] = useState('');
-  const [price, setPrice] = useState('');
+  const [values, setValues] = useState<SetupFormValues | null>(null);
   const [quitMoment, setQuitMoment] = useState<Date | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
 
-  const storedPerDay = state?.settings.unitsPerDay ?? null;
-  const storedPriceMinor = state?.settings.cost.kind === 'pack' ? state.settings.cost.packPriceMinor : null;
-
-  // `useQuitState` loads asynchronously, so the first render has `state === null`. Seeding
-  // these inputs with `useState` alone froze whatever default was in scope on screen, and
-  // Save then wrote that default over the user's real numbers. Re-seeding from the STORED
-  // values fixes it. The effect is keyed on those two values rather than on `state` or on
-  // every render, so it runs exactly when the load (or a save's reload) delivers different
-  // numbers — never while the user is part-way through typing.
-  useEffect(() => {
-    if (storedPerDay === null || storedPriceMinor === null) return;
-    setPerDay(String(storedPerDay));
-    setPrice((storedPriceMinor / 100).toFixed(2));
-  }, [storedPerDay, storedPriceMinor]);
-
+  // `useQuitState` loads asynchronously, so the first render has `state === null`. Seeding the
+  // form with `useState` alone froze whatever default was in scope, and Save then wrote that
+  // default over the user's real numbers. Re-seeding is keyed on the STORED settings, as a
+  // string, so it runs when a load or a save's reload delivers different numbers — never while
+  // the user is part-way through typing.
+  const storedKey = state ? JSON.stringify(state.settings) : null;
   useEffect(() => {
     if (!state) return;
+    setValues(valuesFromSettings(state.settings));
     setQuitMoment(new Date(state.settings.quitDate));
-  }, [state]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storedKey]);
 
   const lifetimeEstimate = state ? estimateCigarettesBeforeQuitting(state.settings) : null;
+  const productChanged = state !== null && values !== null && values.product !== state.settings.product;
+  const slipCount = state?.slips.length ?? 0;
 
   const save = async () => {
-    if (!state) return;
-    const cigarettesPerDay = parsePositiveInt(perDay);
-    const packPriceMinor = parseMinorUnits(price);
-
-    if (cigarettesPerDay === null) return setStatus({ text: 'Cigarettes per day must be a whole number above zero.', tone: 'error' });
-    if (packPriceMinor === null) return setStatus({ text: 'Pack price must look like 11 or 11.50.', tone: 'error' });
-    if (quitMoment !== null && quitMoment.getTime() > Date.now()) {
-      return setStatus({ text: 'Your quit date cannot be in the future.', tone: 'error' });
-    }
+    if (!state || values === null) return;
+    const content = PRODUCT_CONTENT[values.product];
+    const result = parseSetupForm(values, {
+      quitMoment: quitMoment ?? new Date(state.settings.quitDate),
+      now: new Date(),
+      currency: state.settings.currency,
+      timezone: state.settings.timezone,
+      labels: { perDay: content.perDayLabel, perPack: content.perPackLabel, packPrice: content.packPriceLabel },
+    });
+    if (!result.ok) return setStatus({ text: result.error, tone: 'error' });
 
     try {
-      await saveSettings(
-        db,
-        {
-          ...state.settings,
-          unitsPerDay: cigarettesPerDay,
-          cost: state.settings.cost.kind === 'pack' ? { ...state.settings.cost, packPriceMinor } : state.settings.cost,
-          ...(quitMoment ? { quitDate: quitMoment.toISOString() } : {}),
-        },
-        new Date(),
-      );
+      await saveSettings(db, result.settings, new Date());
+    } catch {
+      return setStatus({ text: 'Couldn’t save that. Your stored numbers are unchanged — please try again.', tone: 'error' });
+    }
+    // The write succeeded; a failed refresh must not be reported as a failed save.
+    try {
       await reload();
       setStatus({ text: 'Saved. Every figure has been recalculated.', tone: 'ok' });
     } catch {
-      setStatus({ text: 'Couldn’t save that. Your stored numbers are unchanged — please try again.', tone: 'error' });
+      setStatus({ text: 'Saved, but couldn’t refresh — reopen Settings to see the new figures.', tone: 'ok' });
     }
   };
 
@@ -138,26 +132,35 @@ export default function Settings() {
       <Text style={styles.h2}>Your numbers</Text>
       {/* Nothing editable is rendered until the stored numbers have loaded, so a default
           is never shown to the user as if it were their own figure. */}
-      {state ? (
+      {state && values ? (
         <>
+          <Text style={styles.label}>What you quit</Text>
+          <ProductPicker
+            value={values.product}
+            onChange={(product) => setValues(switchProduct(values, product, PRODUCT_CONTENT[product].defaultPerPack))}
+          />
+          <UsageFields values={values} onChange={setValues} section="usage" />
+          <UsageFields values={values} onChange={setValues} section="history" />
           <Text style={styles.label}>When you quit</Text>
           {quitMoment ? (
             <QuitMomentPicker value={quitMoment} onChange={setQuitMoment} maximumDate={new Date()} />
           ) : null}
-          <Text style={styles.label}>Cigarettes per day</Text>
-          <TextInput style={styles.input} value={perDay} onChangeText={setPerDay} keyboardType="number-pad" accessibilityLabel="Cigarettes per day" />
-          <Text style={styles.label}>Price per pack</Text>
-          <TextInput style={styles.input} value={price} onChangeText={setPrice} keyboardType="decimal-pad" accessibilityLabel="Price per pack" />
+          {productChanged && slipCount > 0 ? (
+            <Text style={styles.warning}>
+              You have {slipCount} logged {slipCount === 1 ? 'slip' : 'slips'}. {slipCount === 1 ? 'It' : 'They'} will be
+              counted as {PRODUCT_CONTENT[values.product].unit.many} from now on.
+            </Text>
+          ) : null}
           <Pressable style={styles.cta} onPress={save}><Text style={styles.ctaText}>Save</Text></Pressable>
           {/* Deliberately NOT called a "lifetime total": that phrase is used on the SOS and
               Log screens for the running figure, which adds every slip and relapse cigarette
               logged since the quit date. This one stops at the quit date. */}
-          {lifetimeEstimate !== null ? <Text style={styles.hint}>
-            Estimated cigarettes smoked before you quit:{' '}
-            {formatCount(lifetimeEstimate)}. Worked out from your daily rate
-            and how long you smoked — an estimate, not a count. It stops at the moment you quit, so anything
-            you have logged since is not included.
-          </Text> : null}
+          {lifetimeEstimate !== null ? (
+            <Text style={styles.hint}>
+              Estimated cigarettes you smoked before quitting: {formatCount(lifetimeEstimate)}. Worked out from
+              your daily rate and how long you smoked — an estimate, not a count.
+            </Text>
+          ) : null}
         </>
       ) : (
         <Text style={styles.hint}>
@@ -214,11 +217,7 @@ const styles = StyleSheet.create({
   h2: { fontSize: theme.font.body, fontWeight: '700', color: theme.color.text, marginTop: theme.space.lg },
   label: { fontSize: theme.font.small, fontWeight: '600', color: theme.color.text, marginTop: theme.space.sm },
   hint: { fontSize: theme.font.tiny, color: theme.color.textFaint, lineHeight: 16 },
-  input: {
-    borderWidth: 1, borderColor: theme.color.border, borderRadius: theme.radius.md,
-    backgroundColor: theme.color.surface, paddingHorizontal: theme.space.md,
-    paddingVertical: theme.space.sm, fontSize: theme.font.body, color: theme.color.text,
-  },
+  warning: { fontSize: theme.font.small, color: theme.color.tipLabel, lineHeight: 19, marginTop: theme.space.sm },
   cta: { backgroundColor: theme.color.heroBg, borderRadius: theme.radius.md, paddingVertical: theme.space.md, alignItems: 'center', marginTop: theme.space.md },
   ctaMuted: { backgroundColor: theme.color.textFaint },
   ctaDanger: { backgroundColor: theme.color.danger },

@@ -123,3 +123,13 @@ export function defaultValues(product: ProductId, defaultPerPack: number | null)
     priorPerDay: '',
   };
 }
+
+/**
+ * Settings lets the user change product in place. Everything they already typed is kept (the
+ * parser ignores fields that do not belong to the new product); only a blank per-pack field is
+ * filled with the new product's default.
+ */
+export function switchProduct(values: SetupFormValues, product: ProductId, defaultPerPack: number | null): SetupFormValues {
+  const unitsPerPack = values.unitsPerPack.trim() === '' && defaultPerPack !== null ? String(defaultPerPack) : values.unitsPerPack;
+  return { ...values, product, unitsPerPack };
+}

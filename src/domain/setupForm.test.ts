@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultValues, parseSetupForm, valuesFromSettings, type SetupFormValues } from './setupForm';
+import { defaultValues, parseSetupForm, switchProduct, valuesFromSettings, type SetupFormValues } from './setupForm';
 import { cigaretteSettings } from './testSettings';
 
 const STICKS = { perDay: 'Sticks per day', perPack: 'Sticks per pack', packPrice: 'Price per pack' };
@@ -163,5 +163,35 @@ describe('valuesFromSettings', () => {
 
     // Assert
     expect(result.unitsPerPack).toBe('');
+  });
+});
+
+describe('switchProduct', () => {
+  it('switchProduct_heatedToSnus_keepsSharedFieldsAndFillsBlankPackDefault', () => {
+    // Arrange
+    const before = values({ unitsPerPack: '', smokedBefore: true, historyYears: '5', priorPerDay: '10' });
+
+    // Act
+    const after = switchProduct(before, 'snus', 20);
+
+    // Assert
+    expect(after).toEqual({ ...before, product: 'snus', unitsPerPack: '20' });
+  });
+
+  it('switchProduct_filledPackField_isNotOverwritten', () => {
+    // Arrange & Act
+    const after = switchProduct(values({ unitsPerPack: '25' }), 'cigarettes', 20);
+
+    // Assert
+    expect(after.unitsPerPack).toBe('25');
+  });
+
+  it('switchProduct_toVape_keepsDailyRateForTheChips', () => {
+    // Arrange & Act
+    const after = switchProduct(values({ unitsPerDay: '12' }), 'vape', null);
+
+    // Assert
+    expect(after.product).toBe('vape');
+    expect(after.unitsPerDay).toBe('12');
   });
 });
