@@ -1,3 +1,4 @@
+import { isCombustible } from './products';
 import { DAYS_PER_MONTH_AVG, type Settings } from './types';
 
 /**
@@ -12,8 +13,6 @@ import { DAYS_PER_MONTH_AVG, type Settings } from './types';
 export function estimateCigarettesBeforeQuitting(settings: Settings): number | null {
   const history = settings.cigaretteHistory;
   if (history === null || history.months <= 0) return null;
-  const perDay = settings.product === 'cigarettes' || settings.product === 'roll-your-own'
-    ? settings.unitsPerDay
-    : history.cigarettesPerDay;
+  const perDay = isCombustible(settings.product) ? settings.unitsPerDay : history.cigarettesPerDay;
   return Math.round(history.months * DAYS_PER_MONTH_AVG * perDay);
 }

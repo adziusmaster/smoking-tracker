@@ -4,6 +4,19 @@ export type PhaseId = 'crash' | 'fog' | 'consolidation' | 'long-haul' | 'non-smo
 export type MilestoneStatus = 'reached' | 'in-progress' | 'future';
 export type SourceTier = 'a' | 'b';
 
+/**
+ * Who a milestone applies to. See src/domain/products.ts#audienceIncludes and the spec's
+ * milestone table: `smoked` is short-term smoke recovery (combustible products only);
+ * `smoking-history` is the long-term smoking-risk curves, which also apply to a switcher.
+ */
+export type Audience = 'all' | 'inhaled' | 'smoked' | 'smoking-history' | 'snus' | 'oral' | 'unknown-long-term';
+
+/** Copy that names smoke has a nicotine-only twin for products that burn nothing. */
+export interface CopyVariants<T> {
+  smoke: T;
+  nicotine: T;
+}
+
 export type ProductId = 'cigarettes' | 'roll-your-own' | 'heated' | 'vape' | 'snus' | 'pouches';
 
 export const PRODUCT_IDS: readonly ProductId[] = ['cigarettes', 'roll-your-own', 'heated', 'vape', 'snus', 'pouches'];
@@ -111,6 +124,15 @@ export interface Milestone {
   slipBehavior: SlipBehavior;
   sourceId: string;
   phaseId: PhaseId;
+  audience: Audience;
+  /** Replaces offsetMs / offsetEndMs / sourceId for the listed products. */
+  overrides?: Partial<Record<ProductId, MilestoneOverride>>;
+}
+
+export interface MilestoneOverride {
+  offsetMs: number | null;
+  offsetEndMs: number | null;
+  sourceId: string;
 }
 
 export interface MilestoneState {

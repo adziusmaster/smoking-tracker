@@ -14,6 +14,7 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'restarts',
     sourceId: 'acs',
     phaseId: 'crash',
+    audience: 'all',
   },
   {
     id: 'carbon-monoxide',
@@ -24,6 +25,7 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'restarts',
     sourceId: 'acs',
     phaseId: 'crash',
+    audience: 'all',
   },
   {
     id: 'nicotine-cleared',
@@ -34,6 +36,7 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'restarts',
     sourceId: 'co-halflife',
     phaseId: 'crash',
+    audience: 'all',
   },
   {
     id: 'withdrawal-peak',
@@ -44,6 +47,7 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'restarts',
     sourceId: 'withdrawal-peak',
     phaseId: 'crash',
+    audience: 'all',
   },
   {
     id: 'taste-smell',
@@ -54,6 +58,7 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'cumulative',
     sourceId: 'taste-smell',
     phaseId: 'fog',
+    audience: 'all',
   },
   {
     id: 'craving-adaptation',
@@ -64,6 +69,7 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'qualitative',
     sourceId: 'nachr',
     phaseId: 'consolidation',
+    audience: 'all',
   },
   {
     id: 'cough-breathlessness',
@@ -74,6 +80,7 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'cumulative',
     sourceId: 'acs',
     phaseId: 'consolidation',
+    audience: 'all',
   },
   {
     id: 'heart-attack-risk',
@@ -84,6 +91,7 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'cumulative',
     sourceId: 'acs',
     phaseId: 'long-haul',
+    audience: 'all',
   },
   {
     id: 'oral-cancer-stroke',
@@ -94,6 +102,7 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'cumulative',
     sourceId: 'acs',
     phaseId: 'long-haul',
+    audience: 'all',
   },
   {
     id: 'lung-cancer-halved',
@@ -104,6 +113,7 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'cumulative',
     sourceId: 'acs',
     phaseId: 'non-smoker',
+    audience: 'all',
   },
   {
     id: 'chd-nonsmoker',
@@ -114,6 +124,7 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'cumulative',
     sourceId: 'acs',
     phaseId: 'non-smoker',
+    audience: 'all',
   },
   {
     id: 'multi-cancer-nonsmoker',
@@ -124,5 +135,6 @@ export const MILESTONES: Milestone[] = [
     slipBehavior: 'cumulative',
     sourceId: 'acs',
     phaseId: 'non-smoker',
+    audience: 'all',
   },
 ];

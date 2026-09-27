@@ -13,9 +13,9 @@ const phases: Phase[] = [
 ];
 
 const milestones: Milestone[] = [
-  { id: 'co', title: 'CO clears', body: '', offsetMs: MS_PER_DAY, offsetEndMs: null, slipBehavior: 'restarts', sourceId: 'acs', phaseId: 'crash' },
-  { id: 'taste', title: 'Taste returns', body: '', offsetMs: 14 * MS_PER_DAY, offsetEndMs: null, slipBehavior: 'cumulative', sourceId: 'acs', phaseId: 'fog' },
-  { id: 'cough', title: 'Cough fades', body: '', offsetMs: 30 * MS_PER_DAY, offsetEndMs: 365 * MS_PER_DAY, slipBehavior: 'cumulative', sourceId: 'acs', phaseId: 'consolidation' },
+  { id: 'co', title: 'CO clears', body: '', offsetMs: MS_PER_DAY, offsetEndMs: null, slipBehavior: 'restarts', sourceId: 'acs', phaseId: 'crash', audience: 'all' },
+  { id: 'taste', title: 'Taste returns', body: '', offsetMs: 14 * MS_PER_DAY, offsetEndMs: null, slipBehavior: 'cumulative', sourceId: 'acs', phaseId: 'fog', audience: 'all' },
+  { id: 'cough', title: 'Cough fades', body: '', offsetMs: 30 * MS_PER_DAY, offsetEndMs: 365 * MS_PER_DAY, slipBehavior: 'cumulative', sourceId: 'acs', phaseId: 'consolidation', audience: 'all' },
 ];
 
 const state: QuitState = {
