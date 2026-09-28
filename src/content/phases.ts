@@ -68,7 +68,7 @@ export const PHASES: Phase[] = [
     whatsHappening:
       "Your lungs are doing repair work. Coughing and shortness of breath ease over the months ahead, and your blood has been carrying a normal amount of oxygen for weeks.",
     whatsHappeningNicotine:
-      "Physically, the hard part is over. Your brain grew extra nicotine receptors to cope with a steady supply, and they are settling back — one small brain-imaging study saw them back at normal levels after six to twelve weeks.",
+      "Physically, the hard part is over. Withdrawal symptoms have usually faded by now, and studies that follow people this far find mood and stress are often better than if they had kept going. The milestones below track what is still changing.",
     whatsHappeningOral: null,
     whyYouFeelThisWay:
       "What’s left is learned. For years, certain moments came with nicotine — coffee, a work break, a drink, the end of a meal, a stressful call — and your brain still expects it there. That is why a craving can appear out of nowhere at the same time every day. Each one still passes in a few minutes.",
@@ -79,7 +79,7 @@ export const PHASES: Phase[] = [
     ],
     howToCopeSmokeOnly: [],
     nameNicotine: null,
-    sources: ['acs', 'nachr', 'hse-cravings'],
+    sources: ['acs', 'hughes-2007', 'taylor-2021', 'hse-cravings'],
   },
   {
     id: 'long-haul',

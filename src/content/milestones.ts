@@ -135,7 +135,7 @@ export const MILESTONES: Milestone[] = [
   {
     id: 'craving-adaptation',
     title: 'Craving intensity and receptor adaptation',
-    body: 'Smoking increases the density of nicotine receptors in your brain, and abstinence lets that adaptation unwind. One small brain-imaging study found levels back in a non-smoker’s range after six to twelve weeks, but it was too small to put a date on it — so this milestone has no date and no progress bar.',
+    body: 'Regular nicotine makes your brain grow extra nicotine receptors, and going without lets that adaptation unwind. One small brain-imaging study found them back at normal levels after six to twelve weeks, but it was too small to put a date on it — so this milestone has no date and no progress bar.',
     offsetMs: null,
     offsetEndMs: null,
     slipBehavior: 'qualitative',

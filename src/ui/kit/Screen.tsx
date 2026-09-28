@@ -8,6 +8,8 @@ const useStyles = makeStyles((t) =>
     root: { flex: 1, backgroundColor: t.color.bg },
     content: { paddingHorizontal: t.space.lg, gap: t.space.md },
     // Full-width band in the page colour, so scrolled content never shows through behind it.
+    // Content scrolls edge to edge; this band keeps the status bar readable above it.
+    statusBand: { position: 'absolute', left: 0, right: 0, top: 0, backgroundColor: t.color.bg },
     footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: t.space.lg, paddingTop: t.space.sm, backgroundColor: t.color.bg },
   }),
 );
@@ -38,6 +40,7 @@ export function Screen(props: {
           {props.children}
         </ScrollView>
       )}
+      <View style={[styles.statusBand, { height: insets.top }]} pointerEvents="none" />
       {props.footer ? <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>{props.footer}</View> : null}
     </View>
   );
