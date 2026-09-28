@@ -1,10 +1,10 @@
-# Privacy Policy — Smoke Free
+# Privacy Policy — Cleared
 
 Last updated: 2026-08-10
 
 ## What this app collects
 
-Nothing. Smoke Free has no user accounts, no servers, and makes no network requests.
+Nothing. Cleared has no user accounts, no servers, and makes no network requests.
 
 ## What it stores, and where
 

@@ -1,4 +1,4 @@
-# STATE — Smoke Free
+# STATE — Cleared
 
 Resume point. Last updated 2026-09-28.
 
@@ -13,7 +13,8 @@ Resume point. Last updated 2026-09-28.
 | Schema | version 5 (v3: product columns; v4: `craving_events`; v5: `slips.product`) |
 | Typecheck | clean |
 | `expo-doctor` | 20/21 — the same patch drift, see Known items |
-| Package name | `com.adziusmaster.smokefree` (permanent once published) |
+| App name | **Cleared** (launcher); Play title **Cleared: Quit Smoking & Vaping** — renamed 2026-09-28 because "Smoke Free" is an established Play app |
+| Package name | `com.adziusmaster.smokefree` — kept on purpose (invisible to users; changing it means a new Play app, a new key, and wiped local data). DB file stays `smokefree.db`. |
 | EAS project | `@adrzej-dev/smoking-tracker` · `b8ec62ea-af25-4199-99e4-b3fbf9962e00` |
 | Last `versionCode` | 4 (EAS-managed, `appVersionSource: remote`) |
 

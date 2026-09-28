@@ -1,4 +1,4 @@
-# Smoke Free
+# Cleared
 
 A local-first, offline quit tracker for Android, built with Expo SDK 57 and `expo-router`,
 for cigarettes, roll-your-own, heated tobacco, vapes, snus and nicotine pouches. It tracks how

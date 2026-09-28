@@ -88,7 +88,7 @@ export default function Settings() {
     try {
       const json = await exportAll(db);
 
-      const file = new File(Paths.cache, 'smokefree-export.json');
+      const file = new File(Paths.cache, 'cleared-export.json');
       // The cache file is overwritten on every export, so delete any previous one first.
       if (file.exists) file.delete();
       file.create();
