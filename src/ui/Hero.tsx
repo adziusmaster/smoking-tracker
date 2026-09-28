@@ -11,7 +11,7 @@ const useStyles = makeStyles((t) =>
     // which would need a native module.
     depth: { position: 'absolute', width: 260, height: 260, borderRadius: 130, top: -110, left: -90, backgroundColor: t.color.heroFrom },
     big: { fontFamily: t.family.display, fontSize: t.font.display, lineHeight: 40, color: t.color.onHero, letterSpacing: -0.5 },
-    sub: { fontFamily: t.family.medium, fontSize: t.font.small, color: t.color.onHero, opacity: 0.85, marginTop: t.space.xs },
+    sub: { fontFamily: t.family.medium, fontSize: t.font.small, color: t.color.onHero, marginTop: t.space.xs },
     row: { flexDirection: 'row', gap: t.space.sm, marginTop: t.space.lg },
   }),
 );

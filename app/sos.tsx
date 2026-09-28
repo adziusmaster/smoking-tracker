@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { addSlip } from '@/data/repositories';
 import { PRODUCT_CONTENT } from '@/content/products';
 import { SLIP_REASSURANCE, SOS_STEPS } from '@/content/sos';
@@ -21,6 +21,7 @@ export default function Sos() {
   const db = useSQLiteContext();
   const router = useRouter();
   const styles = useStyles();
+  const { height: windowHeight } = useWindowDimensions();
   const { state } = useQuitState();
 
   const [stepIndex, setStepIndex] = useState(0);
@@ -113,22 +114,27 @@ export default function Sos() {
   const step = SOS_STEPS[stepIndex];
   const stepSeconds = step?.seconds ?? 60;
   const shown = Math.max(0, remaining);
+  // The main actions are pinned; the ring shrinks on short screens so the instruction stays close.
+  const ringSize = Math.round(Math.min(200, Math.max(140, windowHeight * 0.26)));
 
   return (
-    <Screen scroll={false}>
+    <Screen
+      footerSpace={140}
+      footer={
+        <View style={styles.actions}>
+          <Button label="It’s passed, I’m fine" onPress={() => setOutcome('passed')} />
+          <Button label={content.slipVerb} variant="quiet" onPress={() => setOutcome('slipped')} />
+        </View>
+      }
+    >
       <Eyebrow>Step {stepIndex + 1} of {SOS_STEPS.length}</Eyebrow>
       <Title>{step?.heading}</Title>
       <View style={styles.ringWrap} accessible accessibilityLabel={`${shown} seconds left`}>
-        <ProgressRing progress={shown / stepSeconds} size={200} thickness={12}>
+        <ProgressRing progress={shown / stepSeconds} size={ringSize} thickness={12}>
           <Text style={styles.seconds}>{shown}</Text>
         </ProgressRing>
       </View>
       <Body tone="muted">{step ? fillUnitTokens(step.instruction, content.unit) : null}</Body>
-
-      <View style={{ flex: 1 }} />
-
-      <Button label="It’s passed, I’m fine" onPress={() => setOutcome('passed')} />
-      <Button label={content.slipVerb} variant="quiet" onPress={() => setOutcome('slipped')} />
     </Screen>
   );
 }
@@ -136,7 +142,8 @@ export default function Sos() {
 const useStyles = makeStyles((t) =>
   StyleSheet.create({
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm },
-    ringWrap: { alignItems: 'center', paddingVertical: t.space.lg },
+    ringWrap: { alignItems: 'center', paddingVertical: t.space.md },
+    actions: { gap: t.space.xs, backgroundColor: t.color.bg },
     seconds: { fontFamily: t.family.display, fontSize: 56, lineHeight: 64, color: t.color.accentText, fontVariant: ['tabular-nums'] },
   }),
 );

@@ -15,10 +15,17 @@ const useStyles = makeStyles((t) =>
  * A page: themed background, safe-area insets, standard gutter. `footer` is pinned to the
  * bottom (the SOS button); the scroll content gets enough bottom padding to clear it.
  */
-export function Screen(props: { children: ReactNode; scroll?: boolean; footer?: ReactNode; centered?: boolean }) {
+export function Screen(props: {
+  children: ReactNode;
+  scroll?: boolean;
+  footer?: ReactNode;
+  /** Space reserved under the scroll content for the pinned footer. */
+  footerSpace?: number;
+  centered?: boolean;
+}) {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
-  const bottomPad = insets.bottom + (props.footer ? 96 : 32);
+  const bottomPad = insets.bottom + (props.footer ? (props.footerSpace ?? 96) : 32);
   const padding = { paddingTop: insets.top + 16, paddingBottom: bottomPad };
 
   return (

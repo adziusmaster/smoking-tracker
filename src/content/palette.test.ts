@@ -14,12 +14,12 @@ describe('PALETTES', () => {
     expect(dark).toEqual(light);
   });
 
-  it('PALETTES_everySolidValue_isSixDigitHex', () => {
-    // Arrange — heroTile is a translucent overlay by design
-    const solid = (p: Palette) => Object.entries(p).filter(([key]) => key !== 'heroTile');
+  it('PALETTES_everyValue_isSixDigitHex', () => {
+    // Arrange — no translucent tokens: a blended colour can't be contrast-checked here
+    const all = (p: Palette) => Object.entries(p);
 
     // Act
-    const bad = [...solid(PALETTES.light), ...solid(PALETTES.dark)].filter(([, v]) => !/^#[0-9A-F]{6}$/i.test(v));
+    const bad = [...all(PALETTES.light), ...all(PALETTES.dark)].filter(([, v]) => !/^#[0-9A-F]{6}$/i.test(v));
 
     // Assert
     expect(bad).toEqual([]);
@@ -37,6 +37,9 @@ describe('PALETTES', () => {
     [scheme, 'onAccent', 'accent', 4.5],
     [scheme, 'onHero', 'heroFrom', 4.5],
     [scheme, 'onHero', 'heroTo', 4.5],
+    [scheme, 'onHero', 'heroTile', 4.5],
+    [scheme, 'achieve', 'bg', 4.5],
+    [scheme, 'achieve', 'surface', 4.5],
     [scheme, 'onSos', 'sos', 4.5],
     [scheme, 'danger', 'dangerWash', 4.5],
     [scheme, 'achieve', 'achieveWash', 3],

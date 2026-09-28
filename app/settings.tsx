@@ -17,7 +17,8 @@ import { makeStyles } from '@/ui/theme';
 import { UsageFields } from '@/ui/UsageFields';
 import { useQuitState } from '@/ui/useQuitState';
 
-type Status = { text: string; tone: 'ok' | 'error' };
+/** `area` puts the message next to the button that caused it, whatever else failed to load. */
+type Status = { text: string; tone: 'ok' | 'error'; area: 'numbers' | 'data' };
 
 /**
  * The same policy Google Play links from the store listing. Hosted publicly because Play
@@ -67,19 +68,19 @@ export default function Settings() {
       timezone: state.settings.timezone,
       labels: { perDay: content.perDayLabel, perPack: content.perPackLabel, packPrice: content.packPriceLabel },
     });
-    if (!result.ok) return setStatus({ text: result.error, tone: 'error' });
+    if (!result.ok) return setStatus({ text: result.error, tone: 'error', area: 'numbers' });
 
     try {
       await saveSettings(db, result.settings, new Date());
     } catch {
-      return setStatus({ text: 'Couldn’t save that. Your stored numbers are unchanged — please try again.', tone: 'error' });
+      return setStatus({ text: 'Couldn’t save that. Your stored numbers are unchanged — please try again.', tone: 'error', area: 'numbers' });
     }
     // The write succeeded; a failed refresh must not be reported as a failed save.
     try {
       await reload();
-      setStatus({ text: 'Saved. Every figure has been recalculated.', tone: 'ok' });
+      setStatus({ text: 'Saved. Every figure has been recalculated.', tone: 'ok', area: 'numbers' });
     } catch {
-      setStatus({ text: 'Saved, but couldn’t refresh — reopen Settings to see the new figures.', tone: 'ok' });
+      setStatus({ text: 'Saved, but couldn’t refresh — reopen Settings to see the new figures.', tone: 'ok', area: 'numbers' });
     }
   };
 
@@ -96,10 +97,10 @@ export default function Settings() {
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'Export your data' });
       } else {
-        setStatus({ text: `Saved to ${file.uri}`, tone: 'ok' });
+        setStatus({ text: `Saved to ${file.uri}`, tone: 'ok', area: 'data' });
       }
     } catch {
-      setStatus({ text: 'Couldn’t write the export file. Nothing was exported — please try again.', tone: 'error' });
+      setStatus({ text: 'Couldn’t write the export file. Nothing was exported — please try again.', tone: 'error', area: 'data' });
     }
   };
 
@@ -116,7 +117,7 @@ export default function Settings() {
             try {
               await deleteEverything(db);
             } catch {
-              return setStatus({ text: 'Couldn’t delete your data. Nothing was removed — please try again.', tone: 'error' });
+              return setStatus({ text: 'Couldn’t delete your data. Nothing was removed — please try again.', tone: 'error', area: 'data' });
             }
             router.replace('/onboarding');
           },
@@ -153,7 +154,7 @@ export default function Settings() {
             </Body>
           ) : null}
           <Button label="Save" onPress={save} />
-          {status ? <Body tone={status.tone === 'error' ? 'danger' : 'accent'}>{status.text}</Body> : null}
+          {status?.area === 'numbers' ? <StatusLine status={status} /> : null}
           {/* Deliberately NOT called a "lifetime total": that phrase is used on the SOS and
               Log screens for the running figure, which adds every slip and relapse cigarette
               logged since the quit date. This one stops at the quit date. */}
@@ -177,6 +178,7 @@ export default function Settings() {
       </Caption>
       <Button label="Export as JSON" variant="secondary" onPress={exportData} />
       <Button label="Delete everything" variant="danger" onPress={confirmDelete} />
+      {status?.area === 'data' ? <StatusLine status={status} /> : null}
       <Link label="Read the full privacy policy" url={PRIVACY_POLICY_URL} />
 
       <Heading>Where the claims come from</Heading>
@@ -200,6 +202,14 @@ export default function Settings() {
         any app, including this one.
       </Caption>
     </Screen>
+  );
+}
+
+function StatusLine({ status }: { status: Status }) {
+  return (
+    <Body tone={status.tone === 'error' ? 'danger' : 'accent'} accessibilityRole="text">
+      {status.text}
+    </Body>
   );
 }
 

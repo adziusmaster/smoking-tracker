@@ -22,7 +22,7 @@ export interface Palette {
   heroFrom: string;
   heroTo: string;
   onHero: string;
-  /** Translucent overlay for tiles on the hero card. */
+  /** Solid tile fill on the hero card (solid so its text contrast is testable). */
   heroTile: string;
   sos: string;
   onSos: string;
@@ -45,12 +45,12 @@ export const PALETTES: { light: Palette; dark: Palette } = {
     accent: '#0E7C86',
     accentText: '#0B6770',
     onAccent: '#FFFFFF',
-    achieve: '#B8651F',
+    achieve: '#A0561A',
     achieveWash: '#FFF4E8',
     heroFrom: '#0E5F69',
     heroTo: '#0E7C86',
     onHero: '#FFFFFF',
-    heroTile: 'rgba(255,255,255,0.16)',
+    heroTile: '#0B6770',
     sos: '#0F2830',
     onSos: '#FFFFFF',
     danger: '#B42318',
@@ -75,7 +75,7 @@ export const PALETTES: { light: Palette; dark: Palette } = {
     heroFrom: '#0F2F38',
     heroTo: '#1F6A6F',
     onHero: '#EAF7F6',
-    heroTile: 'rgba(255,255,255,0.08)',
+    heroTile: '#184F55',
     sos: '#F0A55A',
     onSos: '#2A1606',
     danger: '#FF9C8F',

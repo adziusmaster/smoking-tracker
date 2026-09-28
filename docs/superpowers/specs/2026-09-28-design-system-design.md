@@ -68,11 +68,11 @@ Values (from the approved direction):
 | accent | `#0E7C86` | `#5CC8C2` |
 | accentText | `#0B6770` | `#7FD8D2` |
 | onAccent | `#FFFFFF` | `#06282A` |
-| achieve | `#B8651F` | `#F0A55A` |
+| achieve | `#A0561A` | `#F0A55A` |
 | achieveWash | `#FFF4E8` | `#1E1B14` |
 | heroFrom / heroTo | `#0E5F69` / `#0E7C86` | `#0F2F38` / `#1F6A6F` |
 | onHero | `#FFFFFF` | `#EAF7F6` |
-| heroTile | `rgba(255,255,255,0.16)` | `rgba(255,255,255,0.08)` |
+| heroTile | `#0B6770` | `#184F55` |
 | sos / onSos | `#0F2830` / `#FFFFFF` | `#F0A55A` / `#2A1606` |
 | danger | `#B42318` | `#FF9C8F` |
 | dangerWash / dangerLine | `#FEF3F2` / `#FECDCA` | `#2A1512` / `#5A2A24` |
