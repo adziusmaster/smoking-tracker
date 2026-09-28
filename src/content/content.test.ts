@@ -1,7 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { MILESTONES } from './milestones';
 import { SOURCES } from './sources';
-import { PHASES } from './phases';
+import { DANGER_WINDOW_TIPS, PHASES } from './phases';
+import { PRODUCT_CONTENT } from './products';
+import { SLIP_REASSURANCE, SOS_STEPS } from './sos';
+import { applicableMilestones, audienceIncludes } from '@/domain/products';
+import { cigaretteSettings } from '@/domain/testSettings';
+import type { ProductId, Settings } from '@/domain/types';
+
+const PRODUCTS: ProductId[] = ['cigarettes', 'roll-your-own', 'heated', 'vape', 'snus', 'pouches'];
+const settingsFor = (product: ProductId, withHistory: boolean): Settings =>
+  cigaretteSettings({
+    product,
+    cost: product === 'vape' ? { kind: 'weekly', weeklySpendMinor: 1500 } : { kind: 'pack', unitsPerPack: 20, packPriceMinor: 1000 },
+    cigaretteHistory: withHistory ? { months: 60, cigarettesPerDay: 10 } : null,
+  });
+const everyProfile = PRODUCTS.flatMap((p) => [settingsFor(p, false), settingsFor(p, true)]);
+const label = (s: Settings) => `${s.product}/${s.cigaretteHistory ? 'history' : 'none'}`;
 
 describe('MILESTONES', () => {
   it('MILESTONES_everyRecord_hasResolvableSourceId', () => {
@@ -117,5 +132,131 @@ describe('PHASES', () => {
 
     // Assert
     expect(orphans.map((m) => m.id)).toEqual([]);
+  });
+});
+
+describe('MILESTONES by product', () => {
+  it('MILESTONES_everyOverride_hasResolvableSourceId', () => {
+    // Arrange
+    const known = new Set(Object.keys(SOURCES));
+
+    // Act
+    const unresolved = MILESTONES.flatMap((m) =>
+      Object.values(m.overrides ?? {}).filter((o) => !known.has(o.sourceId)).map(() => m.id));
+
+    // Assert
+    expect(unresolved).toEqual([]);
+  });
+
+  it('MILESTONES_everyProfile_hasADatedMilestoneInEachEarlyPhase', () => {
+    // Arrange
+    const earlyPhases = ['crash', 'fog', 'consolidation'] as const;
+
+    // Act
+    const gaps = everyProfile.flatMap((settings) => {
+      const visible = applicableMilestones(MILESTONES, settings);
+      return earlyPhases
+        .filter((phaseId) => !visible.some((m) => m.phaseId === phaseId && m.offsetMs !== null))
+        .map((phaseId) => `${label(settings)}/${phaseId}`);
+    });
+
+    // Assert
+    expect(gaps).toEqual([]);
+  });
+
+  it('MILESTONES_smokedAudience_neverReachesANonCombustibleProduct', () => {
+    // Arrange
+    const nonCombustible = everyProfile.filter((s) => s.product !== 'cigarettes' && s.product !== 'roll-your-own');
+
+    // Act
+    const leaks = nonCombustible.filter((s) => audienceIncludes('smoked', s));
+
+    // Assert
+    expect(leaks).toEqual([]);
+  });
+
+  it('MILESTONES_carbonMonoxide_isVisibleOnlyToCombustibleProducts', () => {
+    // Arrange & Act
+    const seeing = everyProfile
+      .filter((s) => applicableMilestones(MILESTONES, s).some((m) => m.id === 'carbon-monoxide'))
+      .map((s) => s.product);
+
+    // Assert
+    expect([...new Set(seeing)]).toEqual(['cigarettes', 'roll-your-own']);
+  });
+
+  it('MILESTONES_longTermUnknown_appearsExactlyWhenNoSmokingHistory', () => {
+    // Arrange & Act
+    const seeing = everyProfile
+      .filter((s) => applicableMilestones(MILESTONES, s).some((m) => m.id === 'long-term-unknown'))
+      .map(label);
+
+    // Assert
+    expect(seeing).toEqual(['heated/none', 'vape/none', 'snus/none', 'pouches/none']);
+  });
+
+  it('MILESTONES_bannedOverclaims_areAbsentFromEveryTitleAndBody', () => {
+    // Arrange — excluded by the research for this release, see the spec
+    const banned = ['95%', 'safer', 'gums grow', 'recession reverses', 'blood pressure normal', 'healing lost'];
+
+    // Act
+    const offending = MILESTONES.filter((m) => banned.some((b) => `${m.title} ${m.body}`.toLowerCase().includes(b)));
+
+    // Assert
+    expect(offending.map((m) => m.id)).toEqual([]);
+  });
+});
+
+describe('PRODUCT_CONTENT', () => {
+  it('PRODUCT_CONTENT_everyProduct_hasAnEntryWithMatchingId', () => {
+    // Arrange & Act
+    const mismatched = PRODUCTS.filter((p) => PRODUCT_CONTENT[p].id !== p);
+
+    // Assert
+    expect(mismatched).toEqual([]);
+  });
+
+  it('PRODUCT_CONTENT_packProducts_havePackLabelsAndVapeHasNone', () => {
+    // Arrange & Act
+    const missing = PRODUCTS.filter((p) => p !== 'vape' && PRODUCT_CONTENT[p].perPackLabel === null);
+
+    // Assert
+    expect(missing).toEqual([]);
+    expect(PRODUCT_CONTENT.vape.perPackLabel).toBeNull();
+  });
+
+  it('PRODUCT_CONTENT_onlyCombustibleProducts_saySmokeFree', () => {
+    // Arrange & Act
+    const smokeFree = PRODUCTS.filter((p) => PRODUCT_CONTENT[p].freeWord === 'smoke-free');
+
+    // Assert
+    expect(smokeFree).toEqual(['cigarettes', 'roll-your-own']);
+  });
+
+  it('content_unitTokens_onlyUseKnownTokenNames', () => {
+    // Arrange
+    const texts = [
+      ...SOS_STEPS.map((s) => s.instruction), SLIP_REASSURANCE.smoke, SLIP_REASSURANCE.nicotine,
+      ...DANGER_WINDOW_TIPS.howToCope, ...PHASES.flatMap((p) => [...p.howToCope, ...p.howToCopeSmokeOnly]),
+    ];
+
+    // Act
+    const unknown = texts.flatMap((t) => [...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1])).filter((name) => name !== 'unit' && name !== 'units');
+
+    // Assert
+    expect(unknown).toEqual([]);
+  });
+
+  it('PHASES_nicotineVariants_neverMentionSmokeMarkers', () => {
+    // Arrange
+    const markers = /carbon monoxide|tar\b|cilia|smoke/i;
+
+    // Act
+    const offending = PHASES.filter((p) => markers.test(p.whatsHappeningNicotine) || (p.whatsHappeningOral !== null && markers.test(p.whatsHappeningOral)))
+      .map((p) => p.id);
+
+    // Assert
+    expect(offending).toEqual([]);
+    expect(markers.test(DANGER_WINDOW_TIPS.whatsHappening.nicotine)).toBe(false);
   });
 });

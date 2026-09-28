@@ -17,7 +17,7 @@ export function resolveMilestone(milestone: Milestone, anchors: Anchors, now: Da
 
   // Qualitative milestones are narrative: no date, no bar, always ongoing.
   if (anchorIso === null || milestone.offsetMs === null) {
-    return { milestone, status: 'in-progress', reachedAt: null, projectedAt: null, progress: null };
+    return { milestone, status: 'in-progress', reachedAt: null, projectedAt: null, progress: null, conservativelyAnchored: false };
   }
 
   const anchorMs = new Date(anchorIso).getTime();
@@ -34,6 +34,7 @@ export function resolveMilestone(milestone: Milestone, anchors: Anchors, now: Da
       reachedAt: new Date(completionMs).toISOString(),
       projectedAt: null,
       progress: null,
+      conservativelyAnchored: false,
     };
   }
 
@@ -45,6 +46,7 @@ export function resolveMilestone(milestone: Milestone, anchors: Anchors, now: Da
       reachedAt: null,
       projectedAt: new Date(endMs).toISOString(),
       progress: (nowMs - startMs) / (endMs - startMs),
+      conservativelyAnchored: false,
     };
   }
 
@@ -54,6 +56,7 @@ export function resolveMilestone(milestone: Milestone, anchors: Anchors, now: Da
     reachedAt: null,
     projectedAt: new Date(completionMs).toISOString(),
     progress: null,
+    conservativelyAnchored: false,
   };
 }
 

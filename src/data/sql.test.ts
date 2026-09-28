@@ -19,7 +19,7 @@ let db: Database.Database;
 const NOW = '2026-08-08T08:00:00.000Z';
 
 const insertSettings = (quitDate = '2026-06-26T08:00:00+02:00') =>
-  db.prepare(UPSERT_SETTINGS).run(quitDate, 15, 20, 1100, 'EUR', 'Europe/Amsterdam', 96, NOW, NOW);
+  db.prepare(UPSERT_SETTINGS).run(quitDate, 15, 20, 1100, 'EUR', 'Europe/Amsterdam', 96, 'cigarettes', null, null, NOW, NOW);
 
 beforeEach(() => {
   db = new Database(':memory:');
@@ -70,7 +70,7 @@ describe('settings', () => {
 
   it('settings_zeroCigarettesPerDay_isRejected', () => {
     // Arrange & Act
-    const act = () => db.prepare(UPSERT_SETTINGS).run('2026-06-26T08:00:00+02:00', 0, 20, 1100, 'EUR', 'UTC', 0, NOW, NOW);
+    const act = () => db.prepare(UPSERT_SETTINGS).run('2026-06-26T08:00:00+02:00', 0, 20, 1100, 'EUR', 'UTC', 0, 'cigarettes', null, null, NOW, NOW);
 
     // Assert
     expect(act).toThrow(/CHECK constraint failed/);
@@ -82,7 +82,7 @@ describe('settings', () => {
 
     // Act
     db.prepare(UPSERT_SETTINGS).run(
-      '2026-06-26T08:00:00+02:00', 15, 20, 1100, 'EUR', 'Europe/Amsterdam', 77, createdAt, createdAt,
+      '2026-06-26T08:00:00+02:00', 15, 20, 1100, 'EUR', 'Europe/Amsterdam', 77, 'cigarettes', null, null, createdAt, createdAt,
     );
     const row = db.prepare(SELECT_SETTINGS).get() as {
       smoked_for_months: number;
@@ -234,9 +234,9 @@ describe('migration v2', () => {
     expect(row.smoked_for_months).toBe(0);
   });
 
-  it('SCHEMA_VERSION_afterAddingV2_isTwo', () => {
+  it('SCHEMA_VERSION_afterAddingV3_isThree', () => {
     // Arrange & Act & Assert
-    expect(SCHEMA_VERSION).toBe(2);
+    expect(SCHEMA_VERSION).toBe(3);
   });
 
   it('MIGRATIONS_freshDatabase_hasSmokedForMonthsColumn', () => {
@@ -263,15 +263,15 @@ describe('migrationsToApply', () => {
     const selected = migrationsToApply(0);
 
     // Assert
-    expect(selected.map((m) => m.version)).toEqual([1, 2]);
+    expect(selected.map((m) => m.version)).toEqual([1, 2, 3]);
   });
 
-  it('migrationsToApply_fromAV1Database_selectsOnlyV2', () => {
+  it('migrationsToApply_fromAV1Database_selectsV2AndV3', () => {
     // Arrange & Act
     const selected = migrationsToApply(1);
 
     // Assert
-    expect(selected.map((m) => m.version)).toEqual([2]);
+    expect(selected.map((m) => m.version)).toEqual([2, 3]);
   });
 
   it('migrationsToApply_afterTheWholeSetHasBeenApplied_selectsNothingSoASecondPassIsANoOp', () => {
@@ -279,7 +279,7 @@ describe('migrationsToApply', () => {
     // holding a real settings row so a stray UPDATE would be visible too
     const fresh = new Database(':memory:');
     for (const migration of migrationsToApply(0)) fresh.exec(migration.up);
-    fresh.prepare(UPSERT_SETTINGS).run('2026-06-26T08:00:00+02:00', 15, 20, 1100, 'EUR', 'Europe/Amsterdam', 96, NOW, NOW);
+    fresh.prepare(UPSERT_SETTINGS).run('2026-06-26T08:00:00+02:00', 15, 20, 1100, 'EUR', 'Europe/Amsterdam', 96, 'cigarettes', null, null, NOW, NOW);
     const before = schemaSnapshot(fresh);
     const rowBefore = fresh.prepare(SELECT_SETTINGS).get();
 
@@ -322,5 +322,60 @@ describe('DELETE_ALL', () => {
     // Assert
     expect(db.prepare(SELECT_SETTINGS).all()).toEqual([]);
     expect(db.prepare(SELECT_SLIPS).all()).toEqual([]);
+  });
+});
+
+describe('migration v3', () => {
+  it('UPSERT_SETTINGS_vapeRow_roundTripsProductAndWeeklySpend', () => {
+    // Arrange
+    db.prepare(UPSERT_SETTINGS).run('2026-06-26T08:00:00Z', 15, 1, 0, 'EUR', 'UTC', 120, 'vape', 1500, 12, NOW, NOW);
+
+    // Act
+    const row = db.prepare(SELECT_SETTINGS).get() as { product: string; weekly_spend_minor: number; prior_cigarettes_per_day: number };
+
+    // Assert
+    expect(row.product).toBe('vape');
+    expect(row.weekly_spend_minor).toBe(1500);
+    expect(row.prior_cigarettes_per_day).toBe(12);
+  });
+
+  it('settings_unknownProduct_isRejectedByCheckConstraint', () => {
+    // Arrange & Act
+    const act = () => db.prepare(UPSERT_SETTINGS).run('2026-06-26T08:00:00Z', 15, 20, 1100, 'EUR', 'UTC', 0, 'cigars', null, null, NOW, NOW);
+
+    // Assert
+    expect(act).toThrow(/CHECK constraint failed/);
+  });
+
+  it('settings_negativeWeeklySpend_isRejected', () => {
+    // Arrange & Act
+    const act = () => db.prepare(UPSERT_SETTINGS).run('2026-06-26T08:00:00Z', 15, 1, 0, 'EUR', 'UTC', 0, 'vape', -1, null, NOW, NOW);
+
+    // Assert
+    expect(act).toThrow(/CHECK constraint failed/);
+  });
+
+  it('migrationsToApply_fromVersionTwo_selectsOnlyVersionThree', () => {
+    // Arrange & Act
+    const pending = migrationsToApply(2);
+
+    // Assert
+    expect(pending.map((m) => m.version)).toEqual([3]);
+  });
+
+  it('settings_rowWrittenBeforeV3_defaultsToCigarettes', () => {
+    // Arrange — a fresh db at v2, a v2-shaped row, then v3
+    const legacy = new Database(':memory:');
+    for (const migration of MIGRATIONS.filter((m) => m.version <= 2)) legacy.exec(migration.up);
+    legacy.prepare(`INSERT INTO settings (id, quit_date, cigarettes_per_day, cigarettes_per_pack, pack_price_minor,
+      currency, timezone, created_at, updated_at) VALUES (1, ?, 15, 20, 1100, 'EUR', 'UTC', ?, ?)`).run(NOW, NOW, NOW);
+
+    // Act
+    for (const migration of migrationsToApply(2)) legacy.exec(migration.up);
+    const row = legacy.prepare(SELECT_SETTINGS).get() as { product: string; weekly_spend_minor: number | null };
+
+    // Assert
+    expect(row.product).toBe('cigarettes');
+    expect(row.weekly_spend_minor).toBeNull();
   });
 });

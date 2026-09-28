@@ -9,6 +9,7 @@ import { buildTimeline } from '@/domain/timeline';
 import type { MilestoneState } from '@/domain/types';
 import { MILESTONES } from '@/content/milestones';
 import { DANGER_WINDOW_TIPS, PHASES } from '@/content/phases';
+import { PRODUCT_CONTENT } from '@/content/products';
 import { SOURCES } from '@/content/sources';
 import { syncNotifications } from '@/notifications/schedule';
 import { ChapterBlock } from '@/ui/ChapterBlock';
@@ -54,7 +55,17 @@ export default function Timeline() {
   }, [loading, error, state, router]);
 
   const timeline = useMemo(
-    () => (state ? buildTimeline({ state, milestones: MILESTONES, phases: PHASES, now }) : null),
+    () =>
+      state
+        ? buildTimeline({
+            state,
+            milestones: MILESTONES,
+            phases: PHASES,
+            dangerTips: DANGER_WINDOW_TIPS,
+            unit: PRODUCT_CONTENT[state.settings.product].unit,
+            now,
+          })
+        : null,
     [state, now],
   );
 
@@ -130,6 +141,7 @@ export default function Timeline() {
   }
 
   const { dangerWindow, currentPhase } = timeline;
+  const content = PRODUCT_CONTENT[state.settings.product];
 
   return (
     <View style={{ flex: 1 }}>
@@ -146,13 +158,16 @@ export default function Timeline() {
           currency={state.settings.currency}
           phaseName={currentPhase.name}
           currentlySmoking={timeline.anchors.isCurrentlySmoking}
+          freeWord={content.freeWord}
+          avoidedLabel={content.avoidedLabel}
+          relapseTitle={content.relapseTitle}
         />
 
         {dangerWindow.active ? (
           <View style={styles.banner}>
             <Text style={styles.bannerTitle}>Danger window · {dangerWindow.daysRemaining} days left</Text>
             <Text style={styles.bannerBody}>
-              Most slips that become relapses do it within about 19 days. You’re inside that window, so the
+              On average, a slip that becomes a relapse does so within about 19 days. You’re inside that window, so the
               guidance below has changed to match.
             </Text>
             {/* The 19-day figure is a sourced claim like any milestone, so it is attributed
@@ -167,18 +182,8 @@ export default function Timeline() {
           <ChapterBlock
             key={chapter.phase.id}
             chapter={chapter}
-            tips={
-              chapter.status !== 'current'
-                ? null
-                : dangerWindow.active
-                  ? DANGER_WINDOW_TIPS
-                  : {
-                      whatsHappening: chapter.phase.whatsHappening,
-                      whyYouFeelThisWay: chapter.phase.whyYouFeelThisWay,
-                      howToCope: chapter.phase.howToCope,
-                    }
-            }
-            tipsAreDangerWindow={chapter.status === 'current' && dangerWindow.active}
+            tips={chapter.status === 'current' ? timeline.currentTips : null}
+            tipsAreDangerWindow={chapter.status === 'current' && timeline.currentTipsAreDangerWindow}
           />
         ))}
 
@@ -189,7 +194,7 @@ export default function Timeline() {
       </ScrollView>
 
       <Pressable style={[styles.sos, { bottom: insets.bottom + theme.space.lg }]} onPress={() => router.push('/sos')}>
-        <Text style={styles.sosText}>I want to smoke</Text>
+        <Text style={styles.sosText}>{content.cravingButton}</Text>
       </Pressable>
     </View>
   );

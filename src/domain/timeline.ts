@@ -1,11 +1,16 @@
 import { resolveAnchors } from './anchors';
 import { elapsedSince } from './elapsed';
 import { resolveMilestones } from './milestones';
-import { resolveDangerWindow, resolvePhase } from './phases';
+import { applicableMilestones, isConservativelyAnchored, pickVariant } from './products';
+import { fillUnitTokens } from './format';
+import { resolveDangerWindow, resolvePhase, resolvePhaseCopy } from './phases';
 import { computeSavings } from './savings';
 import { longestSmokeFreeStreak } from './streaks';
 import type {
   Chapter,
+  DangerTips,
+  TipContent,
+  UnitWords,
   Milestone,
   MilestoneState,
   Phase,
@@ -17,6 +22,8 @@ export interface TimelineInput {
   state: QuitState;
   milestones: Milestone[];
   phases: Phase[];
+  dangerTips: DangerTips;
+  unit: UnitWords;
   now: Date;
 }
 
@@ -29,10 +36,18 @@ function pickNext(states: MilestoneState[]): MilestoneState | null {
   return upcoming[0] ?? null;
 }
 
-export function buildTimeline({ state, milestones, phases, now }: TimelineInput): TimelineViewModel {
+export function buildTimeline({ state, milestones, phases: rawPhases, dangerTips, unit, now }: TimelineInput): TimelineViewModel {
+  const phases = rawPhases.map((phase) => resolvePhaseCopy(phase, state.settings, unit));
   const anchors = resolveAnchors(state, now);
   const currentPhase = resolvePhase(phases, anchors, now);
-  const milestoneStates = resolveMilestones(milestones, anchors, now);
+  // Filter and apply per-product overrides BEFORE resolving, so nothing downstream —
+  // chapters, nextMilestone, notification planning — can see a claim that does not apply.
+  const milestoneStates = resolveMilestones(applicableMilestones(milestones, state.settings), anchors, now).map(
+    (milestoneState) => ({
+      ...milestoneState,
+      conservativelyAnchored: isConservativelyAnchored(milestoneState.milestone, state.settings),
+    }),
+  );
 
   const currentIndex = phases.findIndex((phase) => phase.id === currentPhase.id);
 
@@ -41,6 +56,19 @@ export function buildTimeline({ state, milestones, phases, now }: TimelineInput)
     status: index < currentIndex ? 'past' : index === currentIndex ? 'current' : 'future',
     milestones: milestoneStates.filter((milestoneState) => milestoneState.milestone.phaseId === phase.id),
   }));
+
+  const dangerWindow = resolveDangerWindow(state.slips, now);
+  const currentTips: TipContent = dangerWindow.active
+    ? {
+        whatsHappening: pickVariant(dangerTips.whatsHappening, state.settings),
+        whyYouFeelThisWay: dangerTips.whyYouFeelThisWay,
+        howToCope: dangerTips.howToCope.map((tip) => fillUnitTokens(tip, unit)),
+      }
+    : {
+        whatsHappening: currentPhase.whatsHappening,
+        whyYouFeelThisWay: currentPhase.whyYouFeelThisWay,
+        howToCope: currentPhase.howToCope,
+      };
 
   return {
     // Displayed streak follows the cumulative anchor: a slip does not zero the counter.
@@ -51,8 +79,10 @@ export function buildTimeline({ state, milestones, phases, now }: TimelineInput)
     savings: computeSavings(state, now),
     anchors,
     currentPhase,
-    dangerWindow: resolveDangerWindow(state.slips, now),
+    dangerWindow,
     chapters,
     nextMilestone: pickNext(milestoneStates),
+    currentTips,
+    currentTipsAreDangerWindow: dangerWindow.active,
   };
 }

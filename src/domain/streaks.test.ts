@@ -1,19 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { cigaretteSettings } from './testSettings';
 import { longestSmokeFreeStreak, smokeFreeStreaks } from './streaks';
 import { MS_PER_DAY, type QuitState, type SmokingPeriod } from './types';
 
 const QUIT = '2026-01-01T00:00:00.000Z';
 
 const state = (periods: SmokingPeriod[] = []): QuitState => ({
-  settings: {
-    quitDate: QUIT,
-    cigarettesPerDay: 15,
-    cigarettesPerPack: 20,
-    packPriceMinor: 1100,
-    currency: 'EUR',
-    timezone: 'Europe/Amsterdam',
-    smokedForMonths: 0,
-  },
+  settings: cigaretteSettings({ quitDate: QUIT, cigaretteHistory: null }),
   slips: [],
   periods,
 });
@@ -22,7 +15,7 @@ const period = (startedAt: string, endedAt: string | null): SmokingPeriod => ({
   id: 1,
   startedAt,
   endedAt,
-  averageCigarettesPerDay: 20,
+  averageUnitsPerDay: 20,
   note: null,
 });
 

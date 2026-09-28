@@ -1,16 +1,19 @@
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { addSlip } from '@/data/repositories';
-import { SOS_STEPS } from '@/content/sos';
-import { formatCount } from '@/domain/format';
-import { parseNonNegativeInt, parsePositiveInt } from '@/domain/parse';
-import { computeSavings } from '@/domain/savings';
+import { PRODUCT_CONTENT } from '@/content/products';
+import { SLIP_REASSURANCE, SOS_STEPS } from '@/content/sos';
+import { fillUnitTokens, formatCount } from '@/domain/format';
+import { parseNonNegativeInt } from '@/domain/parse';
+import { pickVariant } from '@/domain/products';
+import { lifetimeAfterSlip } from '@/domain/savings';
 import type { SlipTrigger } from '@/domain/types';
 import { theme } from '@/ui/theme';
 import { useQuitState } from '@/ui/useQuitState';
+import { useSubmitGuard } from '@/ui/useSubmitGuard';
 
 const TRIGGERS: SlipTrigger[] = ['alcohol', 'stress', 'social', 'boredom', 'routine', 'other'];
 
@@ -26,13 +29,10 @@ export default function Sos() {
   const [count, setCount] = useState('1');
   const [trigger, setTrigger] = useState<SlipTrigger | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  // `submittingRef` is the correctness guard, matching app/log.tsx: it is checked and set
-  // synchronously before any `await`, so two taps in the same tick (before React re-renders
-  // with the updated state) cannot both insert a slip row. Two rows would reset the fast
-  // clock twice and charge the savings figures twice. The `submitting` state only drives
-  // the visual disabled/opacity and may lag a render behind without weakening the guard.
-  const submittingRef = useRef(false);
+  const { submitting, run } = useSubmitGuard();
+  // Cigarette wording until the stored product has loaded — the screen must work instantly.
+  const content = PRODUCT_CONTENT[state?.settings.product ?? 'cigarettes'];
+  const slipUnits = content.countsSlips ? Math.max(1, parseNonNegativeInt(count) ?? 1) : 1;
 
   useEffect(() => {
     if (outcome !== 'running') return;
@@ -51,49 +51,43 @@ export default function Sos() {
     }
   }, [remaining, stepIndex]);
 
-  const logSlip = async () => {
-    if (submittingRef.current) return;
-    submittingRef.current = true;
-    setSubmitting(true);
-    setFailure(null);
-    try {
-      await addSlip(
-        db,
-        { occurredAt: new Date().toISOString(), cigaretteCount: parsePositiveInt(count) ?? 1, trigger, note: null },
-        new Date(),
-      );
-      router.replace('/');
-    } catch {
-      setFailure('Couldn’t save that. Nothing was recorded — try again, and it still counts as logged honestly.');
-    } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
-    }
-  };
+  const logSlip = () =>
+    run(async () => {
+      setFailure(null);
+      try {
+        await addSlip(db, { occurredAt: new Date().toISOString(), unitCount: slipUnits, trigger, note: null }, new Date());
+        router.replace('/');
+      } catch {
+        setFailure('Couldn’t save that. Nothing was recorded — try again, and it still counts as logged honestly.');
+      }
+    });
 
   if (outcome === 'slipped') {
-    const parsedCount = parseNonNegativeInt(count) ?? 1;
-    const lifetimeAfterSlip = state
-      ? computeSavings(state, new Date()).lifetimeTotal + Math.max(1, parsedCount)
-      : null;
+    const lifetime = state ? lifetimeAfterSlip(state, slipUnits, new Date()) : null;
+    const reassurance = state ? pickVariant(SLIP_REASSURANCE, state.settings) : SLIP_REASSURANCE.smoke;
 
     return (
       <ScrollView contentContainerStyle={[styles.page, { paddingTop: insets.top + theme.space.xl }]}>
         <Text style={styles.h1}>Alright. Let’s log it accurately.</Text>
-        <Text style={styles.body}>
-          One cigarette is not a failed quit attempt — treating it as one is what turns it into a relapse.
-          Your carbon monoxide and nicotine clocks restart from this. Everything measured in months and
-          years keeps running, because those depend on cumulative exposure and this barely registers
-          against it.
-        </Text>
-        {lifetimeAfterSlip !== null ? (
+        <Text style={styles.body}>{fillUnitTokens(reassurance, content.unit)}</Text>
+        {lifetime !== null ? (
           <Text style={styles.body}>
-            That brings your estimated lifetime total to {formatCount(lifetimeAfterSlip)}.
+            That brings your estimated lifetime cigarette total to {formatCount(lifetime)}.
           </Text>
         ) : null}
 
-        <Text style={styles.label}>How many did you smoke?</Text>
-        <TextInput style={styles.input} value={count} onChangeText={setCount} keyboardType="number-pad" accessibilityLabel="Number of cigarettes" />
+        {content.countsSlips ? (
+          <>
+            <Text style={styles.label}>How many {content.unit.many}?</Text>
+            <TextInput
+              style={styles.input}
+              value={count}
+              onChangeText={setCount}
+              keyboardType="number-pad"
+              accessibilityLabel={`Number of ${content.unit.many}`}
+            />
+          </>
+        ) : null}
 
         <Text style={styles.label}>What set it off? (optional)</Text>
         <View style={styles.chips}>
@@ -139,7 +133,7 @@ export default function Sos() {
       <Text style={styles.stepCount}>Step {stepIndex + 1} of {SOS_STEPS.length}</Text>
       <Text style={styles.h1}>{step?.heading}</Text>
       <Text style={styles.timer}>{Math.max(0, remaining)}</Text>
-      <Text style={styles.body}>{step?.instruction}</Text>
+      <Text style={styles.body}>{step ? fillUnitTokens(step.instruction, content.unit) : null}</Text>
 
       <View style={{ flex: 1 }} />
 
@@ -147,7 +141,7 @@ export default function Sos() {
         <Text style={styles.secondaryText}>It’s passed, I’m fine</Text>
       </Pressable>
       <Pressable style={styles.tertiary} onPress={() => setOutcome('slipped')}>
-        <Text style={styles.tertiaryText}>I smoked</Text>
+        <Text style={styles.tertiaryText}>{content.slipVerb}</Text>
       </Pressable>
     </View>
   );

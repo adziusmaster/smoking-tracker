@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCount, formatElapsed, formatMinutesNotLost, formatMoneyMinor } from './format';
+import { fillUnitTokens, formatCount, formatElapsed, formatMinutesNotLost, formatMoneyMinor } from './format';
 
 describe('formatMoneyMinor', () => {
   it('formatMoneyMinor_euroAmount_rendersWithTwoDecimals', () => {
@@ -110,5 +110,23 @@ describe('formatCount', () => {
 
     // Assert
     expect(result).toBe('645');
+  });
+});
+
+describe('fillUnitTokens', () => {
+  it('fillUnitTokens_bothTokens_replacesEveryOccurrence', () => {
+    // Arrange & Act
+    const result = fillUnitTokens('One {unit} is not {units}. One {unit}.', { one: 'pouch', many: 'pouches' });
+
+    // Assert
+    expect(result).toBe('One pouch is not pouches. One pouch.');
+  });
+
+  it('fillUnitTokens_noTokens_returnsTextUnchanged', () => {
+    // Arrange & Act
+    const result = fillUnitTokens('plain', { one: 'x', many: 'xs' });
+
+    // Assert
+    expect(result).toBe('plain');
   });
 });

@@ -1,10 +1,15 @@
+import { fillUnitTokens } from './format';
+import { hasSmokingHistory, isCombustible, isOral } from './products';
 import {
   DANGER_WINDOW_DAYS,
   MS_PER_DAY,
   type Anchors,
   type DangerWindow,
   type Phase,
+  type PhaseId,
+  type Settings,
   type Slip,
+  type UnitWords,
 } from './types';
 
 /**
@@ -45,4 +50,26 @@ export function resolveDangerWindow(slips: Slip[], now: Date): DangerWindow {
     daysRemaining: Math.ceil(remainingMs / MS_PER_DAY),
     triggeredBySlipId: mostRecent.id,
   };
+}
+
+const SHORT_TERM_PHASES = new Set<PhaseId>(['crash', 'fog', 'consolidation']);
+
+/**
+ * Picks the copy variant for this person. Short-term phases describe smoke-specific recovery
+ * (carbon monoxide, cilia), so they need a combustible product; long-term phases describe the
+ * smoking-risk curves, which also apply to a switcher with cigarette history.
+ */
+export function resolvePhaseCopy(phase: Phase, settings: Settings, unit: UnitWords): Phase {
+  const combustible = isCombustible(settings.product);
+  const smoke = SHORT_TERM_PHASES.has(phase.id) ? combustible : hasSmokingHistory(settings);
+  const whatsHappening = smoke
+    ? phase.whatsHappening
+    : isOral(settings.product) && phase.whatsHappeningOral !== null
+      ? phase.whatsHappeningOral
+      : phase.whatsHappeningNicotine;
+  const name = !combustible && phase.nameNicotine !== null ? phase.nameNicotine : phase.name;
+  const howToCope = [...phase.howToCope, ...(combustible ? phase.howToCopeSmokeOnly : [])].map((tip) =>
+    fillUnitTokens(tip, unit),
+  );
+  return { ...phase, name, whatsHappening, whyYouFeelThisWay: fillUnitTokens(phase.whyYouFeelThisWay, unit), howToCope };
 }

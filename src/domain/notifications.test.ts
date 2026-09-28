@@ -6,7 +6,7 @@ const NOW = new Date('2026-08-08T08:00:00Z');
 
 const milestone = (id: string): Milestone => ({
   id, title: `Title ${id}`, body: '', offsetMs: MS_PER_DAY, offsetEndMs: null,
-  slipBehavior: 'cumulative', sourceId: 'acs', phaseId: 'crash',
+  slipBehavior: 'cumulative', sourceId: 'acs', phaseId: 'crash', audience: 'all',
 });
 
 const future = (id: string, daysAhead: number): MilestoneState => ({
@@ -15,6 +15,7 @@ const future = (id: string, daysAhead: number): MilestoneState => ({
   reachedAt: null,
   projectedAt: new Date(NOW.getTime() + daysAhead * MS_PER_DAY).toISOString(),
   progress: null,
+  conservativelyAnchored: false,
 });
 
 const noDanger: DangerWindow = { active: false, endsAt: null, daysRemaining: null, triggeredBySlipId: null };
@@ -37,7 +38,7 @@ describe('planNotifications', () => {
     // Arrange
     const reached: MilestoneState = {
       milestone: milestone('co'), status: 'reached',
-      reachedAt: '2026-08-01T08:00:00.000Z', projectedAt: null, progress: null,
+      reachedAt: '2026-08-01T08:00:00.000Z', projectedAt: null, progress: null, conservativelyAnchored: false,
     };
 
     // Act

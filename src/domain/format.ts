@@ -1,4 +1,4 @@
-import type { Elapsed } from './types';
+import type { Elapsed, UnitWords } from './types';
 
 const SYMBOLS: Record<string, string> = { EUR: '€', GBP: '£', USD: '$', PLN: 'zł' };
 
@@ -37,4 +37,9 @@ export function formatMilestoneDate(iso: string): string {
  */
 export function formatCount(value: number): string {
   return value.toLocaleString('en-GB');
+}
+
+/** Fills `{unit}` / `{units}` in content copy with the product's words. */
+export function fillUnitTokens(text: string, unit: UnitWords): string {
+  return text.replaceAll('{units}', unit.many).replaceAll('{unit}', unit.one);
 }

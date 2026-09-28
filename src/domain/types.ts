@@ -4,25 +4,55 @@ export type PhaseId = 'crash' | 'fog' | 'consolidation' | 'long-haul' | 'non-smo
 export type MilestoneStatus = 'reached' | 'in-progress' | 'future';
 export type SourceTier = 'a' | 'b';
 
+/**
+ * Who a milestone applies to. See src/domain/products.ts#audienceIncludes and the spec's
+ * milestone table: `smoked` is short-term smoke recovery (combustible products only);
+ * `smoking-history` is the long-term smoking-risk curves, which also apply to a switcher.
+ */
+export type Audience = 'all' | 'vape' | 'smoked' | 'smoking-history' | 'snus' | 'oral' | 'unknown-long-term';
+
+/** Copy that names smoke has a nicotine-only twin for products that burn nothing. */
+export interface CopyVariants<T> {
+  smoke: T;
+  nicotine: T;
+}
+
+export type ProductId = 'cigarettes' | 'roll-your-own' | 'heated' | 'vape' | 'snus' | 'pouches';
+
+export const PRODUCT_IDS: readonly ProductId[] = ['cigarettes', 'roll-your-own', 'heated', 'vape', 'snus', 'pouches'];
+
+/** Pack-priced products (cigarettes, sticks, cans of pouches) or a weekly spend (vape). */
+export type CostModel =
+  | { kind: 'pack'; unitsPerPack: number; packPriceMinor: number }
+  | { kind: 'weekly'; weeklySpendMinor: number };
+
+export interface CigaretteHistory {
+  months: number;
+  cigarettesPerDay: number;
+}
+
 export interface Settings {
   quitDate: string;            // always `date.toISOString()` — UTC, ending 'Z'
-  cigarettesPerDay: number;
-  cigarettesPerPack: number;
-  packPriceMinor: number;      // integer minor units
+  product: ProductId;
+  /** Cigarettes, sticks, pouches or vape uses per day, in the product's own unit. */
+  unitsPerDay: number;
+  /** 'weekly' exactly when product is 'vape'. */
+  cost: CostModel;
   currency: string;            // ISO 4217
   timezone: string;            // IANA
   /**
-   * How long the user smoked before quitting, in whole months. 0 if not given.
-   * The lifetime cigarette total is DERIVED from this and cigarettesPerDay — see
-   * src/domain/lifetime.ts — so correcting the daily rate corrects the total.
+   * Cigarette smoking history, or null if none was given. The lifetime cigarette estimate is
+   * DERIVED from it (see src/domain/lifetime.ts). For cigarettes and roll-your-own the rate is
+   * the current unitsPerDay, so correcting the daily rate corrects the total.
    */
-  smokedForMonths: number;
+  cigaretteHistory: CigaretteHistory | null;
 }
 
 export interface Slip {
   id: number;
   occurredAt: string;
-  cigaretteCount: number;
+  /** Units of the product being quit (cigarettes, sticks, pouches; 1 for a vape session). */
+  unitCount: number;
   trigger: SlipTrigger | null;
   note: string | null;
 }
@@ -31,7 +61,7 @@ export interface SmokingPeriod {
   id: number;
   startedAt: string;
   endedAt: string | null;      // null means currently smoking
-  averageCigarettesPerDay: number;
+  averageUnitsPerDay: number;
   note: string | null;
 }
 
@@ -68,10 +98,12 @@ export interface Anchors {
 }
 
 export interface Savings {
-  cigarettesAvoided: number;
+  unitsAvoided: number;
   moneySavedMinor: number;
-  minutesNotLost: number;
-  lifetimeTotal: number;
+  /** null unless the product is combustible — the 20-minute figure is measured in cigarettes. */
+  minutesNotLost: number | null;
+  /** Estimated cigarettes smoked in total; null when there is no cigarette history. */
+  lifetimeCigarettes: number | null;
 }
 
 export interface Source {
@@ -92,6 +124,15 @@ export interface Milestone {
   slipBehavior: SlipBehavior;
   sourceId: string;
   phaseId: PhaseId;
+  audience: Audience;
+  /** Replaces offsetMs / offsetEndMs / sourceId for the listed products. */
+  overrides?: Partial<Record<ProductId, MilestoneOverride>>;
+}
+
+export interface MilestoneOverride {
+  offsetMs: number | null;
+  offsetEndMs: number | null;
+  sourceId: string;
 }
 
 export interface MilestoneState {
@@ -101,6 +142,8 @@ export interface MilestoneState {
   projectedAt: string | null;
   /** 0..1, only for an in-progress ranged milestone; null otherwise. */
   progress: number | null;
+  /** A switcher's smoking-recovery milestone, counted conservatively from the final quit date. */
+  conservativelyAnchored: boolean;
 }
 
 export interface Phase {
@@ -109,8 +152,34 @@ export interface Phase {
   startMs: number;
   endMs: number | null;        // null means open-ended
   whatsHappening: string;
+  /** Replaces whatsHappening for products that burn nothing. */
+  whatsHappeningNicotine: string;
+  /** Replaces the nicotine text for snus and pouches, where one exists. */
+  whatsHappeningOral: string | null;
   whyYouFeelThisWay: string;
-  howToCope: string[];
+  howToCope: readonly string[];
+  /** Appended to howToCope only for combustible products (cilia, tar). */
+  howToCopeSmokeOnly: readonly string[];
+  /** Replaces name for non-combustible products ("Non-Smoker" → "Nicotine-Free"). */
+  nameNicotine: string | null;
+}
+
+export interface UnitWords {
+  one: string;
+  many: string;
+}
+
+export interface TipContent {
+  whatsHappening: string;
+  whyYouFeelThisWay: string;
+  howToCope: readonly string[];
+}
+
+/** The post-slip tip set. Its first line names carbon monoxide, hence the variants. */
+export interface DangerTips {
+  whatsHappening: CopyVariants<string>;
+  whyYouFeelThisWay: string;
+  howToCope: readonly string[];
 }
 
 export interface DangerWindow {
@@ -136,6 +205,9 @@ export interface TimelineViewModel {
   dangerWindow: DangerWindow;
   chapters: Chapter[];
   nextMilestone: MilestoneState | null;
+  /** Tips for the current chapter: the danger-window set while it is open, else the phase's own. */
+  currentTips: TipContent;
+  currentTipsAreDangerWindow: boolean;
 }
 
 export const MINUTES_LOST_PER_CIGARETTE = 20;

@@ -1,13 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
-import type { Chapter } from '@/domain/types';
+import type { Chapter, TipContent } from '@/domain/types';
 import { MilestoneNode } from './MilestoneNode';
 import { theme } from './theme';
-
-export interface TipContent {
-  whatsHappening: string;
-  whyYouFeelThisWay: string;
-  howToCope: readonly string[];
-}
 
 export function ChapterBlock(props: { chapter: Chapter; tips: TipContent | null; tipsAreDangerWindow: boolean }) {
   const { chapter, tips } = props;

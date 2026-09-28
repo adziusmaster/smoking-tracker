@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import type { QuitState, Settings, Slip, SlipTrigger, SmokingPeriod } from '@/domain/types';
+import { readableSettingsOrRaw, rowToSettings, settingsToParams, type SettingsRow } from './settingsMapping';
 import {
   DELETE_ALL,
   END_OPEN_SMOKING_PERIOD,
@@ -20,16 +21,8 @@ import {
 // which only stays chronologically correct while every stored value shares this one
 // format. Never write an offset-bearing string like '+02:00' here.
 
-interface SettingsRow {
-  quit_date: string;
-  cigarettes_per_day: number;
-  cigarettes_per_pack: number;
-  pack_price_minor: number;
-  currency: string;
-  timezone: string;
-  smoked_for_months: number;
-}
-
+// cigarette_count / average_cigarettes_per_day store units of the current product —
+// see settingsMapping.ts for why the columns keep their original names.
 interface SlipRow {
   id: number;
   occurred_at: string;
@@ -60,20 +53,12 @@ export async function loadQuitState(db: SQLiteDatabase): Promise<QuitState | nul
   const slipRows = await db.getAllAsync<SlipRow>(SELECT_SLIPS);
   const periodRows = await db.getAllAsync<PeriodRow>(SELECT_SMOKING_PERIODS);
 
-  const settings: Settings = {
-    quitDate: settingsRow.quit_date,
-    cigarettesPerDay: settingsRow.cigarettes_per_day,
-    cigarettesPerPack: settingsRow.cigarettes_per_pack,
-    packPriceMinor: settingsRow.pack_price_minor,
-    currency: settingsRow.currency,
-    timezone: settingsRow.timezone,
-    smokedForMonths: settingsRow.smoked_for_months,
-  };
+  const settings: Settings = rowToSettings(settingsRow);
 
   const slips: Slip[] = slipRows.map((row) => ({
     id: row.id,
     occurredAt: row.occurred_at,
-    cigaretteCount: row.cigarette_count,
+    unitCount: row.cigarette_count,
     trigger: row.trigger,
     note: row.note,
   }));
@@ -82,7 +67,7 @@ export async function loadQuitState(db: SQLiteDatabase): Promise<QuitState | nul
     id: row.id,
     startedAt: row.started_at,
     endedAt: row.ended_at,
-    averageCigarettesPerDay: row.average_cigarettes_per_day,
+    averageUnitsPerDay: row.average_cigarettes_per_day,
     note: row.note,
   }));
 
@@ -91,34 +76,23 @@ export async function loadQuitState(db: SQLiteDatabase): Promise<QuitState | nul
 
 export async function saveSettings(db: SQLiteDatabase, settings: Settings, now: Date): Promise<void> {
   const stamp = now.toISOString();
-  await db.runAsync(
-    UPSERT_SETTINGS,
-    settings.quitDate,
-    settings.cigarettesPerDay,
-    settings.cigarettesPerPack,
-    settings.packPriceMinor,
-    settings.currency,
-    settings.timezone,
-    settings.smokedForMonths,
-    stamp,
-    stamp,
-  );
+  await db.runAsync(UPSERT_SETTINGS, ...settingsToParams(settings), stamp, stamp);
 }
 
 export async function addSlip(
   db: SQLiteDatabase,
-  input: { occurredAt: string; cigaretteCount: number; trigger: SlipTrigger | null; note: string | null },
+  input: { occurredAt: string; unitCount: number; trigger: SlipTrigger | null; note: string | null },
   now: Date,
 ): Promise<void> {
-  await db.runAsync(INSERT_SLIP, input.occurredAt, input.cigaretteCount, input.trigger, input.note, now.toISOString());
+  await db.runAsync(INSERT_SLIP, input.occurredAt, input.unitCount, input.trigger, input.note, now.toISOString());
 }
 
 export async function startSmokingPeriod(
   db: SQLiteDatabase,
-  input: { startedAt: string; averageCigarettesPerDay: number; note: string | null },
+  input: { startedAt: string; averageUnitsPerDay: number; note: string | null },
   now: Date,
 ): Promise<void> {
-  await db.runAsync(INSERT_SMOKING_PERIOD, input.startedAt, null, input.averageCigarettesPerDay, input.note, now.toISOString());
+  await db.runAsync(INSERT_SMOKING_PERIOD, input.startedAt, null, input.averageUnitsPerDay, input.note, now.toISOString());
 }
 
 export async function endSmokingPeriod(db: SQLiteDatabase, endedAt: string): Promise<void> {
@@ -155,8 +129,20 @@ export async function listCheckins(db: SQLiteDatabase, limit: number): Promise<C
 // calculation, and it lives in `data/`, not `domain/`.
 /** Everything the user has stored, as JSON. This is the only "backup" v1 offers. */
 export async function exportAll(db: SQLiteDatabase): Promise<string> {
-  const state = await loadQuitState(db);
   const checkins = await listCheckins(db, 100_000);
+  const settingsRow = await db.getFirstAsync<SettingsRow>(SELECT_SETTINGS);
+  const settings = settingsRow ? readableSettingsOrRaw(settingsRow) : null;
+  if (settings !== null && !settings.readable) {
+    // The app cannot interpret its own settings, but the user's history must still be exportable.
+    const slips = await db.getAllAsync(SELECT_SLIPS);
+    const periods = await db.getAllAsync(SELECT_SMOKING_PERIODS);
+    return JSON.stringify(
+      { exportedAt: new Date().toISOString(), unreadableSettings: settings, rawSlips: slips, rawPeriods: periods, checkins },
+      null,
+      2,
+    );
+  }
+  const state = await loadQuitState(db);
   return JSON.stringify({ exportedAt: new Date().toISOString(), state, checkins }, null, 2);
 }
 

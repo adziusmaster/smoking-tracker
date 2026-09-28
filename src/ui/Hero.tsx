@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { formatElapsed, formatMinutesNotLost, formatMoneyMinor } from '@/domain/format';
+import { formatCount, formatElapsed, formatMinutesNotLost, formatMoneyMinor } from '@/domain/format';
 import type { Savings, Elapsed, Streak } from '@/domain/types';
 import { theme } from './theme';
 
@@ -11,11 +11,15 @@ export function Hero(props: {
   currency: string;
   phaseName: string;
   currentlySmoking: boolean;
+  /** Product wording from src/content/products.ts. */
+  freeWord: string;
+  avoidedLabel: string;
+  relapseTitle: string;
 }) {
   if (props.currentlySmoking) {
     return (
       <View style={[styles.hero, styles.heroSmoking]}>
-        <Text style={styles.smokingTitle}>You’re smoking again right now</Text>
+        <Text style={styles.smokingTitle}>{props.relapseTitle}</Text>
         <Text style={styles.smokingBody}>
           That’s logged, not judged. Your best run was {formatElapsed(props.longestStreak.elapsed)} — you’ve
           already proved you can do this once. End the period from the Log screen whenever you’re ready to
@@ -28,11 +32,13 @@ export function Hero(props: {
   return (
     <View style={styles.hero}>
       <Text style={styles.big}>{formatElapsed(props.elapsed)}</Text>
-      <Text style={styles.sub}>smoke-free · {props.phaseName}</Text>
+      <Text style={styles.sub}>{props.freeWord} · {props.phaseName}</Text>
       <View style={styles.row}>
         <Stat value={formatMoneyMinor(props.savings.moneySavedMinor, props.currency)} label="saved" />
-        <Stat value={String(props.savings.cigarettesAvoided)} label="not smoked" />
-        <Stat value={formatMinutesNotLost(props.savings.minutesNotLost)} label="time not lost" />
+        <Stat value={formatCount(props.savings.unitsAvoided)} label={props.avoidedLabel} />
+        {props.savings.minutesNotLost !== null ? (
+          <Stat value={formatMinutesNotLost(props.savings.minutesNotLost)} label="time not lost" />
+        ) : null}
       </View>
     </View>
   );
