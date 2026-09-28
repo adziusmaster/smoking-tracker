@@ -18,6 +18,16 @@ Resume point. Last updated 2026-09-28.
 | EAS project | `@adrzej-dev/smoking-tracker` · `b8ec62ea-af25-4199-99e4-b3fbf9962e00` |
 | Last `versionCode` | 4 (EAS-managed, `appVersionSource: remote`) |
 
+## Next release (after 1.2.0 / versionCode 7) — to fix
+
+- **Play warning on versionCode 7: "There is no deobfuscation file associated with this App
+  Bundle."** Harmless today (R8 is off, so nothing is obfuscated), but the AAB is 62 MB. Plan:
+  add `expo-build-properties` (config-only plugin) with `android.enableMinifyInReleaseBuilds` and
+  `android.enableShrinkResourcesInReleaseBuilds` set to true; build locally; test the release
+  build thoroughly on the phone (R8 can strip reflection-used RN code — only visible at runtime);
+  upload `android/app/build/outputs/mapping/release/mapping.txt` with the AAB and keep a copy in
+  `builds/` next to it. Run `npm ci` after adding the dependency.
+
 ## Release roadmap (decided 2026-09-28)
 
 The owner chose to **build everything before closed testing** (the 14-day clock starts at the
