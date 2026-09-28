@@ -24,7 +24,7 @@ type Status = { text: string; tone: 'ok' | 'error'; area: 'numbers' | 'data' };
  * The same policy Google Play links from the store listing. Hosted publicly because Play
  * requires a reachable URL, and kept in sync with docs/privacy-policy.md in this repo.
  */
-const PRIVACY_POLICY_URL = 'https://adziusmaster.github.io/smokefree-privacy/';
+const PRIVACY_POLICY_URL = 'https://lechdigital.nl/projects/cleared/privacy/';
 
 const HELP_LINKS = [
   { label: 'Ikstopnu.nl — Dutch national quit support', url: 'https://www.ikstopnu.nl/' },

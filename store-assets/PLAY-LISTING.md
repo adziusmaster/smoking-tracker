@@ -96,8 +96,7 @@ Regenerate: `node store-assets/_src/build.mjs` (screens come from real phone cap
 
 - **Category:** Health & Fitness. **Tags:** quit smoking, health tracker, habit tracker.
 - **Contact email:** required by Play — use the address already on the developer account.
-- **Privacy policy:** https://adziusmaster.github.io/smokefree-privacy/ — the page must be renamed to
-  Cleared before publishing (it still says "Smoke Free"; source repo `adziusmaster/smokefree-privacy`).
+- **Privacy policy:** https://lechdigital.nl/projects/cleared/privacy/ (source: `lech-digital/projects/cleared/privacy/index.html`, deployed by pushing the site's `main`).
 - **Target audience:** 18+ only (tobacco and nicotine subject matter).
 - **Content rating questionnaire:** references to tobacco — yes (cessation, not promotion); no
   purchases, no user interaction, no shared location.

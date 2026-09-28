@@ -108,9 +108,10 @@ The app is free, no ads, no purchases — a deliberate decision, not a TODO.
   testing does **not** count toward it. Recruit ~15 for margin; dropping below 12 risks
   restarting the clock.
 - **Play Console was locked until 12 Aug 2026.**
-- Privacy policy is live and required by Play: <https://adziusmaster.github.io/smokefree-privacy/>
-  Source: `adziusmaster/smokefree-privacy` (public, deliberately — only the policy is public).
-  Keep it in sync with `docs/privacy-policy.md`.
+- Privacy policy is live and required by Play: <https://lechdigital.nl/projects/cleared/privacy/>
+  Source: `../lech-digital/projects/cleared/privacy/index.html` (GitHub Pages; pushing `main`
+  deploys). Keep it in sync with `docs/privacy-policy.md`. The old
+  `adziusmaster.github.io/smokefree-privacy/` page is superseded and no longer linked.
 - Data Safety answers: collects nothing, shares nothing, deletion in-app. **Verified against
   the built artifact**, not just the source.
 - Store listing copy: `docs/play-store-listing.md`. Graphics: `store-assets/`.
