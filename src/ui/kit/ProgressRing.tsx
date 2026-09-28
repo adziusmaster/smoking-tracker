@@ -28,6 +28,15 @@ export function ProgressRing(props: { progress: number; size: number; thickness:
           <View style={{ position: 'absolute', left: 0, width: half, height: size, backgroundColor: t.color.accent, borderTopLeftRadius: half, borderBottomLeftRadius: half }} />
         </View>
       </View>
+      {/* The two half-discs meet on the vertical centre line, and anti-aliasing leaves a hairline of
+          track colour there. Bridge it wherever the arc covers that line: 6 o'clock past half, 12
+          o'clock when full. */}
+      {degrees >= 180 ? (
+        <View style={{ position: 'absolute', left: half - 1, top: size - thickness, width: 2, height: thickness, backgroundColor: t.color.accent }} />
+      ) : null}
+      {degrees >= 359.5 ? (
+        <View style={{ position: 'absolute', left: half - 1, top: 0, width: 2, height: thickness, backgroundColor: t.color.accent }} />
+      ) : null}
       <View
         style={{
           position: 'absolute',

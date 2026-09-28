@@ -27,7 +27,7 @@ export function Screen(props: {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
   const bottomPad = insets.bottom + (props.footer ? (props.footerSpace ?? 96) : 32);
-  const padding = { paddingTop: insets.top + 16, paddingBottom: bottomPad };
+  const padding = { paddingTop: insets.top + 4, paddingBottom: bottomPad };
 
   return (
     <View style={styles.root}>

@@ -134,6 +134,10 @@ The app is free, no ads, no purchases — a deliberate decision, not a TODO.
 
 - **Changing product in Settings reinterprets logged slips** in the new unit (a slip of 5
   cigarettes becomes 5 pouches). The screen warns before saving; nothing is converted.
+- **Theme once stayed dark after the phone switched back to light** (2026-09-28, right after a
+  fresh install): the SOS screen rendered dark until the app was force-stopped. Not reproduced in
+  five attempts (foreground, background via Home and via Back, fresh SOS mount). If it recurs, note
+  the exact steps; `useColorScheme` is the only source of the scheme (`src/ui/theme.ts`).
 - **Heated tobacco has no heart-rate milestone** — deliberately; no study measures it. See the
   spec's amendment note.
 - **Settings save can claim success after a failed refresh.** `useQuitState().reload()` catches
