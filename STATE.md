@@ -170,6 +170,11 @@ The app is free, no ads, no purchases — a deliberate decision, not a TODO.
 
 ## Known items, none blocking
 
+- **Open-source notices screen, before open testing:** the app bundles Fraunces and Manrope (SIL OFL)
+  and, since 1.3.0, Lucide icons (ISC, via `lucide-react-native` + `react-native-svg`). Neither is
+  credited in the app yet; add a small "Open-source licences" page reachable from Settings.
+  Import Lucide icons one by one (`lucide-react-native/icons/<name>`) so the whole set isn't bundled.
+
 - **Changing product in Settings reinterprets logged slips** in the new unit (a slip of 5
   cigarettes becomes 5 pouches). The screen warns before saving; nothing is converted.
 - **Theme once stayed dark after the phone switched back to light** (2026-09-28, right after a

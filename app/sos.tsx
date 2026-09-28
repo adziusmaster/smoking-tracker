@@ -1,4 +1,6 @@
 import { useRouter } from 'expo-router';
+import Volume2 from 'lucide-react-native/icons/volume-2';
+import VolumeX from 'lucide-react-native/icons/volume-x';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -19,7 +21,7 @@ import { Grounding } from '@/ui/sos/Grounding';
 import { MemoryPairs } from '@/ui/sos/MemoryPairs';
 import { SlipProductPicker } from '@/ui/SlipProductPicker';
 import { WaterStep } from '@/ui/sos/WaterStep';
-import { makeStyles } from '@/ui/theme';
+import { makeStyles, useTheme } from '@/ui/theme';
 import { useFeedback } from '@/ui/useFeedback';
 import { usePreferences } from '@/ui/usePreferences';
 import { useQuitState } from '@/ui/useQuitState';
@@ -37,6 +39,7 @@ export default function Sos() {
   const db = useSQLiteContext();
   const router = useRouter();
   const styles = useStyles();
+  const t = useTheme();
   const { height: windowHeight } = useWindowDimensions();
   const { state } = useQuitState();
 
@@ -249,7 +252,11 @@ export default function Sos() {
                 accessibilityLabel="Sound"
                 hitSlop={8}
               >
-                <Text style={styles.muteGlyph}>{preferences.sound ? '🔊' : '🔇'}</Text>
+                {preferences.sound ? (
+                  <Volume2 size={22} strokeWidth={1.75} color={t.color.ink} />
+                ) : (
+                  <VolumeX size={22} strokeWidth={1.75} color={t.color.muted} />
+                )}
               </Pressable>
             ) : null}
             <Button label="Try something else" variant="quiet" onPress={() => setMode('pick')} />
@@ -283,7 +290,6 @@ const useStyles = makeStyles((t) =>
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm },
     mute: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: t.color.line, backgroundColor: t.color.surface, alignItems: 'center', justifyContent: 'center' },
     mutePressed: { backgroundColor: t.color.doneWash },
-    muteGlyph: { fontSize: 20 },
     ringWrap: { alignItems: 'center', paddingVertical: t.space.md },
     seconds: { fontFamily: t.family.display, fontSize: 56, lineHeight: 64, color: t.color.accentText, fontVariant: ['tabular-nums'] },
     actions: { gap: t.space.xs },
