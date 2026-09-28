@@ -1,8 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View } from 'react-native';
 import { addSlip } from '@/data/repositories';
 import { PRODUCT_CONTENT } from '@/content/products';
 import { SLIP_REASSURANCE, SOS_STEPS } from '@/content/sos';
@@ -11,7 +10,8 @@ import { parseNonNegativeInt } from '@/domain/parse';
 import { pickVariant } from '@/domain/products';
 import { lifetimeAfterSlip } from '@/domain/savings';
 import type { SlipTrigger } from '@/domain/types';
-import { theme } from '@/ui/theme';
+import { Body, Button, Chip, Eyebrow, Field, Label, ProgressRing, Screen, Title } from '@/ui/kit';
+import { makeStyles } from '@/ui/theme';
 import { useQuitState } from '@/ui/useQuitState';
 import { useSubmitGuard } from '@/ui/useSubmitGuard';
 
@@ -20,7 +20,7 @@ const TRIGGERS: SlipTrigger[] = ['alcohol', 'stress', 'social', 'boredom', 'rout
 export default function Sos() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const styles = useStyles();
   const { state } = useQuitState();
 
   const [stepIndex, setStepIndex] = useState(0);
@@ -67,110 +67,76 @@ export default function Sos() {
     const reassurance = state ? pickVariant(SLIP_REASSURANCE, state.settings) : SLIP_REASSURANCE.smoke;
 
     return (
-      <ScrollView contentContainerStyle={[styles.page, { paddingTop: insets.top + theme.space.xl }]}>
-        <Text style={styles.h1}>Alright. Let’s log it accurately.</Text>
-        <Text style={styles.body}>{fillUnitTokens(reassurance, content.unit)}</Text>
+      <Screen>
+        <Title>Alright. Let’s log it accurately.</Title>
+        <Body tone="muted">{fillUnitTokens(reassurance, content.unit)}</Body>
         {lifetime !== null ? (
-          <Text style={styles.body}>
-            That brings your estimated lifetime cigarette total to {formatCount(lifetime)}.
-          </Text>
+          <Body tone="muted">That brings your estimated lifetime cigarette total to {formatCount(lifetime)}.</Body>
         ) : null}
 
         {content.countsSlips ? (
-          <>
-            <Text style={styles.label}>How many {content.unit.many}?</Text>
-            <TextInput
-              style={styles.input}
-              value={count}
-              onChangeText={setCount}
-              keyboardType="number-pad"
-              accessibilityLabel={`Number of ${content.unit.many}`}
-            />
-          </>
+          <Field
+            label={`How many ${content.unit.many}?`}
+            value={count}
+            onChangeText={setCount}
+            keyboardType="number-pad"
+            accessibilityLabel={`Number of ${content.unit.many}`}
+          />
         ) : null}
 
-        <Text style={styles.label}>What set it off? (optional)</Text>
+        <Label>What set it off? (optional)</Label>
         <View style={styles.chips}>
           {TRIGGERS.map((option) => (
-            <Pressable
-              key={option}
-              onPress={() => setTrigger(trigger === option ? null : option)}
-              style={[styles.chip, trigger === option && styles.chipActive]}
-            >
-              <Text style={[styles.chipText, trigger === option && styles.chipTextActive]}>{option}</Text>
-            </Pressable>
+            <Chip key={option} label={option} selected={trigger === option} onPress={() => setTrigger(trigger === option ? null : option)} />
           ))}
         </View>
 
-        <Pressable style={[styles.cta, submitting && styles.ctaDisabled]} onPress={logSlip} disabled={submitting}>
-          <Text style={styles.ctaText}>Log it and carry on</Text>
-        </Pressable>
-
-        {failure ? <Text style={styles.failure}>{failure}</Text> : null}
-      </ScrollView>
+        <Button label="Log it and carry on" onPress={logSlip} disabled={submitting} />
+        {failure ? <Body tone="danger">{failure}</Body> : null}
+      </Screen>
     );
   }
 
   if (outcome === 'passed') {
     return (
-      <View style={[styles.page, styles.centered, { paddingTop: insets.top + theme.space.xl }]}>
-        <Text style={styles.h1}>It passed.</Text>
-        <Text style={styles.body}>
-          That is what cravings do — five minutes, every time, whether you feed them or not. You now have
-          direct evidence of that, which is worth more than anything this app can tell you.
-        </Text>
-        <Pressable style={styles.cta} onPress={() => router.replace('/')}>
-          <Text style={styles.ctaText}>Back to the timeline</Text>
-        </Pressable>
-      </View>
+      <Screen scroll={false} centered>
+        <Title>It passed.</Title>
+        <Body tone="muted">
+          That is what cravings do — five minutes, every time, whether you feed them or not. You now have direct
+          evidence of that, which is worth more than anything this app can tell you.
+        </Body>
+        <Button label="Back to the timeline" onPress={() => router.replace('/')} />
+      </Screen>
     );
   }
 
   const step = SOS_STEPS[stepIndex];
+  const stepSeconds = step?.seconds ?? 60;
+  const shown = Math.max(0, remaining);
 
   return (
-    <View style={[styles.page, { paddingTop: insets.top + theme.space.xl }]}>
-      <Text style={styles.stepCount}>Step {stepIndex + 1} of {SOS_STEPS.length}</Text>
-      <Text style={styles.h1}>{step?.heading}</Text>
-      <Text style={styles.timer}>{Math.max(0, remaining)}</Text>
-      <Text style={styles.body}>{step ? fillUnitTokens(step.instruction, content.unit) : null}</Text>
+    <Screen scroll={false}>
+      <Eyebrow>Step {stepIndex + 1} of {SOS_STEPS.length}</Eyebrow>
+      <Title>{step?.heading}</Title>
+      <View style={styles.ringWrap} accessible accessibilityLabel={`${shown} seconds left`}>
+        <ProgressRing progress={shown / stepSeconds} size={200} thickness={12}>
+          <Text style={styles.seconds}>{shown}</Text>
+        </ProgressRing>
+      </View>
+      <Body tone="muted">{step ? fillUnitTokens(step.instruction, content.unit) : null}</Body>
 
       <View style={{ flex: 1 }} />
 
-      <Pressable style={styles.secondary} onPress={() => setOutcome('passed')}>
-        <Text style={styles.secondaryText}>It’s passed, I’m fine</Text>
-      </Pressable>
-      <Pressable style={styles.tertiary} onPress={() => setOutcome('slipped')}>
-        <Text style={styles.tertiaryText}>{content.slipVerb}</Text>
-      </Pressable>
-    </View>
+      <Button label="It’s passed, I’m fine" onPress={() => setOutcome('passed')} />
+      <Button label={content.slipVerb} variant="quiet" onPress={() => setOutcome('slipped')} />
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  page: { flex: 1, padding: theme.space.lg, gap: theme.space.md, backgroundColor: theme.color.bg },
-  centered: { justifyContent: 'center' },
-  stepCount: { fontSize: theme.font.tiny, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, color: theme.color.textFaint },
-  h1: { fontSize: theme.font.title, fontWeight: '700', color: theme.color.text },
-  timer: { fontSize: 64, fontWeight: '700', color: theme.color.heroBg, letterSpacing: -2 },
-  body: { fontSize: theme.font.body, color: theme.color.textMuted, lineHeight: 22 },
-  label: { fontSize: theme.font.small, fontWeight: '600', color: theme.color.text, marginTop: theme.space.md },
-  input: {
-    borderWidth: 1, borderColor: theme.color.border, borderRadius: theme.radius.md,
-    backgroundColor: theme.color.surface, paddingHorizontal: theme.space.md,
-    paddingVertical: theme.space.sm, fontSize: theme.font.body, color: theme.color.text,
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.sm },
-  chip: { borderWidth: 1, borderColor: theme.color.border, borderRadius: theme.radius.pill, paddingHorizontal: theme.space.md, paddingVertical: 6, backgroundColor: theme.color.surface },
-  chipActive: { backgroundColor: theme.color.heroBg, borderColor: theme.color.heroBg },
-  chipText: { fontSize: theme.font.tiny, color: theme.color.textMuted },
-  chipTextActive: { color: theme.color.heroText, fontWeight: '600' },
-  cta: { backgroundColor: theme.color.heroBg, borderRadius: theme.radius.md, paddingVertical: theme.space.md, alignItems: 'center', marginTop: theme.space.lg },
-  ctaText: { color: theme.color.heroText, fontSize: theme.font.body, fontWeight: '700' },
-  ctaDisabled: { opacity: 0.5 },
-  failure: { fontSize: theme.font.small, color: theme.color.danger, marginTop: theme.space.md, lineHeight: 19 },
-  secondary: { backgroundColor: theme.color.done, borderRadius: theme.radius.md, paddingVertical: theme.space.md, alignItems: 'center' },
-  secondaryText: { color: '#fff', fontSize: theme.font.body, fontWeight: '700' },
-  tertiary: { paddingVertical: theme.space.md, alignItems: 'center' },
-  tertiaryText: { color: theme.color.textFaint, fontSize: theme.font.small },
-});
+const useStyles = makeStyles((t) =>
+  StyleSheet.create({
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm },
+    ringWrap: { alignItems: 'center', paddingVertical: t.space.lg },
+    seconds: { fontFamily: t.family.display, fontSize: 56, lineHeight: 64, color: t.color.accentText, fontVariant: ['tabular-nums'] },
+  }),
+);
