@@ -63,11 +63,13 @@ export function buildTimeline({ state, milestones, phases: rawPhases, dangerTips
         whatsHappening: pickVariant(dangerTips.whatsHappening, state.settings),
         whyYouFeelThisWay: dangerTips.whyYouFeelThisWay,
         howToCope: dangerTips.howToCope.map((tip) => fillUnitTokens(tip, unit)),
+        sourceIds: dangerTips.sources,
       }
     : {
         whatsHappening: currentPhase.whatsHappening,
         whyYouFeelThisWay: currentPhase.whyYouFeelThisWay,
         howToCope: currentPhase.howToCope,
+        sourceIds: currentPhase.sources,
       };
 
   return {

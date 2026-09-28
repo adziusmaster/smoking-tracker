@@ -43,8 +43,8 @@ export const MILESTONES: Milestone[] = [
   },
   {
     id: 'carbon-monoxide',
-    title: 'Carbon monoxide clears your blood',
-    body: "Blood carbon monoxide returns to a non-smoker’s range, so oxygen moves freely again.",
+    title: 'Your blood carries its full load of oxygen again',
+    body: "Carbon monoxide from smoke takes up room that oxygen should use. About a day after the last cigarette, levels are back in a non-smoker’s range.",
     offsetMs: 24 * MS_PER_HOUR,
     offsetEndMs: null,
     slipBehavior: 'restarts',
@@ -66,7 +66,7 @@ export const MILESTONES: Milestone[] = [
   {
     id: 'withdrawal-peak',
     title: 'The withdrawal peak is behind you',
-    body: 'Symptoms usually start within 4–24 hours and peak around day 3. This is the hardest it gets, and it is now behind you. Measured in smokers and vapers; for heated tobacco and pouches it is inferred from how nicotine works.',
+    body: 'Symptoms usually start within 4–24 hours and hit their high point around day three. From here the curve slopes down. Measured in smokers and vapers; for heated tobacco and pouches it is inferred from how nicotine works.',
     offsetMs: DAYS(3),
     offsetEndMs: null,
     slipBehavior: 'restarts',
@@ -80,7 +80,7 @@ export const MILESTONES: Milestone[] = [
   {
     id: 'first-week',
     title: 'The first week is usually the roughest for sleep',
-    body: 'Trouble sleeping is a recognised withdrawal symptom. It usually peaks in the first week and fades over two to four weeks.',
+    body: 'Waking in the night and restless sleep are recognised withdrawal symptoms. They tend to ease over the next two to four weeks.',
     offsetMs: DAYS(7),
     offsetEndMs: null,
     slipBehavior: 'restarts',
@@ -146,7 +146,7 @@ export const MILESTONES: Milestone[] = [
   {
     id: 'cravings-rarer',
     title: 'Cravings usually ease',
-    body: 'Cravings usually improve somewhere between week four and week six. When one does come, it still passes in three to five minutes.',
+    body: 'Somewhere between week four and week six, most people find the urges improve. When one does come, it still passes in three to five minutes.',
     offsetMs: DAYS(28),
     offsetEndMs: DAYS(42),
     slipBehavior: 'restarts',
@@ -190,7 +190,7 @@ export const MILESTONES: Milestone[] = [
   {
     id: 'cough-breathlessness',
     title: 'Coughing and breathlessness decrease',
-    body: 'Coughing and shortness of breath ease over the first year as your lungs recover.',
+    body: 'It happens gradually over the first year, so it is easier to notice month to month than day to day.',
     offsetMs: MONTHS(1),
     offsetEndMs: MONTHS(12),
     slipBehavior: 'cumulative',
@@ -201,7 +201,7 @@ export const MILESTONES: Milestone[] = [
   {
     id: 'long-term-unknown',
     title: 'No published recovery timeline',
-    body: 'No health authority publishes a dated recovery timeline for stopping this product, so there are no dated milestones here. What is certain is that stopping ends the ongoing exposure.',
+    body: 'No health authority has put dates on how risk falls after stopping this product, so this chapter has no dated milestones. What is certain is that stopping ends the ongoing exposure.',
     offsetMs: null,
     offsetEndMs: null,
     slipBehavior: 'qualitative',
@@ -217,7 +217,7 @@ export const MILESTONES: Milestone[] = [
   {
     id: 'heart-attack-risk',
     title: 'Heart attack risk drops sharply',
-    body: 'Your risk of a heart attack falls sharply within the first couple of years.',
+    body: 'The drop keeps going after that: by year fifteen, coronary heart disease risk is close to someone who never smoked.',
     offsetMs: YEARS(1),
     offsetEndMs: YEARS(2),
     slipBehavior: 'cumulative',

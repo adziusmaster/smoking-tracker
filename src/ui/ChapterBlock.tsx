@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { Chapter, TipContent } from '@/domain/types';
 import { Body, Card, Eyebrow } from './kit';
 import { MilestoneNode } from './MilestoneNode';
+import { SourceLinks } from './SourceLinks';
 import { makeStyles } from './theme';
 
 const useStyles = makeStyles((t) =>
@@ -56,6 +57,8 @@ export function ChapterBlock(props: { chapter: Chapter; tips: TipContent | null;
               <View style={{ flex: 1 }}><Body tone="muted">{tip}</Body></View>
             </View>
           ))}
+          <View style={styles.tipGap} />
+          <SourceLinks ids={tips.sourceIds} />
         </Card>
       ) : null}
 

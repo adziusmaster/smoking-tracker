@@ -9,18 +9,13 @@ import type { MilestoneState } from '@/domain/types';
 import { MILESTONES } from '@/content/milestones';
 import { DANGER_WINDOW_TIPS, PHASES } from '@/content/phases';
 import { PRODUCT_CONTENT } from '@/content/products';
-import { SOURCES } from '@/content/sources';
 import { syncNotifications } from '@/notifications/schedule';
 import { ChapterBlock } from '@/ui/ChapterBlock';
 import { Hero } from '@/ui/Hero';
+import { SourceLinks } from '@/ui/SourceLinks';
 import { Body, Button, Caption, Card, Heading, Screen, Title } from '@/ui/kit';
 import { makeStyles, useTheme } from '@/ui/theme';
 import { useQuitState } from '@/ui/useQuitState';
-
-/** Backs the 19-day danger-window claim. `SOURCES` is a Record, so under
- * noUncheckedIndexedAccess this is `Source | undefined` and the banner renders the
- * attribution only when it resolves — no cast, no non-null assertion. */
-const LAPSE_RELAPSE_SOURCE = SOURCES['lapse-relapse'];
 
 /** Narrows to milestones that are reached AND have a timestamp, so downstream code
  * never needs `reachedAt as string` — the type system proves it instead of a cast. */
@@ -180,9 +175,7 @@ export default function Timeline() {
           </Body>
           {/* The 19-day figure is a sourced claim like any milestone, so it is attributed
               where it is shown rather than only in the Settings citation list. */}
-          {LAPSE_RELAPSE_SOURCE ? (
-            <Caption tone="faint">{LAPSE_RELAPSE_SOURCE.label} · full citations in Settings</Caption>
-          ) : null}
+          <SourceLinks ids={['lapse-relapse']} />
         </Card>
       ) : null}
 

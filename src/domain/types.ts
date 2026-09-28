@@ -162,6 +162,8 @@ export interface Phase {
   howToCopeSmokeOnly: readonly string[];
   /** Replaces name for non-combustible products ("Non-Smoker" → "Nicotine-Free"). */
   nameNicotine: string | null;
+  /** Source ids the phase copy relies on; rendered as links. */
+  sources: readonly string[];
 }
 
 export interface UnitWords {
@@ -173,6 +175,7 @@ export interface TipContent {
   whatsHappening: string;
   whyYouFeelThisWay: string;
   howToCope: readonly string[];
+  sourceIds: readonly string[];
 }
 
 /** The post-slip tip set. Its first line names carbon monoxide, hence the variants. */
@@ -180,6 +183,7 @@ export interface DangerTips {
   whatsHappening: CopyVariants<string>;
   whyYouFeelThisWay: string;
   howToCope: readonly string[];
+  sources: readonly string[];
 }
 
 export interface DangerWindow {

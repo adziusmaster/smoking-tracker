@@ -260,3 +260,70 @@ describe('PRODUCT_CONTENT', () => {
     expect(markers.test(DANGER_WINDOW_TIPS.whatsHappening.nicotine)).toBe(false);
   });
 });
+
+describe('PHASES copy', () => {
+  const words = (text: string) => new Set(text.toLowerCase().match(/[a-z’']{4,}/g) ?? []);
+  const overlap = (a: string, b: string) => {
+    const [x, y] = [words(a), words(b)];
+    const shared = [...x].filter((w) => y.has(w)).length;
+    return shared / Math.min(x.size, y.size);
+  };
+
+  it('PHASES_whyYouFeelThisWay_saysSomethingDifferentFromWhatsHappening', () => {
+    // Arrange — each field has its own job (body now vs the psychology of the stage), so they
+    // must not read as the same sentence twice
+    const variants = PHASES.flatMap((p) =>
+      [p.whatsHappening, p.whatsHappeningNicotine, p.whatsHappeningOral]
+        .filter((text): text is string => text !== null)
+        .map((text) => ({ id: p.id, text, why: p.whyYouFeelThisWay })),
+    );
+
+    // Act
+    const repetitive = variants.filter((v) => overlap(v.text, v.why) > 0.3).map((v) => `${v.id}: ${v.text.slice(0, 40)}`);
+
+    // Assert
+    expect(repetitive).toEqual([]);
+  });
+});
+
+describe('phase and danger-window sources', () => {
+  it('PHASES_everySourceId_resolves', () => {
+    // Arrange
+    const known = new Set(Object.keys(SOURCES));
+
+    // Act
+    const unresolved = [
+      ...PHASES.flatMap((p) => p.sources.filter((id) => !known.has(id)).map((id) => `${p.id}:${id}`)),
+      ...DANGER_WINDOW_TIPS.sources.filter((id) => !known.has(id)).map((id) => `danger:${id}`),
+    ];
+
+    // Assert
+    expect(unresolved).toEqual([]);
+  });
+
+  it('PHASES_everyPhase_citesAtLeastOneSource', () => {
+    // Arrange & Act
+    const uncited = PHASES.filter((p) => p.sources.length === 0).map((p) => p.id);
+
+    // Assert
+    expect(uncited).toEqual([]);
+  });
+});
+
+describe('MILESTONES copy', () => {
+  it('MILESTONES_body_addsSomethingBeyondTheTitle', () => {
+    // Arrange — the body should explain or add context, not restate the title
+    const words = (text: string) => new Set(text.toLowerCase().match(/[a-z’']{4,}/g) ?? []);
+
+    // Act
+    const restating = MILESTONES.filter((m) => {
+      const title = words(m.title);
+      const body = words(m.body);
+      const shared = [...title].filter((w) => body.has(w)).length;
+      return title.size > 0 && shared / title.size > 0.5;
+    }).map((m) => m.id);
+
+    // Assert
+    expect(restating).toEqual([]);
+  });
+});

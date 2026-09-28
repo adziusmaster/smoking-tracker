@@ -1,8 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { SOURCES } from '@/content/sources';
 import { formatMilestoneDate } from '@/domain/format';
 import type { MilestoneState, SlipBehavior } from '@/domain/types';
 import { Caption, Card, Eyebrow, ProgressBar } from './kit';
+import { SourceLinks } from './SourceLinks';
 import { makeStyles } from './theme';
 
 // Keyed by the exact SlipBehavior union (not a bare `Record<string, string>`), so indexing
@@ -30,7 +30,6 @@ export function MilestoneNode(props: { state: MilestoneState; compact: boolean }
   const styles = useStyles();
   const { state, compact } = props;
   const { milestone, status } = state;
-  const source = SOURCES[milestone.sourceId];
 
   if (compact) {
     return (
@@ -71,8 +70,8 @@ export function MilestoneNode(props: { state: MilestoneState; compact: boolean }
 
       <View style={styles.footer}>
         <Caption tone="faint">{BEHAVIOUR_LABEL[milestone.slipBehavior]}</Caption>
-        {source ? <Caption tone="faint">Source: {source.label.split(' — ')[0]}</Caption> : null}
       </View>
+      <SourceLinks ids={[milestone.sourceId]} />
     </Card>
   );
 }

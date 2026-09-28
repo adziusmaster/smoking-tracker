@@ -7,9 +7,9 @@ import { MS_PER_DAY, type Anchors, type Phase, type Slip } from './types';
 const QUIT = '2026-06-26T08:00:00+02:00';
 
 const phases: Phase[] = [
-  { id: 'crash', name: 'The Crash', startMs: 0, endMs: 3 * MS_PER_DAY, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [] },
-  { id: 'fog', name: 'The Fog', startMs: 3 * MS_PER_DAY, endMs: 28 * MS_PER_DAY, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [] },
-  { id: 'consolidation', name: 'Consolidation', startMs: 28 * MS_PER_DAY, endMs: null, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [] },
+  { id: 'crash', name: 'The Crash', startMs: 0, endMs: 3 * MS_PER_DAY, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [], sources: [] },
+  { id: 'fog', name: 'The Fog', startMs: 3 * MS_PER_DAY, endMs: 28 * MS_PER_DAY, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [], sources: [] },
+  { id: 'consolidation', name: 'Consolidation', startMs: 28 * MS_PER_DAY, endMs: null, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [], sources: [] },
 ];
 
 const anchors = (overrides: Partial<Anchors> = {}): Anchors => ({
