@@ -24,7 +24,7 @@ export function BlockDrop() {
   const styles = useStyles();
   const { width, height } = useWindowDimensions();
   const [game, setGame] = useState(() => newBlocks(Date.now() & 0x7fffffff));
-  const cell = Math.floor(Math.min((width - 64) / BOARD_WIDTH, (height * 0.42) / BOARD_HEIGHT));
+  const cell = Math.floor(Math.min((width - 64) / BOARD_WIDTH, (height * 0.5) / BOARD_HEIGHT));
 
   useEffect(() => {
     if (game.over) return;

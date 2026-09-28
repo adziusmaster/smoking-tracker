@@ -18,7 +18,7 @@ interface Bubble {
 const useStyles = makeStyles((t) =>
   StyleSheet.create({
     wrap: { gap: t.space.sm },
-    field: { height: 380, borderRadius: t.radius.md, borderWidth: 1, borderColor: t.color.line, backgroundColor: t.color.surface, overflow: 'hidden' },
+    field: { height: 460, borderRadius: t.radius.md, borderWidth: 1, borderColor: t.color.line, backgroundColor: t.color.surface, overflow: 'hidden' },
   }),
 );
 
@@ -28,7 +28,7 @@ export function BubblePop() {
   const styles = useStyles();
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [popped, setPopped] = useState(0);
-  const [area, setArea] = useState({ width: 0, height: 380 });
+  const [area, setArea] = useState({ width: 0, height: 460 });
   const nextId = useRef(0);
   const live = useRef(new Map<number, Animated.CompositeAnimation>());
 

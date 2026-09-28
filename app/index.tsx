@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { recordMilestoneReached } from '@/data/repositories';
 import { planNotifications } from '@/domain/notifications';
+import { cravingsBeaten } from '@/domain/cravings';
 import { buildTimeline } from '@/domain/timeline';
 import type { MilestoneState } from '@/domain/types';
 import { MILESTONES } from '@/content/milestones';
@@ -164,6 +165,7 @@ export default function Timeline() {
         freeWord={content.freeWord}
         avoidedLabel={content.avoidedLabel}
         relapseTitle={content.relapseTitle}
+        cravingsBeaten={cravingsBeaten(state.cravingEvents)}
       />
 
       {dangerWindow.active ? (

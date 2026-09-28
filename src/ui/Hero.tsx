@@ -13,6 +13,7 @@ const useStyles = makeStyles((t) =>
     big: { fontFamily: t.family.display, fontSize: t.font.display, lineHeight: 40, color: t.color.onHero, letterSpacing: -0.5 },
     sub: { fontFamily: t.family.medium, fontSize: t.font.small, color: t.color.onHero, marginTop: t.space.xs },
     row: { flexDirection: 'row', gap: t.space.sm, marginTop: t.space.lg },
+    beaten: { fontFamily: t.family.semi, fontSize: t.font.small, color: t.color.onHero, marginTop: t.space.sm },
   }),
 );
 
@@ -28,6 +29,7 @@ export function Hero(props: {
   freeWord: string;
   avoidedLabel: string;
   relapseTitle: string;
+  cravingsBeaten: number;
 }) {
   const styles = useStyles();
 
@@ -54,8 +56,15 @@ export function Hero(props: {
         <StatTile value={formatCount(props.savings.unitsAvoided)} label={props.avoidedLabel} />
         {props.savings.minutesNotLost !== null ? (
           <StatTile value={formatMinutesNotLost(props.savings.minutesNotLost)} label="time not lost" />
-        ) : null}
+        ) : (
+          <StatTile value={formatCount(props.cravingsBeaten)} label="cravings beaten" />
+        )}
       </View>
+      {props.savings.minutesNotLost !== null && props.cravingsBeaten > 0 ? (
+        <Text style={styles.beaten}>
+          {formatCount(props.cravingsBeaten)} {props.cravingsBeaten === 1 ? 'craving' : 'cravings'} beaten
+        </Text>
+      ) : null}
     </View>
   );
 }
