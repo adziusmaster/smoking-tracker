@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fillUnitTokens, formatCount, formatLifetimeSentence, formatElapsed, formatMinutesNotLost, formatMoneyMinor } from './format';
+import { fillUnitTokens, formatCount, formatElapsed, formatMinutesNotLost, formatMoneyMinor } from './format';
 
 describe('formatMoneyMinor', () => {
   it('formatMoneyMinor_euroAmount_rendersWithTwoDecimals', () => {
@@ -131,22 +131,3 @@ describe('fillUnitTokens', () => {
   });
 });
 
-describe('formatLifetimeSentence', () => {
-  it('formatLifetimeSentence_withBasis_explainsWhereTheNumberComesFrom', () => {
-    // Arrange & Act
-    const sentence = formatLifetimeSentence(109_585, { years: 15, perDay: 20 });
-
-    // Assert
-    expect(sentence).toBe(
-      'That brings your estimated lifetime cigarette total to 109,585: about 15 years at 20 a day from your smoking history, plus every cigarette logged since you quit.',
-    );
-  });
-
-  it('formatLifetimeSentence_oneYearOneADay_usesSingulars', () => {
-    // Arrange & Act
-    const sentence = formatLifetimeSentence(366, { years: 1, perDay: 1 });
-
-    // Assert
-    expect(sentence).toContain('about 1 year at 1 a day');
-  });
-});

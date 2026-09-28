@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { estimateCigarettesBeforeQuitting, lifetimeBasis } from './lifetime';
+import { estimateCigarettesBeforeQuitting } from './lifetime';
 import { cigaretteSettings } from './testSettings';
 import type { Settings } from './types';
 
@@ -65,34 +65,3 @@ describe('estimateCigarettesBeforeQuitting', () => {
   });
 });
 
-describe('lifetimeBasis', () => {
-  it('lifetimeBasis_heatedSwitcher_usesThePriorCigaretteRate', () => {
-    // Arrange — 180 months at 20 a day before switching; now 25 sticks a day
-    const settings = cigaretteSettings({ product: 'heated', unitsPerDay: 25, cigaretteHistory: { months: 180, cigarettesPerDay: 20 } });
-
-    // Act
-    const basis = lifetimeBasis(settings);
-
-    // Assert
-    expect(basis).toEqual({ years: 15, perDay: 20 });
-  });
-
-  it('lifetimeBasis_smoker_usesTheCurrentDailyRate', () => {
-    // Arrange — 8½ years reads as "about 9 years"
-    const settings = cigaretteSettings({ unitsPerDay: 12, cigaretteHistory: { months: 102, cigarettesPerDay: 10 } });
-
-    // Act
-    const basis = lifetimeBasis(settings);
-
-    // Assert
-    expect(basis).toEqual({ years: 9, perDay: 12 });
-  });
-
-  it('lifetimeBasis_noHistory_isNull', () => {
-    // Arrange & Act
-    const basis = lifetimeBasis(cigaretteSettings({ cigaretteHistory: null }));
-
-    // Assert
-    expect(basis).toBeNull();
-  });
-});

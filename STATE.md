@@ -9,7 +9,7 @@ Resume point. Last updated 2026-09-28.
 | --- | --- |
 | Repo | `adziusmaster/smoking-tracker` (private) |
 | Branch | `feat/nicotine-products` (multi-product support, not yet merged); `main` is the v1 cigarettes-only app |
-| Tests | 299 passing across 24 files |
+| Tests | 295 passing across 24 files |
 | Schema | version 5 (v3: product columns; v4: `craving_events`; v5: `slips.product`) |
 | Typecheck | clean |
 | `expo-doctor` | 20/21 — the same patch drift, see Known items |
@@ -132,6 +132,9 @@ The app is free, no ads, no purchases — a deliberate decision, not a TODO.
   permission-checked artifact, and this dependency tree has already broken one EAS build.
   Do not upgrade casually before a release.
 - **`lifetime_baseline` is retained, not dropped.** Superseded by `smoked_for_months`.
+- **No lifetime cigarette total after a slip** (owner's call, 2026-09-28: "an abstract number that
+  says nothing"). The slip screen and Log confirmation no longer show it; the pre-quit estimate in
+  Settings remains. `Savings.lifetimeCigarettes` is still computed and tested but not shown.
 - **The lifetime total is an estimate and must always be labelled one.** It applies the
   current daily rate retroactively and overestimates for most people. Two distinct figures
   exist and must not share a label: the **pre-quit estimate** (Settings) and the **running

@@ -17,15 +17,3 @@ export function estimateCigarettesBeforeQuitting(settings: Settings): number | n
   return Math.round(history.months * DAYS_PER_MONTH_AVG * perDay);
 }
 
-/**
- * What the lifetime estimate is made of, rounded for a sentence ("about 15 years at 20 a day"),
- * so the number is never shown without where it came from. Null when there is no history.
- */
-export function lifetimeBasis(settings: Settings): { years: number; perDay: number } | null {
-  const history = settings.cigaretteHistory;
-  if (history === null || history.months <= 0) return null;
-  return {
-    years: Math.max(1, Math.round(history.months / 12)),
-    perDay: isCombustible(settings.product) ? settings.unitsPerDay : history.cigarettesPerDay,
-  };
-}

@@ -5,7 +5,6 @@ import {
   MS_PER_DAY,
   type QuitState,
   type Savings,
-  type ProductId,
   type Settings,
   type SmokingPeriod,
 } from './types';
@@ -57,14 +56,4 @@ export function computeSavings(state: QuitState, now: Date): Savings {
     minutesNotLost: combustible ? unitsAvoided * MINUTES_LOST_PER_CIGARETTE : null,
     lifetimeCigarettes: before === null ? null : before + Math.round(smokedSince),
   };
-}
-
-/**
- * The running lifetime cigarette total to quote after logging `extraUnits` of `product`, or null
- * when that sentence would be misleading: no cigarette history, or a slip that was not cigarettes.
- */
-export function lifetimeAfterSlip(state: QuitState, extraUnits: number, product: ProductId, now: Date): number | null {
-  if (!isCombustible(product)) return null;
-  const lifetime = computeSavings(state, now).lifetimeCigarettes;
-  return lifetime === null ? null : lifetime + extraUnits;
 }

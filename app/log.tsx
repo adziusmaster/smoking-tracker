@@ -6,15 +6,11 @@ import {
   addSlip,
   endSmokingPeriod,
   listCheckins,
-  loadQuitState,
   saveCheckin,
   startSmokingPeriod,
   type CheckinRow,
 } from '@/data/repositories';
-import { formatLifetimeSentence } from '@/domain/format';
 import { parsePositiveInt } from '@/domain/parse';
-import { lifetimeBasis } from '@/domain/lifetime';
-import { lifetimeAfterSlip } from '@/domain/savings';
 import type { ProductId, SlipTrigger } from '@/domain/types';
 import { PRODUCT_CONTENT } from '@/content/products';
 import { CravingChart } from '@/ui/CravingChart';
@@ -65,16 +61,7 @@ export default function Log() {
         const units = slipContent.countsSlips ? (parsePositiveInt(slipCount) ?? 1) : 1;
         await addSlip(db, { occurredAt: new Date().toISOString(), unitCount: units, trigger: slipTrigger, note: null, product: slipProduct }, new Date());
         await reload();
-        const refreshed = await loadQuitState(db);
-        const total = refreshed ? lifetimeAfterSlip(refreshed, 0, slipProduct, new Date()) : null;
-        const basis = refreshed ? lifetimeBasis(refreshed.settings) : null;
-        setStatus({
-          text:
-            total === null || basis === null
-              ? 'Slip logged. Your fast clocks restarted; the long ones did not.'
-              : `Slip logged. Your fast clocks restarted; the long ones did not. ${formatLifetimeSentence(total, basis)}`,
-          tone: 'ok',
-        });
+        setStatus({ text: 'Slip logged. Your fast clocks restarted; the long ones did not.', tone: 'ok' });
       } catch {
         setStatus({ text: 'Couldn’t save that slip. Nothing was recorded — please try again.', tone: 'error' });
       }

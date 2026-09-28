@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cigaretteSettings } from './testSettings';
-import { computeSavings, lifetimeAfterSlip } from './savings';
+import { computeSavings } from './savings';
 import type { QuitState, Settings } from './types';
 
 const baseState = (overrides: Partial<QuitState> = {}): QuitState => ({
@@ -152,59 +152,6 @@ describe('computeSavings', () => {
 
 const vape = (overrides: Partial<Settings> = {}): Settings =>
   cigaretteSettings({ product: 'vape', unitsPerDay: 15, cost: { kind: 'weekly', weeklySpendMinor: 2100 }, cigaretteHistory: null, ...overrides });
-
-describe('lifetimeAfterSlip', () => {
-  it('lifetimeAfterSlip_cigarettes_addsTheNewSlip', () => {
-    // Arrange
-    const state: QuitState = { settings: cigaretteSettings(), slips: [], periods: [], cravingEvents: [] };
-
-    // Act
-    const result = lifetimeAfterSlip(state, 2, 'cigarettes', new Date('2026-08-08T08:00:00+02:00'));
-
-    // Assert — 96 x 30.44 x 15 = 43_834, + 2
-    expect(result).toBe(43_836);
-  });
-
-  it('lifetimeAfterSlip_heatedSwitcher_isNull', () => {
-    // Arrange
-    const state: QuitState = {
-      settings: cigaretteSettings({ product: 'heated', cigaretteHistory: { months: 60, cigarettesPerDay: 10 } }),
-      slips: [],
-      periods: [], cravingEvents: [],
-    };
-
-    // Act
-    const result = lifetimeAfterSlip(state, 1, 'heated', new Date('2026-08-08T08:00:00+02:00'));
-
-    // Assert
-    expect(result).toBeNull();
-  });
-
-  it('lifetimeAfterSlip_cigarettesWithoutHistory_isNull', () => {
-    // Arrange
-    const state: QuitState = { settings: cigaretteSettings({ cigaretteHistory: null }), slips: [], periods: [], cravingEvents: [] };
-
-    // Act
-    const result = lifetimeAfterSlip(state, 1, 'cigarettes', new Date('2026-08-08T08:00:00+02:00'));
-
-    // Assert
-    expect(result).toBeNull();
-  });
-
-  it('lifetimeAfterSlip_heatedSwitcherSmokesCigarettes_addsThemToTheCigaretteTotal', () => {
-    // Arrange — 60 x 30.44 x 10 = 18_264 cigarettes before, plus 2 now
-    const state: QuitState = {
-      settings: cigaretteSettings({ product: 'heated', cigaretteHistory: { months: 60, cigarettesPerDay: 10 } }),
-      slips: [], periods: [], cravingEvents: [],
-    };
-
-    // Act
-    const result = lifetimeAfterSlip(state, 2, 'cigarettes', new Date('2026-08-08T08:00:00+02:00'));
-
-    // Assert
-    expect(result).toBe(18_266);
-  });
-});
 
 describe('slips of another product', () => {
   const heatedSwitcher = (slips: QuitState['slips']): QuitState => ({

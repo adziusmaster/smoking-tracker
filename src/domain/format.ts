@@ -44,8 +44,3 @@ export function fillUnitTokens(text: string, unit: UnitWords): string {
   return text.replaceAll('{units}', unit.many).replaceAll('{unit}', unit.one);
 }
 
-/** The slip-screen sentence for the lifetime estimate, always with what it is made of. */
-export function formatLifetimeSentence(total: number, basis: { years: number; perDay: number }): string {
-  const years = `${basis.years} ${basis.years === 1 ? 'year' : 'years'}`;
-  return `That brings your estimated lifetime cigarette total to ${formatCount(total)}: about ${years} at ${basis.perDay} a day from your smoking history, plus every cigarette logged since you quit.`;
-}

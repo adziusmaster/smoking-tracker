@@ -5,11 +5,9 @@ import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { addCravingEvent, countCravingsBeaten, logSlipAfterCraving } from '@/data/repositories';
 import { PRODUCT_CONTENT } from '@/content/products';
 import { ACTIVITIES, SLIP_BUTTON, SLIP_REASSURANCE, SOS_STEPS } from '@/content/sos';
-import { fillUnitTokens, formatLifetimeSentence } from '@/domain/format';
-import { lifetimeBasis } from '@/domain/lifetime';
+import { fillUnitTokens } from '@/domain/format';
 import { parseNonNegativeInt } from '@/domain/parse';
 import { variantForProduct } from '@/domain/products';
-import { lifetimeAfterSlip } from '@/domain/savings';
 import type { ActivityId, ProductId, SlipTrigger } from '@/domain/types';
 import { Body, Button, Chip, Eyebrow, Field, Label, ProgressRing, Screen, Title } from '@/ui/kit';
 import { ActivityPicker } from '@/ui/sos/ActivityPicker';
@@ -106,8 +104,6 @@ export default function Sos() {
     });
 
   if (outcome === 'slipped') {
-    const lifetime = state ? lifetimeAfterSlip(state, slipUnits, slipProduct, new Date()) : null;
-    const basis = state ? lifetimeBasis(state.settings) : null;
     const reassurance = variantForProduct(SLIP_REASSURANCE, slipProduct);
 
     return (
@@ -124,7 +120,6 @@ export default function Sos() {
             accessibilityLabel={`Number of ${slipContent.unit.many}`}
           />
         ) : null}
-        {lifetime !== null && basis !== null ? <Body tone="muted">{formatLifetimeSentence(lifetime, basis)}</Body> : null}
 
         <Label>What set it off? (optional)</Label>
         <View style={styles.chips}>
