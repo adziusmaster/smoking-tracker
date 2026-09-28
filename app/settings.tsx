@@ -12,9 +12,10 @@ import { formatCount } from '@/domain/format';
 import { parseSetupForm, switchProduct, valuesFromSettings, type SetupFormValues } from '@/domain/setupForm';
 import { ProductPicker } from '@/ui/ProductPicker';
 import QuitMomentPicker from '@/ui/QuitMomentPicker';
-import { Body, Button, Caption, Heading, Label, Screen, Title } from '@/ui/kit';
+import { Body, Button, Caption, Chip, Field, Heading, Label, Screen, Title } from '@/ui/kit';
 import { makeStyles } from '@/ui/theme';
 import { UsageFields } from '@/ui/UsageFields';
+import { usePreferences } from '@/ui/usePreferences';
 import { useQuitState } from '@/ui/useQuitState';
 
 /** `area` puts the message next to the button that caused it, whatever else failed to load. */
@@ -40,6 +41,9 @@ export default function Settings() {
   const [values, setValues] = useState<SetupFormValues | null>(null);
   const [quitMoment, setQuitMoment] = useState<Date | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
+  const { preferences, setSound, setVibration, setReason } = usePreferences();
+  const [reasonDraft, setReasonDraft] = useState<string | null>(null);
+  const reasonShown = reasonDraft ?? preferences.reason;
 
   // `useQuitState` loads asynchronously, so the first render has `state === null`. Seeding the
   // form with `useState` alone froze whatever default was in scope, and Save then wrote that
@@ -171,6 +175,32 @@ export default function Settings() {
         </Caption>
       )}
 
+      <Heading>Your reason</Heading>
+      <Field
+        label="Why are you quitting?"
+        hint="Shown to you when a craving hits. Leave empty to hide it."
+        value={reasonShown}
+        onChangeText={setReasonDraft}
+        multiline
+        maxLength={280}
+      />
+      {reasonDraft !== null && reasonDraft !== preferences.reason ? (
+        <Button
+          label="Save reason"
+          variant="secondary"
+          onPress={() => {
+            void setReason(reasonDraft).then(() => setReasonDraft(null));
+          }}
+        />
+      ) : null}
+
+      <Heading>Sound and vibration</Heading>
+      <Caption tone="faint">Used by the craving games and the breathing guide.</Caption>
+      <View style={styles.chips}>
+        <Chip role="checkbox" label={preferences.sound ? 'Sound on' : 'Sound off'} selected={preferences.sound} onPress={() => void setSound(!preferences.sound)} />
+        <Chip role="checkbox" label={preferences.vibration ? 'Vibration on' : 'Vibration off'} selected={preferences.vibration} onPress={() => void setVibration(!preferences.vibration)} />
+      </View>
+
       <Heading>Your data</Heading>
       <Caption tone="faint">
         Everything lives in a database file on this phone. Nothing is uploaded, there is no account, and no analytics
@@ -226,5 +256,6 @@ const useStyles = makeStyles((t) =>
   StyleSheet.create({
     topBar: { flexDirection: 'row', justifyContent: 'flex-start' },
     link: { paddingVertical: t.space.xs },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm },
   }),
 );

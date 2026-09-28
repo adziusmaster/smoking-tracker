@@ -16,6 +16,7 @@ const useStyles = makeStyles((t) =>
       fontSize: t.font.body,
       color: t.color.ink,
     },
+    multiline: { minHeight: 96, paddingTop: t.space.sm, paddingBottom: t.space.sm },
   }),
 );
 
@@ -27,8 +28,11 @@ export function Field(props: {
   keyboardType?: 'number-pad' | 'decimal-pad' | 'default';
   placeholder?: string;
   accessibilityLabel?: string;
-  /** Renders just the input, for callers that lay out their own label (years + months). */
+  /** Renders just the input, for callers that lay out their own label. */
   bare?: boolean;
+  /** A taller, wrapping input for free text. */
+  multiline?: boolean;
+  maxLength?: number;
 }) {
   const t = useTheme();
   const styles = useStyles();
@@ -42,6 +46,8 @@ export function Field(props: {
       placeholderTextColor={t.color.faint}
       selectionColor={t.color.accent}
       cursorColor={t.color.accent}
+      {...(props.multiline ? { multiline: true, textAlignVertical: 'top' as const, style: [styles.input, styles.multiline] } : {})}
+      {...(props.maxLength !== undefined ? { maxLength: props.maxLength } : {})}
       {...(props.placeholder !== undefined ? { placeholder: props.placeholder } : {})}
     />
   );

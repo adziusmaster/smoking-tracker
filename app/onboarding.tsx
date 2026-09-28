@@ -3,10 +3,10 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { PRODUCT_CONTENT } from '@/content/products';
-import { saveSettings } from '@/data/repositories';
+import { savePreference, saveSettings } from '@/data/repositories';
 import { defaultValues, parseSetupForm, type SetupFormValues } from '@/domain/setupForm';
 import type { ProductId } from '@/domain/types';
-import { Body, Button, Caption, Eyebrow, Screen, Title } from '@/ui/kit';
+import { Body, Button, Caption, Eyebrow, Field, Screen, Title } from '@/ui/kit';
 import { ProductPicker } from '@/ui/ProductPicker';
 import QuitMomentPicker from '@/ui/QuitMomentPicker';
 import { makeStyles } from '@/ui/theme';
@@ -23,6 +23,7 @@ export default function Onboarding() {
   const [values, setValues] = useState<SetupFormValues | null>(null);
   const [quitMoment, setQuitMoment] = useState(() => new Date());
   const [error, setError] = useState<string | null>(null);
+  const [reason, setReason] = useState('');
 
   const chooseProduct = (product: ProductId) => {
     setError(null);
@@ -57,6 +58,7 @@ export default function Onboarding() {
 
     try {
       await saveSettings(db, result.settings, now);
+      if (reason.trim() !== '') await savePreference(db, 'reason', reason.trim());
     } catch {
       return setError('Couldn’t save your setup. Nothing was stored — please try again.');
     }
@@ -96,6 +98,14 @@ export default function Onboarding() {
         <>
           <Caption tone="faint">Defaults to right now. Tap to change either part.</Caption>
           <QuitMomentPicker value={quitMoment} onChange={setQuitMoment} maximumDate={new Date()} />
+          <Field
+            label="Why are you quitting? (optional)"
+            hint="In your own words. It is shown to you when a craving hits."
+            value={reason}
+            onChangeText={setReason}
+            multiline
+            maxLength={280}
+          />
         </>
       ) : null}
 

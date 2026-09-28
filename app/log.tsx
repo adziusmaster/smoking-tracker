@@ -13,7 +13,9 @@ import {
 import { parsePositiveInt } from '@/domain/parse';
 import type { ProductId, SlipTrigger } from '@/domain/types';
 import { PRODUCT_CONTENT } from '@/content/products';
+import { cravingInsights } from '@/domain/cravings';
 import { CravingChart } from '@/ui/CravingChart';
+import { CravingInsights } from '@/ui/CravingInsights';
 import { SlipProductPicker } from '@/ui/SlipProductPicker';
 import { Body, Button, Caption, Chip, Field, Heading, Label, Screen, Title } from '@/ui/kit';
 import { makeStyles } from '@/ui/theme';
@@ -120,6 +122,13 @@ export default function Log() {
 
       <Heading>Craving over the last 30 days</Heading>
       <CravingChart checkins={checkins} />
+
+      <Heading>Cravings</Heading>
+      {state ? (
+        <CravingInsights
+          insights={cravingInsights(state.cravingEvents, state.slips, new Date(), (iso) => new Date(iso).getHours())}
+        />
+      ) : null}
 
       <Heading>Log a slip</Heading>
       <Caption tone="faint">A slip, still quit. It restarts the fast clocks and nothing else is taken away.</Caption>

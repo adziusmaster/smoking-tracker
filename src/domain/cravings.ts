@@ -63,3 +63,37 @@ export function slipTriggers(slips: readonly Slip[]): { trigger: SlipTrigger; co
   for (const slip of slips) if (slip.trigger !== null) counts.set(slip.trigger, (counts.get(slip.trigger) ?? 0) + 1);
   return [...counts.entries()].map(([trigger, count]) => ({ trigger, count })).sort((a, b) => b.count - a.count);
 }
+
+export type DayPart = keyof TimeOfDayCounts;
+
+export interface CravingInsights {
+  total: number;
+  beaten: number;
+  /** Null unless both the last 14 days and the time before have ratings. */
+  trend: { recent: number; earlier: number } | null;
+  /** Each part's count, and its share of the busiest part (0..1) for drawing bars. */
+  timeOfDay: { part: DayPart; count: number; share: number }[];
+  /** The three most frequent slip triggers. */
+  triggers: { trigger: SlipTrigger; count: number }[];
+}
+
+const DAY_PARTS: DayPart[] = ['night', 'morning', 'afternoon', 'evening'];
+
+/** Everything the Log screen shows about cravings, ready to render. */
+export function cravingInsights(
+  events: readonly CravingEvent[],
+  slips: readonly Slip[],
+  now: Date,
+  hourOf: (iso: string) => number,
+): CravingInsights {
+  const { recent, earlier } = strengthTrend(events, now);
+  const counts = cravingsByTimeOfDay(events, hourOf);
+  const busiest = Math.max(...DAY_PARTS.map((part) => counts[part]));
+  return {
+    total: events.length,
+    beaten: cravingsBeaten(events),
+    trend: recent !== null && earlier !== null ? { recent, earlier } : null,
+    timeOfDay: DAY_PARTS.map((part) => ({ part, count: counts[part], share: busiest === 0 ? 0 : counts[part] / busiest })),
+    triggers: slipTriggers(slips).slice(0, 3),
+  };
+}
