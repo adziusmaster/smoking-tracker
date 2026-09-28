@@ -9,7 +9,7 @@ import { fillUnitTokens } from '@/domain/format';
 import { parseNonNegativeInt } from '@/domain/parse';
 import { variantForProduct } from '@/domain/products';
 import type { ActivityId, ProductId, SlipTrigger } from '@/domain/types';
-import { Body, Button, Chip, Eyebrow, Field, Label, ProgressRing, Screen, Title } from '@/ui/kit';
+import { Body, Button, Card, Chip, Eyebrow, Field, Label, ProgressRing, Screen, Title } from '@/ui/kit';
 import { ActivityPicker } from '@/ui/sos/ActivityPicker';
 import { BlockDrop } from '@/ui/sos/BlockDrop';
 import { BreatheGuide } from '@/ui/sos/BreatheGuide';
@@ -20,10 +20,13 @@ import { MemoryPairs } from '@/ui/sos/MemoryPairs';
 import { SlipProductPicker } from '@/ui/SlipProductPicker';
 import { WaterStep } from '@/ui/sos/WaterStep';
 import { makeStyles } from '@/ui/theme';
+import { useFeedback } from '@/ui/useFeedback';
+import { usePreferences } from '@/ui/usePreferences';
 import { useQuitState } from '@/ui/useQuitState';
 import { useSubmitGuard } from '@/ui/useSubmitGuard';
 
 const TRIGGERS: SlipTrigger[] = ['alcohol', 'stress', 'social', 'boredom', 'routine', 'other'];
+const STRENGTHS = [1, 2, 3, 4, 5];
 const DELAY = SOS_STEPS.find((step) => step.id === 'delay');
 const WATER = SOS_STEPS.find((step) => step.id === 'drink');
 const DELAY_SECONDS = DELAY?.seconds ?? 60;
@@ -42,7 +45,10 @@ export default function Sos() {
   const [mode, setMode] = useState<Mode>('delay');
   const [lastActivity, setLastActivity] = useState<ActivityId | null>(null);
   const [delayLeft, setDelayLeft] = useState(DELAY_SECONDS);
-  const [outcome, setOutcome] = useState<'running' | 'passed' | 'slipped'>('running');
+  const [outcome, setOutcome] = useState<'running' | 'rating' | 'passed' | 'slipped'>('running');
+  const [strengthStart, setStrengthStart] = useState<number | null>(null);
+  const { preferences, setSound } = usePreferences();
+  const feedback = useFeedback(preferences);
   const [beatenNow, setBeatenNow] = useState<number | null>(null);
   const [count, setCount] = useState('1');
   const [trigger, setTrigger] = useState<SlipTrigger | null>(null);
@@ -73,11 +79,12 @@ export default function Sos() {
     setMode(activity);
   };
 
-  const markPassed = () =>
+  // "It passed" first asks how strong it is now (optional), then records the craving.
+  const markPassed = (strengthEnd: number | null) =>
     run(async () => {
       setFailure(null);
       try {
-        await addCravingEvent(db, { startedAt, endedAt: new Date().toISOString(), outcome: 'passed', activity: lastActivity, strengthStart: null, strengthEnd: null }, new Date());
+        await addCravingEvent(db, { startedAt, endedAt: new Date().toISOString(), outcome: 'passed', activity: lastActivity, strengthStart, strengthEnd }, new Date());
         setBeatenNow(await countCravingsBeaten(db));
       } catch {
         // The craving still passed; failing to record it must not take that away.
@@ -94,7 +101,7 @@ export default function Sos() {
         await logSlipAfterCraving(
           db,
           { occurredAt: now.toISOString(), unitCount: slipUnits, trigger, note: null, product: slipProduct },
-          { startedAt, endedAt: now.toISOString(), outcome: 'slipped', activity: lastActivity, strengthStart: null, strengthEnd: null },
+          { startedAt, endedAt: now.toISOString(), outcome: 'slipped', activity: lastActivity, strengthStart, strengthEnd: null },
           now,
         );
         router.replace('/');
@@ -134,6 +141,17 @@ export default function Sos() {
     );
   }
 
+  if (outcome === 'rating') {
+    return (
+      <Screen scroll={false} centered>
+        <Title>How strong is it now?</Title>
+        <Body tone="muted">Optional. Over time this shows whether your cravings are getting weaker.</Body>
+        <StrengthChips value={null} onChange={(value) => void markPassed(value)} disabled={submitting} />
+        <Button label="Skip" variant="quiet" onPress={() => void markPassed(null)} disabled={submitting} />
+      </Screen>
+    );
+  }
+
   if (outcome === 'passed') {
     return (
       <Screen scroll={false} centered>
@@ -159,12 +177,19 @@ export default function Sos() {
       footerSpace={140}
       footer={
         <View style={styles.actions}>
-          <Button label="It’s passed, I’m fine" onPress={markPassed} disabled={submitting} />
+          <Button label="It’s passed, I’m fine" onPress={() => setOutcome('rating')} disabled={submitting} />
           <Button label={SLIP_BUTTON} variant="quiet" onPress={() => setOutcome('slipped')} />
         </View>
       }
     >
       <CravingBar startedAt={startedAt} />
+
+      {preferences.reason ? (
+        <Card>
+          <Eyebrow tone="achieve">Your reason</Eyebrow>
+          <Body>{preferences.reason}</Body>
+        </Card>
+      ) : null}
 
       {mode === 'delay' ? (
         <>
@@ -176,6 +201,8 @@ export default function Sos() {
             </ProgressRing>
           </View>
           <Body tone="muted">{DELAY ? fillUnitTokens(DELAY.instruction, content.unit) : null}</Body>
+          <Label>How strong is it? (optional)</Label>
+          <StrengthChips value={strengthStart} onChange={setStrengthStart} />
           <Button label="Skip the wait" variant="secondary" onPress={() => setMode('pick')} />
         </>
       ) : null}
@@ -197,10 +224,18 @@ export default function Sos() {
             </View>
             <Button label="Try something else" variant="quiet" onPress={() => setMode('pick')} />
           </View>
-          {mode === 'breathe' ? <BreatheGuide /> : null}
-          {mode === 'blocks' ? <BlockDrop /> : null}
-          {mode === 'memory' ? <MemoryPairs /> : null}
-          {mode === 'bubbles' ? <BubblePop /> : null}
+          <View style={styles.soundRow}>
+            <Chip
+              role="checkbox"
+              label={preferences.sound ? 'Sound on' : 'Sound off'}
+              selected={preferences.sound}
+              onPress={() => void setSound(!preferences.sound)}
+            />
+          </View>
+          {mode === 'breathe' ? <BreatheGuide onPhaseChange={feedback.tick} /> : null}
+          {mode === 'blocks' ? <BlockDrop onClear={feedback.pop} /> : null}
+          {mode === 'memory' ? <MemoryPairs onMatch={feedback.tick} /> : null}
+          {mode === 'bubbles' ? <BubblePop onPop={feedback.pop} /> : null}
           {mode === 'grounding' ? <Grounding /> : null}
           {mode === 'water' ? <WaterStep instruction={WATER ? fillUnitTokens(WATER.instruction, content.unit) : ''} /> : null}
         </>
@@ -209,9 +244,22 @@ export default function Sos() {
   );
 }
 
+/** 1 (barely there) to 5 (overwhelming). */
+function StrengthChips(props: { value: number | null; onChange: (value: number) => void; disabled?: boolean }) {
+  const styles = useStyles();
+  return (
+    <View style={styles.chips} accessibilityLabel="Craving strength from 1, barely there, to 5, overwhelming">
+      {STRENGTHS.map((n) => (
+        <Chip key={n} label={String(n)} selected={props.value === n} onPress={() => { if (!props.disabled) props.onChange(n); }} />
+      ))}
+    </View>
+  );
+}
+
 const useStyles = makeStyles((t) =>
   StyleSheet.create({
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm },
+    soundRow: { flexDirection: 'row', justifyContent: 'flex-end' },
     ringWrap: { alignItems: 'center', paddingVertical: t.space.md },
     seconds: { fontFamily: t.family.display, fontSize: 56, lineHeight: 64, color: t.color.accentText, fontVariant: ['tabular-nums'] },
     actions: { gap: t.space.xs },
