@@ -1,8 +1,9 @@
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { PRODUCT_CONTENT, VAPE_FREQUENCY_CHIPS } from '@/content/products';
 import { isCombustible } from '@/domain/products';
 import type { SetupFormValues } from '@/domain/setupForm';
-import { formStyles } from './formStyles';
+import { Caption, Chip, Field, Label } from './kit';
+import { makeStyles } from './theme';
 
 type Props = {
   values: SetupFormValues;
@@ -11,128 +12,87 @@ type Props = {
   section: 'usage' | 'history';
 };
 
+const useStyles = makeStyles((t) =>
+  StyleSheet.create({
+    group: { gap: t.space.md },
+    field: { gap: t.space.xs },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm },
+    duo: { flexDirection: 'row', gap: t.space.sm },
+  }),
+);
+
 export function UsageFields({ values, onChange, section }: Props) {
+  const styles = useStyles();
   const content = PRODUCT_CONTENT[values.product];
   const set = (patch: Partial<SetupFormValues>) => onChange({ ...values, ...patch });
+
+  const yearsMonths = (
+    <View style={styles.duo}>
+      <Field bare label="Years smoked" value={values.historyYears} onChangeText={(historyYears) => set({ historyYears })} keyboardType="number-pad" placeholder="years" />
+      <Field bare label="Additional months smoked" value={values.historyMonths} onChangeText={(historyMonths) => set({ historyMonths })} keyboardType="number-pad" placeholder="months" />
+    </View>
+  );
 
   if (section === 'history') {
     if (isCombustible(values.product)) {
       return (
-        <View style={formStyles.field}>
-          <Text style={formStyles.label}>How long did you smoke? (optional)</Text>
-          <Text style={formStyles.hint}>
-            Used only for an estimate of your lifetime cigarette total. Leave blank to skip.
-          </Text>
-          <YearsMonths values={values} set={set} />
+        <View style={styles.field}>
+          <Label>How long did you smoke? (optional)</Label>
+          <Caption tone="faint">Used only for an estimate of your lifetime cigarette total. Leave blank to skip.</Caption>
+          {yearsMonths}
         </View>
       );
     }
     return (
-      <View style={formStyles.field}>
-        <Text style={formStyles.label}>Did you smoke cigarettes before?</Text>
-        <Text style={formStyles.hint}>
-          This decides whether the long-term smoking-recovery milestones apply to you.
-        </Text>
-        <View style={formStyles.chips}>
-          {([[true, 'Yes'], [false, 'No']] as const).map(([answer, label]) => (
-            <Pressable
-              key={label}
-              onPress={() => set({ smokedBefore: answer })}
-              style={[formStyles.chip, values.smokedBefore === answer && formStyles.chipActive]}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: values.smokedBefore === answer }}
-            >
-              <Text style={[formStyles.chipText, values.smokedBefore === answer && formStyles.chipTextActive]}>{label}</Text>
-            </Pressable>
-          ))}
+      <View style={styles.group}>
+        <View style={styles.field}>
+          <Label>Did you smoke cigarettes before?</Label>
+          <Caption tone="faint">This decides whether the long-term smoking-recovery milestones apply to you.</Caption>
+          <View style={styles.chips}>
+            <Chip label="Yes" selected={values.smokedBefore} onPress={() => set({ smokedBefore: true })} />
+            <Chip label="No" selected={!values.smokedBefore} onPress={() => set({ smokedBefore: false })} />
+          </View>
         </View>
         {values.smokedBefore ? (
           <>
-            <Text style={formStyles.label}>For how long?</Text>
-            <YearsMonths values={values} set={set} />
-            <Field label="Cigarettes per day back then" value={values.priorPerDay} onChange={(priorPerDay) => set({ priorPerDay })} keyboardType="number-pad" />
+            <View style={styles.field}>
+              <Label>For how long?</Label>
+              {yearsMonths}
+            </View>
+            <Field label="Cigarettes per day back then" value={values.priorPerDay} onChangeText={(priorPerDay) => set({ priorPerDay })} keyboardType="number-pad" />
           </>
         ) : null}
       </View>
     );
   }
 
-  return (
-    <View style={{ gap: 12 }}>
-      {values.product === 'vape' ? (
-        <View style={formStyles.field}>
-          <Text style={formStyles.label}>How often did you vape?</Text>
-          <View style={formStyles.chips}>
-            {VAPE_FREQUENCY_CHIPS.map((chip) => {
-              const active = values.unitsPerDay === String(chip.usesPerDay);
-              return (
-                <Pressable
-                  key={chip.label}
-                  onPress={() => set({ unitsPerDay: String(chip.usesPerDay) })}
-                  style={[formStyles.chip, active && formStyles.chipActive]}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: active }}
-                >
-                  <Text style={[formStyles.chipText, active && formStyles.chipTextActive]}>{chip.label}</Text>
-                </Pressable>
-              );
-            })}
+  if (values.product === 'vape') {
+    return (
+      <View style={styles.group}>
+        <View style={styles.field}>
+          <Label>How often did you vape?</Label>
+          <View style={styles.chips}>
+            {VAPE_FREQUENCY_CHIPS.map((chip) => (
+              <Chip
+                key={chip.label}
+                label={chip.label}
+                selected={values.unitsPerDay === String(chip.usesPerDay)}
+                onPress={() => set({ unitsPerDay: String(chip.usesPerDay) })}
+              />
+            ))}
           </View>
-          <Field label="Uses per day (edit if you like)" value={values.unitsPerDay} onChange={(unitsPerDay) => set({ unitsPerDay })} keyboardType="number-pad" />
-          <Field label="Spend per week (€)" value={values.weeklySpend} onChange={(weeklySpend) => set({ weeklySpend })} keyboardType="decimal-pad" />
         </View>
-      ) : (
-        <>
-          <Field label={content.perDayLabel} hint="Roughly what you used before quitting." value={values.unitsPerDay} onChange={(unitsPerDay) => set({ unitsPerDay })} keyboardType="number-pad" />
-          <Field label={content.perPackLabel ?? 'Per pack'} value={values.unitsPerPack} onChange={(unitsPerPack) => set({ unitsPerPack })} keyboardType="number-pad" />
-          <Field label={`${content.packPriceLabel ?? 'Price'} (€)`} value={values.packPrice} onChange={(packPrice) => set({ packPrice })} keyboardType="decimal-pad" />
-        </>
-      )}
-    </View>
-  );
-}
+        <Field label="Uses per day (edit if you like)" value={values.unitsPerDay} onChangeText={(unitsPerDay) => set({ unitsPerDay })} keyboardType="number-pad" />
+        <Field label="Spend per week (€)" value={values.weeklySpend} onChangeText={(weeklySpend) => set({ weeklySpend })} keyboardType="decimal-pad" />
+      </View>
+    );
+  }
 
-function YearsMonths({ values, set }: { values: SetupFormValues; set: (patch: Partial<SetupFormValues>) => void }) {
   return (
-    <View style={formStyles.duo}>
-      <TextInput
-        style={[formStyles.input, formStyles.duoInput]}
-        value={values.historyYears}
-        onChangeText={(historyYears) => set({ historyYears })}
-        keyboardType="number-pad"
-        placeholder="years"
-        accessibilityLabel="Years smoked"
-      />
-      <TextInput
-        style={[formStyles.input, formStyles.duoInput]}
-        value={values.historyMonths}
-        onChangeText={(historyMonths) => set({ historyMonths })}
-        keyboardType="number-pad"
-        placeholder="months"
-        accessibilityLabel="Additional months smoked"
-      />
-    </View>
-  );
-}
-
-function Field(props: {
-  label: string;
-  hint?: string;
-  value: string;
-  onChange: (next: string) => void;
-  keyboardType: 'number-pad' | 'decimal-pad';
-}) {
-  return (
-    <View style={formStyles.field}>
-      <Text style={formStyles.label}>{props.label}</Text>
-      {props.hint ? <Text style={formStyles.hint}>{props.hint}</Text> : null}
-      <TextInput
-        style={formStyles.input}
-        value={props.value}
-        onChangeText={props.onChange}
-        keyboardType={props.keyboardType}
-        accessibilityLabel={props.label}
-      />
+    <View style={styles.group}>
+      <Field label={content.perDayLabel} hint="Roughly what you used before quitting." value={values.unitsPerDay} onChangeText={(unitsPerDay) => set({ unitsPerDay })} keyboardType="number-pad" />
+      <Field label={content.perPackLabel ?? 'Per pack'} value={values.unitsPerPack} onChangeText={(unitsPerPack) => set({ unitsPerPack })} keyboardType="number-pad" />
+      <Field label={`${content.packPriceLabel ?? 'Price'} (€)`} value={values.packPrice} onChangeText={(packPrice) => set({ packPrice })} keyboardType="decimal-pad" />
     </View>
   );
 }

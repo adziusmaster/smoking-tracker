@@ -1,7 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { theme } from './theme';
+import { makeStyles } from './theme';
 
 /**
  * Two tappable rows — a date and a time — that together choose one moment. Android shows
@@ -13,6 +13,7 @@ export default function QuitMomentPicker(props: {
   onChange: (next: Date) => void;
   maximumDate?: Date | undefined;
 }) {
+  const styles = useStyles();
   const [open, setOpen] = useState<'none' | 'date' | 'time'>('none');
 
   const dateLabel = props.value.toLocaleDateString('en-GB', {
@@ -71,16 +72,19 @@ export default function QuitMomentPicker(props: {
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    borderWidth: 1, borderColor: theme.color.border, borderRadius: theme.radius.md,
-    backgroundColor: theme.color.surface, overflow: 'hidden',
-  },
-  row: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: theme.space.md, paddingVertical: theme.space.md,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.color.border,
-  },
-  rowLabel: { fontSize: theme.font.small, color: theme.color.textMuted },
-  rowValue: { fontSize: theme.font.body, fontWeight: '600', color: theme.color.text },
-});
+const useStyles = makeStyles((t) =>
+  StyleSheet.create({
+    wrap: { borderWidth: 1, borderColor: t.color.line, borderRadius: t.radius.md, backgroundColor: t.color.surface, overflow: 'hidden' },
+    row: {
+      minHeight: 48,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: t.space.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: t.color.line,
+    },
+    rowLabel: { fontFamily: t.family.medium, fontSize: t.font.small, color: t.color.muted },
+    rowValue: { fontFamily: t.family.semi, fontSize: t.font.body, color: t.color.ink },
+  }),
+);
