@@ -27,12 +27,12 @@ export const SELECT_SETTINGS = `
 `;
 
 export const INSERT_SLIP = `
-  INSERT INTO slips (occurred_at, cigarette_count, trigger, note, created_at)
-  VALUES (?, ?, ?, ?, ?)
+  INSERT INTO slips (occurred_at, cigarette_count, trigger, note, product, created_at)
+  VALUES (?, ?, ?, ?, ?, ?)
 `;
 
 export const SELECT_SLIPS = `
-  SELECT id, occurred_at, cigarette_count, trigger, note
+  SELECT id, occurred_at, cigarette_count, trigger, note, product
   FROM slips ORDER BY occurred_at DESC
 `;
 

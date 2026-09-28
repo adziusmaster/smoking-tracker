@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { addCravingEvent, countCravingsBeaten, logSlipAfterCraving } from '@/data/repositories';
 import { PRODUCT_CONTENT } from '@/content/products';
-import { ACTIVITIES, SLIP_REASSURANCE, SOS_STEPS } from '@/content/sos';
+import { ACTIVITIES, SLIP_BUTTON, SLIP_REASSURANCE, SOS_STEPS } from '@/content/sos';
 import { fillUnitTokens, formatCount } from '@/domain/format';
 import { parseNonNegativeInt } from '@/domain/parse';
-import { pickVariant } from '@/domain/products';
+import { variantForProduct } from '@/domain/products';
 import { lifetimeAfterSlip } from '@/domain/savings';
-import type { ActivityId, SlipTrigger } from '@/domain/types';
+import type { ActivityId, ProductId, SlipTrigger } from '@/domain/types';
 import { Body, Button, Chip, Eyebrow, Field, Label, ProgressRing, Screen, Title } from '@/ui/kit';
 import { ActivityPicker } from '@/ui/sos/ActivityPicker';
 import { BlockDrop } from '@/ui/sos/BlockDrop';
@@ -18,6 +18,7 @@ import { BubblePop } from '@/ui/sos/BubblePop';
 import { CravingBar } from '@/ui/sos/CravingBar';
 import { Grounding } from '@/ui/sos/Grounding';
 import { MemoryPairs } from '@/ui/sos/MemoryPairs';
+import { SlipProductPicker } from '@/ui/SlipProductPicker';
 import { WaterStep } from '@/ui/sos/WaterStep';
 import { makeStyles } from '@/ui/theme';
 import { useQuitState } from '@/ui/useQuitState';
@@ -48,9 +49,14 @@ export default function Sos() {
   const [trigger, setTrigger] = useState<SlipTrigger | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const { submitting, run } = useSubmitGuard();
-  // Cigarette wording until the stored product has loaded — the screen must work instantly.
-  const content = PRODUCT_CONTENT[state?.settings.product ?? 'cigarettes'];
-  const slipUnits = content.countsSlips ? Math.max(1, parseNonNegativeInt(count) ?? 1) : 1;
+  // The user's own product (cigarettes until the stored one has loaded — the screen must work
+  // instantly), and what the slip was, which can be anything: an IQOS quitter can slip on a cigarette.
+  const own: ProductId = state?.settings.product ?? 'cigarettes';
+  const content = PRODUCT_CONTENT[own];
+  const [slipChoice, setSlipChoice] = useState<ProductId | null>(null);
+  const slipProduct = slipChoice ?? own;
+  const slipContent = PRODUCT_CONTENT[slipProduct];
+  const slipUnits = slipContent.countsSlips ? Math.max(1, parseNonNegativeInt(count) ?? 1) : 1;
   const ringSize = Math.round(Math.min(200, Math.max(140, windowHeight * 0.26)));
 
   useEffect(() => {
@@ -88,7 +94,7 @@ export default function Sos() {
         const now = new Date();
         await logSlipAfterCraving(
           db,
-          { occurredAt: now.toISOString(), unitCount: slipUnits, trigger, note: null },
+          { occurredAt: now.toISOString(), unitCount: slipUnits, trigger, note: null, product: slipProduct },
           { startedAt, endedAt: now.toISOString(), outcome: 'slipped', activity: lastActivity },
           now,
         );
@@ -99,24 +105,25 @@ export default function Sos() {
     });
 
   if (outcome === 'slipped') {
-    const lifetime = state ? lifetimeAfterSlip(state, slipUnits, new Date()) : null;
-    const reassurance = state ? pickVariant(SLIP_REASSURANCE, state.settings) : SLIP_REASSURANCE.smoke;
+    const lifetime = state ? lifetimeAfterSlip(state, slipUnits, slipProduct, new Date()) : null;
+    const reassurance = variantForProduct(SLIP_REASSURANCE, slipProduct);
 
     return (
       <Screen>
         <Title>Alright. Let’s log it accurately.</Title>
-        <Body tone="muted">{fillUnitTokens(reassurance, content.unit)}</Body>
+        <Body tone="muted">{fillUnitTokens(reassurance, slipContent.unit)}</Body>
+        <SlipProductPicker own={own} value={slipProduct} onChange={setSlipChoice} />
         {lifetime !== null ? (
           <Body tone="muted">That brings your estimated lifetime cigarette total to {formatCount(lifetime)}.</Body>
         ) : null}
 
-        {content.countsSlips ? (
+        {slipContent.countsSlips ? (
           <Field
-            label={`How many ${content.unit.many}?`}
+            label={`How many ${slipContent.unit.many}?`}
             value={count}
             onChangeText={setCount}
             keyboardType="number-pad"
-            accessibilityLabel={`Number of ${content.unit.many}`}
+            accessibilityLabel={`Number of ${slipContent.unit.many}`}
           />
         ) : null}
 
@@ -159,7 +166,7 @@ export default function Sos() {
       footer={
         <View style={styles.actions}>
           <Button label="It’s passed, I’m fine" onPress={markPassed} disabled={submitting} />
-          <Button label={content.slipVerb} variant="quiet" onPress={() => setOutcome('slipped')} />
+          <Button label={SLIP_BUTTON} variant="quiet" onPress={() => setOutcome('slipped')} />
         </View>
       }
     >

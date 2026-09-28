@@ -109,6 +109,16 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    version: 5,
+    up: `
+      -- What the slip was. NULL means the user's own product, which is what every slip before
+      -- this column meant. A slip of any product restarts the fast clocks; only own-product
+      -- slips come off "units not used" and money saved.
+      ALTER TABLE slips ADD COLUMN product TEXT NULL
+        CHECK (product IN ('cigarettes','roll-your-own','heated','vape','snus','pouches'));
+    `,
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]?.version ?? 0;

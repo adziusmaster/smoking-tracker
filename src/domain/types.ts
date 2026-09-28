@@ -55,6 +55,8 @@ export interface Slip {
   unitCount: number;
   trigger: SlipTrigger | null;
   note: string | null;
+  /** What was used; null means the user's own product (every slip logged before this field). */
+  product: ProductId | null;
 }
 
 export interface SmokingPeriod {

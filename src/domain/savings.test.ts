@@ -29,7 +29,7 @@ describe('computeSavings', () => {
   it('computeSavings_withSlip_subtractsOnlyTheCigarettesSmoked', () => {
     // Arrange
     const state = baseState({
-      slips: [{ id: 1, occurredAt: '2026-08-05T22:00:00+02:00', unitCount: 3, trigger: 'alcohol', note: null }],
+      slips: [{ id: 1, occurredAt: '2026-08-05T22:00:00+02:00', unitCount: 3, trigger: 'alcohol', note: null, product: null }],
     });
     const now = new Date('2026-08-08T08:00:00+02:00');
 
@@ -65,7 +65,7 @@ describe('computeSavings', () => {
   it('computeSavings_relapseLongerThanQuitAttempt_clampsAvoidedAtZero', () => {
     // Arrange
     const state = baseState({
-      slips: [{ id: 1, occurredAt: '2026-08-01T00:00:00+02:00', unitCount: 9_999, trigger: null, note: null }],
+      slips: [{ id: 1, occurredAt: '2026-08-01T00:00:00+02:00', unitCount: 9_999, trigger: null, note: null, product: null }],
     });
     const now = new Date('2026-08-08T08:00:00+02:00');
 
@@ -122,7 +122,7 @@ describe('computeSavings', () => {
     // Arrange — a slip logged as 5 cigarettes before the user switched product to vape
     const state: QuitState = {
       settings: vape(),
-      slips: [{ id: 1, occurredAt: '2026-08-01T00:00:00+02:00', unitCount: 5, trigger: null, note: null }],
+      slips: [{ id: 1, occurredAt: '2026-08-01T00:00:00+02:00', unitCount: 5, trigger: null, note: null, product: null }],
       periods: [], cravingEvents: [],
     };
 
@@ -137,7 +137,7 @@ describe('computeSavings', () => {
     // Arrange — 60 months x 30.44 x 10 = 18_264 cigarettes; the stick slip is not a cigarette
     const state: QuitState = {
       settings: cigaretteSettings({ product: 'heated', cigaretteHistory: { months: 60, cigarettesPerDay: 10 } }),
-      slips: [{ id: 1, occurredAt: '2026-08-01T00:00:00+02:00', unitCount: 3, trigger: null, note: null }],
+      slips: [{ id: 1, occurredAt: '2026-08-01T00:00:00+02:00', unitCount: 3, trigger: null, note: null, product: null }],
       periods: [], cravingEvents: [],
     };
 
@@ -159,7 +159,7 @@ describe('lifetimeAfterSlip', () => {
     const state: QuitState = { settings: cigaretteSettings(), slips: [], periods: [], cravingEvents: [] };
 
     // Act
-    const result = lifetimeAfterSlip(state, 2, new Date('2026-08-08T08:00:00+02:00'));
+    const result = lifetimeAfterSlip(state, 2, 'cigarettes', new Date('2026-08-08T08:00:00+02:00'));
 
     // Assert — 96 x 30.44 x 15 = 43_834, + 2
     expect(result).toBe(43_836);
@@ -174,7 +174,7 @@ describe('lifetimeAfterSlip', () => {
     };
 
     // Act
-    const result = lifetimeAfterSlip(state, 1, new Date('2026-08-08T08:00:00+02:00'));
+    const result = lifetimeAfterSlip(state, 1, 'heated', new Date('2026-08-08T08:00:00+02:00'));
 
     // Assert
     expect(result).toBeNull();
@@ -185,9 +185,63 @@ describe('lifetimeAfterSlip', () => {
     const state: QuitState = { settings: cigaretteSettings({ cigaretteHistory: null }), slips: [], periods: [], cravingEvents: [] };
 
     // Act
-    const result = lifetimeAfterSlip(state, 1, new Date('2026-08-08T08:00:00+02:00'));
+    const result = lifetimeAfterSlip(state, 1, 'cigarettes', new Date('2026-08-08T08:00:00+02:00'));
 
     // Assert
     expect(result).toBeNull();
+  });
+
+  it('lifetimeAfterSlip_heatedSwitcherSmokesCigarettes_addsThemToTheCigaretteTotal', () => {
+    // Arrange — 60 x 30.44 x 10 = 18_264 cigarettes before, plus 2 now
+    const state: QuitState = {
+      settings: cigaretteSettings({ product: 'heated', cigaretteHistory: { months: 60, cigarettesPerDay: 10 } }),
+      slips: [], periods: [], cravingEvents: [],
+    };
+
+    // Act
+    const result = lifetimeAfterSlip(state, 2, 'cigarettes', new Date('2026-08-08T08:00:00+02:00'));
+
+    // Assert
+    expect(result).toBe(18_266);
+  });
+});
+
+describe('slips of another product', () => {
+  const heatedSwitcher = (slips: QuitState['slips']): QuitState => ({
+    settings: cigaretteSettings({ product: 'heated', unitsPerDay: 15, cigaretteHistory: { months: 60, cigarettesPerDay: 10 } }),
+    slips, periods: [], cravingEvents: [],
+  });
+
+  it('computeSavings_cigaretteSlipForHeatedUser_doesNotReduceSticksNotUsed', () => {
+    // Arrange
+    const state = heatedSwitcher([{ id: 1, occurredAt: '2026-08-01T00:00:00+02:00', unitCount: 3, trigger: null, note: null, product: 'cigarettes' }]);
+
+    // Act
+    const result = computeSavings(state, new Date('2026-08-08T08:00:00+02:00'));
+
+    // Assert — 43 days x 15 = 645 sticks, untouched by the cigarettes
+    expect(result.unitsAvoided).toBe(645);
+  });
+
+  it('computeSavings_cigaretteSlipForHeatedUser_addsToLifetimeCigarettes', () => {
+    // Arrange
+    const state = heatedSwitcher([{ id: 1, occurredAt: '2026-08-01T00:00:00+02:00', unitCount: 3, trigger: null, note: null, product: 'cigarettes' }]);
+
+    // Act
+    const result = computeSavings(state, new Date('2026-08-08T08:00:00+02:00'));
+
+    // Assert
+    expect(result.lifetimeCigarettes).toBe(18_267);
+  });
+
+  it('computeSavings_ownProductSlipStoredAsNull_stillSubtracts', () => {
+    // Arrange — slips logged before migration v5 have product null, meaning the user's own
+    const state = heatedSwitcher([{ id: 1, occurredAt: '2026-08-01T00:00:00+02:00', unitCount: 3, trigger: null, note: null, product: null }]);
+
+    // Act
+    const result = computeSavings(state, new Date('2026-08-08T08:00:00+02:00'));
+
+    // Assert
+    expect(result.unitsAvoided).toBe(642);
   });
 });

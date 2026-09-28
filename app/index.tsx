@@ -10,6 +10,7 @@ import type { MilestoneState } from '@/domain/types';
 import { MILESTONES } from '@/content/milestones';
 import { DANGER_WINDOW_TIPS, PHASES } from '@/content/phases';
 import { PRODUCT_CONTENT } from '@/content/products';
+import { CRAVING_BUTTON } from '@/content/sos';
 import { syncNotifications } from '@/notifications/schedule';
 import { ChapterBlock } from '@/ui/ChapterBlock';
 import { Hero } from '@/ui/Hero';
@@ -146,7 +147,7 @@ export default function Timeline() {
           onPress={() => router.push('/sos')}
           accessibilityRole="button"
         >
-          <Text style={styles.sosText}>{content.cravingButton}</Text>
+          <Text style={styles.sosText}>{CRAVING_BUTTON}</Text>
         </Pressable>
       }
     >

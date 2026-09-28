@@ -1,5 +1,5 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
-import type { ActivityId, CravingEvent, QuitState, Settings, Slip, SlipTrigger, SmokingPeriod } from '@/domain/types';
+import type { ActivityId, CravingEvent, ProductId, QuitState, Settings, Slip, SlipTrigger, SmokingPeriod } from '@/domain/types';
 import { readableSettingsOrRaw, rowToSettings, settingsToParams, type SettingsRow } from './settingsMapping';
 import {
   DELETE_ALL,
@@ -32,6 +32,7 @@ interface SlipRow {
   cigarette_count: number;
   trigger: SlipTrigger | null;
   note: string | null;
+  product: ProductId | null;
 }
 
 interface PeriodRow {
@@ -72,6 +73,7 @@ export async function loadQuitState(db: SQLiteDatabase): Promise<QuitState | nul
     unitCount: row.cigarette_count,
     trigger: row.trigger,
     note: row.note,
+    product: row.product,
   }));
 
   const periods: SmokingPeriod[] = periodRows.map((row) => ({
@@ -101,10 +103,10 @@ export async function saveSettings(db: SQLiteDatabase, settings: Settings, now: 
 
 export async function addSlip(
   db: SQLiteDatabase,
-  input: { occurredAt: string; unitCount: number; trigger: SlipTrigger | null; note: string | null },
+  input: { occurredAt: string; unitCount: number; trigger: SlipTrigger | null; note: string | null; product: ProductId | null },
   now: Date,
 ): Promise<void> {
-  await db.runAsync(INSERT_SLIP, input.occurredAt, input.unitCount, input.trigger, input.note, now.toISOString());
+  await db.runAsync(INSERT_SLIP, input.occurredAt, input.unitCount, input.trigger, input.note, input.product, now.toISOString());
 }
 
 export async function startSmokingPeriod(
@@ -139,7 +141,7 @@ export async function countCravingsBeaten(db: SQLiteDatabase): Promise<number> {
  */
 export async function logSlipAfterCraving(
   db: SQLiteDatabase,
-  slip: { occurredAt: string; unitCount: number; trigger: SlipTrigger | null; note: string | null },
+  slip: { occurredAt: string; unitCount: number; trigger: SlipTrigger | null; note: string | null; product: ProductId | null },
   craving: { startedAt: string; endedAt: string; outcome: CravingEvent['outcome']; activity: ActivityId | null },
   now: Date,
 ): Promise<void> {

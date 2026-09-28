@@ -14,9 +14,10 @@ import {
 import { formatCount } from '@/domain/format';
 import { parsePositiveInt } from '@/domain/parse';
 import { lifetimeAfterSlip } from '@/domain/savings';
-import type { SlipTrigger } from '@/domain/types';
+import type { ProductId, SlipTrigger } from '@/domain/types';
 import { PRODUCT_CONTENT } from '@/content/products';
 import { CravingChart } from '@/ui/CravingChart';
+import { SlipProductPicker } from '@/ui/SlipProductPicker';
 import { Body, Button, Caption, Chip, Field, Heading, Label, Screen, Title } from '@/ui/kit';
 import { makeStyles } from '@/ui/theme';
 import { useQuitState } from '@/ui/useQuitState';
@@ -35,6 +36,7 @@ export default function Log() {
 
   const [checkins, setCheckins] = useState<CheckinRow[]>([]);
   const [slipCount, setSlipCount] = useState('1');
+  const [slipChoice, setSlipChoice] = useState<ProductId | null>(null);
   const [slipTrigger, setSlipTrigger] = useState<SlipTrigger | null>(null);
   const [craving, setCraving] = useState(3);
   const [mood, setMood] = useState(3);
@@ -50,16 +52,20 @@ export default function Log() {
 
   const currentlySmoking = state?.periods.some((period) => period.endedAt === null) ?? false;
 
-  const content = PRODUCT_CONTENT[state?.settings.product ?? 'cigarettes'];
+  const own: ProductId = state?.settings.product ?? 'cigarettes';
+  const content = PRODUCT_CONTENT[own];
+  // A slip can be any product: an IQOS quitter can slip on a cigarette.
+  const slipProduct = slipChoice ?? own;
+  const slipContent = PRODUCT_CONTENT[slipProduct];
 
   const submitSlip = () =>
     run(async () => {
       try {
-        const units = content.countsSlips ? (parsePositiveInt(slipCount) ?? 1) : 1;
-        await addSlip(db, { occurredAt: new Date().toISOString(), unitCount: units, trigger: slipTrigger, note: null }, new Date());
+        const units = slipContent.countsSlips ? (parsePositiveInt(slipCount) ?? 1) : 1;
+        await addSlip(db, { occurredAt: new Date().toISOString(), unitCount: units, trigger: slipTrigger, note: null, product: slipProduct }, new Date());
         await reload();
         const refreshed = await loadQuitState(db);
-        const total = refreshed ? lifetimeAfterSlip(refreshed, 0, new Date()) : null;
+        const total = refreshed ? lifetimeAfterSlip(refreshed, 0, slipProduct, new Date()) : null;
         setStatus({
           text:
             total === null
@@ -127,18 +133,15 @@ export default function Log() {
       <CravingChart checkins={checkins} />
 
       <Heading>Log a slip</Heading>
-      <Caption tone="faint">
-        {content.countsSlips
-          ? `A few ${content.unit.many}, still quit. This subtracts exactly what you used — nothing more.`
-          : 'A slip, still quit. It restarts the fast clocks and nothing else.'}
-      </Caption>
-      {content.countsSlips ? (
+      <Caption tone="faint">A slip, still quit. It restarts the fast clocks and nothing else is taken away.</Caption>
+      <SlipProductPicker own={own} value={slipProduct} onChange={setSlipChoice} />
+      {slipContent.countsSlips ? (
         <Field
-          label={`How many ${content.unit.many}?`}
+          label={`How many ${slipContent.unit.many}?`}
           value={slipCount}
           onChangeText={setSlipCount}
           keyboardType="number-pad"
-          accessibilityLabel={`Number of ${content.unit.many}`}
+          accessibilityLabel={`Number of ${slipContent.unit.many}`}
         />
       ) : null}
       <View style={styles.chips}>

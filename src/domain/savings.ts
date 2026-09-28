@@ -1,10 +1,11 @@
 import { estimateCigarettesBeforeQuitting } from './lifetime';
-import { isCombustible } from './products';
+import { isCombustible, slipProductOf } from './products';
 import {
   MINUTES_LOST_PER_CIGARETTE,
   MS_PER_DAY,
   type QuitState,
   type Savings,
+  type ProductId,
   type Settings,
   type SmokingPeriod,
 } from './types';
@@ -29,31 +30,41 @@ export function moneyForUnits(units: number, settings: Settings): number {
 
 export function computeSavings(state: QuitState, now: Date): Savings {
   const { settings, slips, periods } = state;
+  const own = settings.product;
 
   const elapsedDays = Math.max(0, now.getTime() - new Date(settings.quitDate).getTime()) / MS_PER_DAY;
   const wouldHaveUsed = elapsedDays * settings.unitsPerDay;
-  const actuallyUsed = slips.reduce((total, slip) => total + slip.unitCount, 0) + smokedDuringPeriods(periods, now);
-  const unitsAvoided = Math.max(0, Math.round(wouldHaveUsed - actuallyUsed));
+  // Only slips of the product being quit come off "units not used": two cigarettes are not
+  // sticks you failed to avoid. Every slip still restarts the fast clocks (see anchors.ts).
+  const ownSlipUnits = slips
+    .filter((slip) => slipProductOf(slip, own) === own)
+    .reduce((total, slip) => total + slip.unitCount, 0);
+  const periodUnits = smokedDuringPeriods(periods, now);
+  const unitsAvoided = Math.max(0, Math.round(wouldHaveUsed - ownSlipUnits - periodUnits));
 
-  const combustible = isCombustible(settings.product);
+  const combustible = isCombustible(own);
   const before = estimateCigarettesBeforeQuitting(settings);
+  // Cigarettes and roll-ups from any slip are cigarettes; for a smoker, relapse periods are too.
+  const cigaretteSlips = slips
+    .filter((slip) => isCombustible(slipProductOf(slip, own)))
+    .reduce((total, slip) => total + slip.unitCount, 0);
+  const smokedSince = cigaretteSlips + (combustible ? periodUnits : 0);
 
   return {
     unitsAvoided,
     moneySavedMinor: moneyForUnits(unitsAvoided, settings),
     // The 20-minute figure is measured in cigarettes (Jackson 2025); no equivalent exists for other products.
     minutesNotLost: combustible ? unitsAvoided * MINUTES_LOST_PER_CIGARETTE : null,
-    // For a switcher, slips are sticks, pouches or vape sessions — adding them to a cigarette total would mix units.
-    lifetimeCigarettes: before === null ? null : combustible ? before + Math.round(actuallyUsed) : before,
+    lifetimeCigarettes: before === null ? null : before + Math.round(smokedSince),
   };
 }
 
 /**
- * The running lifetime total to quote after logging `extraUnits` more, or null when that
- * sentence would be misleading: no history, or a product whose slips are not cigarettes.
+ * The running lifetime cigarette total to quote after logging `extraUnits` of `product`, or null
+ * when that sentence would be misleading: no cigarette history, or a slip that was not cigarettes.
  */
-export function lifetimeAfterSlip(state: QuitState, extraUnits: number, now: Date): number | null {
-  if (!isCombustible(state.settings.product)) return null;
+export function lifetimeAfterSlip(state: QuitState, extraUnits: number, product: ProductId, now: Date): number | null {
+  if (!isCombustible(product)) return null;
   const lifetime = computeSavings(state, now).lifetimeCigarettes;
   return lifetime === null ? null : lifetime + extraUnits;
 }

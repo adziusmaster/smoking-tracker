@@ -9,8 +9,8 @@ Resume point. Last updated 2026-09-28.
 | --- | --- |
 | Repo | `adziusmaster/smoking-tracker` (private) |
 | Branch | `feat/nicotine-products` (multi-product support, not yet merged); `main` is the v1 cigarettes-only app |
-| Tests | 284 passing across 23 files |
-| Schema | version 4 (v3: product columns; v4: `craving_events`) |
+| Tests | 299 passing across 24 files |
+| Schema | version 5 (v3: product columns; v4: `craving_events`; v5: `slips.product`) |
 | Typecheck | clean |
 | `expo-doctor` | 20/21 — the same patch drift, see Known items |
 | Package name | `com.adziusmaster.smokefree` (permanent once published) |
@@ -32,6 +32,10 @@ end). Sub-projects, each with its own spec → plan → build:
 3. **SOS activities** — done on `feat/sos-games`: delay, then breathing / block drop (cites
    Skorka-Brown 2015) / memory pairs / bubble pop / 5-4-3-2-1 / water, a five-minute bar, and
    "cravings beaten" on home. Game rules are pure and tested in `src/domain/games/`.
+   Craving/slip buttons are product-neutral ("I’m having a craving" / "I slipped"); a slip records
+   what was used (`slips.product`, null = own product). Any slip restarts the fast clocks; only
+   own-product slips reduce "units not used"; cigarette/roll-up slips add to the lifetime total.
+   Repository functions now run in Node via `src/data/testDb.ts`.
 4. **Something new every day** — daily card, savings goal, reasons.
 4. **Insights & journal.**
 5. **Notification preferences + backup/restore to file.**

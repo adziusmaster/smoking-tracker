@@ -73,7 +73,7 @@ describe('buildTimeline', () => {
     // Arrange — slip 10 hours before now, so the 24 h CO milestone is unreached again
     const withSlip: QuitState = {
       ...state,
-      slips: [{ id: 1, occurredAt: '2026-08-07T22:00:00+02:00', unitCount: 3, trigger: 'alcohol', note: null }],
+      slips: [{ id: 1, occurredAt: '2026-08-07T22:00:00+02:00', unitCount: 3, trigger: 'alcohol', note: null, product: null }],
     };
 
     // Act
@@ -211,7 +211,7 @@ describe('buildTimeline tips', () => {
     const settings = cigaretteSettings({ quitDate: QUIT, product: 'vape', cost: { kind: 'weekly', weeklySpendMinor: 1500 }, cigaretteHistory: null });
     const withSlip: QuitState = {
       settings,
-      slips: [{ id: 1, occurredAt: '2026-08-07T22:00:00+02:00', unitCount: 1, trigger: null, note: null }],
+      slips: [{ id: 1, occurredAt: '2026-08-07T22:00:00+02:00', unitCount: 1, trigger: null, note: null, product: null }],
       periods: [], cravingEvents: [],
     };
 

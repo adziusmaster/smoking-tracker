@@ -37,6 +37,13 @@ export const SOS_STEPS: SosStep[] = [
 
 export const SOS_TOTAL_SECONDS = SOS_STEPS.reduce((total, step) => total + step.seconds, 0);
 
+/**
+ * The same words for everyone: someone quitting IQOS can slip on a cigarette, and an ex-vaper on a
+ * vape, so the craving and slip buttons never name a product.
+ */
+export const CRAVING_BUTTON = 'I’m having a craving';
+export const SLIP_BUTTON = 'I slipped';
+
 /** Shown on the slip screen. The smoke variant names carbon monoxide; the other cannot. */
 export const SLIP_REASSURANCE: CopyVariants<string> = {
   smoke:

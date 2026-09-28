@@ -59,7 +59,7 @@ describe('repositories', () => {
 
   it('logSlipAfterCraving_cravingInsertFails_savesNeitherRow', async () => {
     // Arrange — an invalid activity makes the second insert violate its CHECK
-    const slip = { occurredAt: '2026-09-28T10:04:00.000Z', unitCount: 2, trigger: null, note: null };
+    const slip = { occurredAt: '2026-09-28T10:04:00.000Z', unitCount: 2, trigger: null, note: null, product: 'cigarettes' as const };
     const craving = { startedAt: '2026-09-28T10:00:00.000Z', endedAt: '2026-09-28T10:04:00.000Z', outcome: 'slipped' as const, activity: 'chess' as never };
 
     // Act
@@ -74,7 +74,7 @@ describe('repositories', () => {
 
   it('logSlipAfterCraving_bothValid_savesBothRows', async () => {
     // Arrange
-    const slip = { occurredAt: '2026-09-28T10:04:00.000Z', unitCount: 2, trigger: null, note: null };
+    const slip = { occurredAt: '2026-09-28T10:04:00.000Z', unitCount: 2, trigger: null, note: null, product: 'cigarettes' as const };
     const craving = { startedAt: '2026-09-28T10:00:00.000Z', endedAt: '2026-09-28T10:04:00.000Z', outcome: 'slipped' as const, activity: null };
 
     // Act
@@ -84,5 +84,21 @@ describe('repositories', () => {
     const state = await loadQuitState(db);
     expect(state?.slips).toHaveLength(1);
     expect(state?.cravingEvents).toHaveLength(1);
+  });
+});
+
+describe('slips with a product', () => {
+  it('addSlip_differentProduct_roundTripsThroughLoad', async () => {
+    // Arrange & Act
+    await logSlipAfterCraving(
+      db,
+      { occurredAt: '2026-09-28T10:04:00.000Z', unitCount: 1, trigger: null, note: null, product: 'vape' },
+      { startedAt: '2026-09-28T10:00:00.000Z', endedAt: '2026-09-28T10:04:00.000Z', outcome: 'slipped', activity: null },
+      NOW,
+    );
+    const state = await loadQuitState(db);
+
+    // Assert
+    expect(state?.slips[0]?.product).toBe('vape');
   });
 });
