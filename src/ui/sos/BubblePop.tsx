@@ -126,7 +126,9 @@ export function BubblePop(props: { onPop: () => void }) {
         style={styles.field}
         onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)}
         onStartShouldSetResponder={() => true}
-        onResponderGrant={onTouch}
+        // Start fires for the first finger (right after the grant) and for every extra finger
+        // while one is down, so two-thumb popping works; the grant itself does nothing.
+        onResponderStart={onTouch}
         accessible
         accessibilityRole="button"
         accessibilityLabel={`Bubble field. ${popped} popped. Tap a bubble to pop it.`}

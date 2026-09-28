@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isNewBest } from './records';
+import { beatsPreviousBest, isNewBest } from './records';
 
 describe('isNewBest', () => {
   it('isNewBest_noRecordYet_isTrueForAnyFinishedGame', () => {
@@ -22,5 +22,31 @@ describe('isNewBest', () => {
   it('isNewBest_zeroScore_isNeverARecordForHigherGames', () => {
     // Arrange & Act & Assert — "0 popped" should not greet anyone with "New best!"
     expect(isNewBest('bubbles', 0, null)).toBe(false);
+  });
+});
+
+describe('beatsPreviousBest', () => {
+  it('beatsPreviousBest_betterThanStored_isTrue', () => {
+    // Arrange & Act
+    const result = beatsPreviousBest('bubbles', 31, 30);
+
+    // Assert
+    expect(result).toBe(true);
+  });
+
+  it('beatsPreviousBest_noRecordYet_isFalseSoTheFirstPopIsNotANewBest', () => {
+    // Arrange & Act
+    const result = beatsPreviousBest('bubbles', 1, null);
+
+    // Assert
+    expect(result).toBe(false);
+  });
+
+  it('beatsPreviousBest_memoryTie_isFalse', () => {
+    // Arrange & Act
+    const result = beatsPreviousBest('memory', 9, 9);
+
+    // Assert
+    expect(result).toBe(false);
   });
 });

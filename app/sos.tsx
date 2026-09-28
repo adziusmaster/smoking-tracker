@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { addCravingEvent, countCravingsBeaten, logSlipAfterCraving, setCravingStrengthEnd } from '@/data/repositories';
 import { PRODUCT_CONTENT } from '@/content/products';
 import { ACTIVITIES, SLIP_BUTTON, SLIP_REASSURANCE, SOS_STEPS } from '@/content/sos';
@@ -218,7 +218,8 @@ export default function Sos() {
           </View>
           <Body tone="muted">{DELAY ? fillUnitTokens(DELAY.instruction, content.unit) : null}</Body>
           <Label>How strong is it? (optional)</Label>
-          <StrengthChips value={strengthStart} onChange={setStrengthStart} />
+          {/* Optional: tapping the chosen number again clears it. */}
+          <StrengthChips value={strengthStart} onChange={(n) => setStrengthStart(strengthStart === n ? null : n)} />
           <Button label="Skip the wait" variant="secondary" onPress={() => setMode('pick')} />
         </>
       ) : null}
@@ -238,15 +239,20 @@ export default function Sos() {
               <Eyebrow>Ride it out</Eyebrow>
               <Title>{activity.title}</Title>
             </View>
+            {/* Only the games that make a sound get the mute button. */}
+            {mode === 'blocks' || mode === 'bubbles' ? (
+              <Pressable
+                onPress={() => void setSound(!preferences.sound).catch(() => undefined)}
+                style={({ pressed }) => [styles.mute, pressed && styles.mutePressed]}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: preferences.sound }}
+                accessibilityLabel="Sound"
+                hitSlop={8}
+              >
+                <Text style={styles.muteGlyph}>{preferences.sound ? '🔊' : '🔇'}</Text>
+              </Pressable>
+            ) : null}
             <Button label="Try something else" variant="quiet" onPress={() => setMode('pick')} />
-          </View>
-          <View style={styles.soundRow}>
-            <Chip
-              role="checkbox"
-              label={preferences.sound ? 'Sound on' : 'Sound off'}
-              selected={preferences.sound}
-              onPress={() => void setSound(!preferences.sound)}
-            />
           </View>
           {mode === 'breathe' ? <BreatheGuide onPhaseChange={feedback.tick} /> : null}
           {mode === 'blocks' ? <BlockDrop onClear={feedback.pop} /> : null}
@@ -275,7 +281,9 @@ function StrengthChips(props: { value: number | null; onChange: (value: number) 
 const useStyles = makeStyles((t) =>
   StyleSheet.create({
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm },
-    soundRow: { flexDirection: 'row', justifyContent: 'flex-end' },
+    mute: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: t.color.line, backgroundColor: t.color.surface, alignItems: 'center', justifyContent: 'center' },
+    mutePressed: { backgroundColor: t.color.doneWash },
+    muteGlyph: { fontSize: 20 },
     ringWrap: { alignItems: 'center', paddingVertical: t.space.md },
     seconds: { fontFamily: t.family.display, fontSize: 56, lineHeight: 64, color: t.color.accentText, fontVariant: ['tabular-nums'] },
     actions: { gap: t.space.xs },

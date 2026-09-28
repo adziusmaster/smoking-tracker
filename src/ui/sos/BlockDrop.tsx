@@ -87,6 +87,17 @@ export function BlockDrop(props: { onClear: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.over]);
 
+  // Leaving mid-game ("It's passed", another activity) still counts the score toward the best.
+  const latest = useRef(game);
+  latest.current = game;
+  useEffect(
+    () => () => {
+      if (!latest.current.over) record.submit(latest.current.score);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   const stopSoftDrop = () => {
     if (soft.current) clearInterval(soft.current);
     soft.current = null;

@@ -66,11 +66,19 @@ export function BreatheGuide(props: { onPhaseChange: () => void }) {
     if (now.phase === lastPhase.current) return;
     lastPhase.current = now.phase;
     props.onPhaseChange();
-    Animated.timing(colour, { toValue: PHASE_INDEX[now.phase], duration: 500, useNativeDriver: false }).start();
+    if (now.phase === 'in') {
+      // Out → in goes forward to a second copy of the "in" colour and then snaps back to 0, so
+      // it never passes back through the hold colour on the way.
+      Animated.timing(colour, { toValue: 3, duration: 500, useNativeDriver: false }).start(({ finished }) => {
+        if (finished) colour.setValue(0);
+      });
+    } else {
+      Animated.timing(colour, { toValue: PHASE_INDEX[now.phase], duration: 500, useNativeDriver: false }).start();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now.phase]);
 
-  const fill = colour.interpolate({ inputRange: [0, 1, 2], outputRange: phaseColours });
+  const fill = colour.interpolate({ inputRange: [0, 1, 2, 3], outputRange: [...phaseColours, phaseColours[0] ?? t.color.accent] });
 
   return (
     <View style={{ gap: 12 }}>

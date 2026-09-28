@@ -93,9 +93,15 @@ export const UPSERT_PREFERENCE = `
 
 export const SELECT_PREFERENCES = `SELECT key, value FROM preferences`;
 
+/**
+ * Only ever improves a record, so a stale or failed read in the app can't overwrite a better
+ * best. Memory is fewer-is-better; the others more-is-better (mirrors RECORD_DIRECTION).
+ */
 export const UPSERT_GAME_RECORD = `
   INSERT INTO game_records (game, best, achieved_at) VALUES (?, ?, ?)
   ON CONFLICT (game) DO UPDATE SET best = excluded.best, achieved_at = excluded.achieved_at
+  WHERE (excluded.game = 'memory' AND excluded.best < game_records.best)
+     OR (excluded.game <> 'memory' AND excluded.best > game_records.best)
 `;
 
 export const SELECT_GAME_RECORDS = `SELECT game, best FROM game_records`;

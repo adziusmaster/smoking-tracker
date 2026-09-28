@@ -177,12 +177,12 @@ export async function saveGameRecord(db: SQLiteDatabase, game: GameId, best: num
   await db.runAsync(UPSERT_GAME_RECORD, game, best, now.toISOString());
 }
 
-/** Passed craving events, read straight from the database so the number shown is never a guess. */
 /** The "how strong is it now?" answer, added to a craving already saved when it passed. */
 export async function setCravingStrengthEnd(db: SQLiteDatabase, id: number, strengthEnd: number): Promise<void> {
   await db.runAsync(UPDATE_CRAVING_STRENGTH_END, strengthEnd, id);
 }
 
+/** Passed craving events, read straight from the database so the number shown is never a guess. */
 export async function countCravingsBeaten(db: SQLiteDatabase): Promise<number> {
   const row = await db.getFirstAsync<{ beaten: number }>(COUNT_CRAVINGS_BEATEN);
   return row?.beaten ?? 0;

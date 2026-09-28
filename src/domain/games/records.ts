@@ -15,3 +15,11 @@ export function isNewBest(game: GameId, value: number, current: number | null): 
   }
   return current === null || value < current;
 }
+
+/**
+ * Whether to celebrate "New best!": only when there was an earlier best and `value` beats it.
+ * The very first score is saved as the best, but beating nothing isn't a record.
+ */
+export function beatsPreviousBest(game: GameId, value: number, current: number | null): boolean {
+  return current !== null && isNewBest(game, value, current);
+}
