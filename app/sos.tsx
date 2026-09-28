@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { addCravingEvent, countCravingsBeaten, logSlipAfterCraving } from '@/data/repositories';
+import { addCravingEvent, countCravingsBeaten, logSlipAfterCraving, setCravingStrengthEnd } from '@/data/repositories';
 import { PRODUCT_CONTENT } from '@/content/products';
 import { ACTIVITIES, SLIP_BUTTON, SLIP_REASSURANCE, SOS_STEPS } from '@/content/sos';
 import { fillUnitTokens } from '@/domain/format';
@@ -50,6 +50,7 @@ export default function Sos() {
   const { preferences, setSound } = usePreferences();
   const feedback = useFeedback(preferences);
   const [beatenNow, setBeatenNow] = useState<number | null>(null);
+  const passedId = useRef<number | null>(null);
   const [count, setCount] = useState('1');
   const [trigger, setTrigger] = useState<SlipTrigger | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
@@ -79,16 +80,30 @@ export default function Sos() {
     setMode(activity);
   };
 
-  // "It passed" first asks how strong it is now (optional), then records the craving.
-  const markPassed = (strengthEnd: number | null) =>
+  // "It passed" records the craving straight away, so leaving the optional rating step (back
+  // button, app killed) never loses it; a rating is added to that row afterwards.
+  const markPassed = () =>
     run(async () => {
       setFailure(null);
       try {
-        await addCravingEvent(db, { startedAt, endedAt: new Date().toISOString(), outcome: 'passed', activity: lastActivity, strengthStart, strengthEnd }, new Date());
+        passedId.current = await addCravingEvent(db, { startedAt, endedAt: new Date().toISOString(), outcome: 'passed', activity: lastActivity, strengthStart, strengthEnd: null }, new Date());
         setBeatenNow(await countCravingsBeaten(db));
       } catch {
         // The craving still passed; failing to record it must not take that away.
+        passedId.current = null;
         setBeatenNow(null);
+      }
+      setOutcome('rating');
+    });
+
+  const rateEnd = (strengthEnd: number | null) =>
+    run(async () => {
+      if (strengthEnd !== null && passedId.current !== null) {
+        try {
+          await setCravingStrengthEnd(db, passedId.current, strengthEnd);
+        } catch {
+          // The rating is optional; the craving itself is already saved.
+        }
       }
       setOutcome('passed');
     });
@@ -146,8 +161,8 @@ export default function Sos() {
       <Screen scroll={false} centered>
         <Title>How strong is it now?</Title>
         <Body tone="muted">Optional. Over time this shows whether your cravings are getting weaker.</Body>
-        <StrengthChips value={null} onChange={(value) => void markPassed(value)} disabled={submitting} />
-        <Button label="Skip" variant="quiet" onPress={() => void markPassed(null)} disabled={submitting} />
+        <StrengthChips value={null} onChange={(value) => void rateEnd(value)} disabled={submitting} />
+        <Button label="Skip" variant="quiet" onPress={() => void rateEnd(null)} disabled={submitting} />
       </Screen>
     );
   }
@@ -177,7 +192,7 @@ export default function Sos() {
       footerSpace={140}
       footer={
         <View style={styles.actions}>
-          <Button label="It’s passed, I’m fine" onPress={() => setOutcome('rating')} disabled={submitting} />
+          <Button label="It’s passed, I’m fine" onPress={() => void markPassed()} disabled={submitting} />
           <Button label={SLIP_BUTTON} variant="quiet" onPress={() => setOutcome('slipped')} />
         </View>
       }
@@ -187,7 +202,8 @@ export default function Sos() {
       {preferences.reason ? (
         <Card>
           <Eyebrow tone="achieve">Your reason</Eyebrow>
-          <Body>{preferences.reason}</Body>
+          {/* In full before a game starts; two lines during one, so the controls stay on screen. */}
+          <Body {...(mode === 'delay' || mode === 'pick' ? {} : { numberOfLines: 2 })}>{preferences.reason}</Body>
         </Card>
       ) : null}
 

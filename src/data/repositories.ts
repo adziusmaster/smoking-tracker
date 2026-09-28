@@ -5,6 +5,7 @@ import {
   DELETE_ALL,
   END_OPEN_SMOKING_PERIOD,
   INSERT_CRAVING_EVENT,
+  UPDATE_CRAVING_STRENGTH_END,
   INSERT_SLIP,
   INSERT_SMOKING_PERIOD,
   SELECT_CHECKINS,
@@ -133,8 +134,8 @@ export async function addCravingEvent(
   db: SQLiteDatabase,
   input: CravingInput,
   now: Date,
-): Promise<void> {
-  await db.runAsync(
+): Promise<number> {
+  const result = await db.runAsync(
     INSERT_CRAVING_EVENT,
     input.startedAt,
     input.endedAt,
@@ -144,6 +145,7 @@ export async function addCravingEvent(
     input.strengthEnd,
     now.toISOString(),
   );
+  return result.lastInsertRowId;
 }
 
 type CravingInput = Omit<CravingEvent, 'id'>;
@@ -176,6 +178,11 @@ export async function saveGameRecord(db: SQLiteDatabase, game: GameId, best: num
 }
 
 /** Passed craving events, read straight from the database so the number shown is never a guess. */
+/** The "how strong is it now?" answer, added to a craving already saved when it passed. */
+export async function setCravingStrengthEnd(db: SQLiteDatabase, id: number, strengthEnd: number): Promise<void> {
+  await db.runAsync(UPDATE_CRAVING_STRENGTH_END, strengthEnd, id);
+}
+
 export async function countCravingsBeaten(db: SQLiteDatabase): Promise<number> {
   const row = await db.getFirstAsync<{ beaten: number }>(COUNT_CRAVINGS_BEATEN);
   return row?.beaten ?? 0;

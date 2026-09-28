@@ -82,6 +82,10 @@ export const SELECT_CRAVING_EVENTS = `
   FROM craving_events ORDER BY started_at DESC
 `;
 
+export const UPDATE_CRAVING_STRENGTH_END = `
+  UPDATE craving_events SET strength_end = ? WHERE id = ?
+`;
+
 export const UPSERT_PREFERENCE = `
   INSERT INTO preferences (key, value) VALUES (?, ?)
   ON CONFLICT (key) DO UPDATE SET value = excluded.value

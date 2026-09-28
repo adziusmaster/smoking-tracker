@@ -81,6 +81,8 @@ export function BlockDrop(props: { onClear: () => void }) {
   }, [game.lines]);
 
   useEffect(() => {
+    // The held ▼ unmounts with the controls at game over without an onPressOut, so stop here.
+    if (game.over) stopSoftDrop();
     if (game.over) setNewBest(record.submit(game.score));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.over]);
@@ -116,6 +118,7 @@ export function BlockDrop(props: { onClear: () => void }) {
   const pieceColour = t.game[KIND_COLOUR[game.piece.kind]] ?? t.color.accent;
 
   const restart = () => {
+    stopSoftDrop();
     setNewBest(false);
     lines.current = 0;
     setGame(newBlocks(Date.now() & 0x7fffffff));

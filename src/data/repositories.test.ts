@@ -14,6 +14,7 @@ import {
   logSlipAfterCraving,
   saveCheckin,
   saveSettings,
+  setCravingStrengthEnd,
 } from './repositories';
 import { openTestDb } from './testDb';
 
@@ -162,5 +163,41 @@ describe('preferences and records', () => {
 
     // Assert
     expect(state?.cravingEvents[0]).toEqual(expect.objectContaining({ strengthStart: 5, strengthEnd: 3 }));
+  });
+});
+
+describe('craving strength after it passed', () => {
+  it('setCravingStrengthEnd_afterAddingAPassedCraving_updatesThatRow', async () => {
+    // Arrange
+    const id = await addCravingEvent(db, { startedAt: '2026-09-28T10:00:00.000Z', endedAt: '2026-09-28T10:04:00.000Z', outcome: 'passed', activity: null, strengthStart: 4, strengthEnd: null }, NOW);
+
+    // Act
+    await setCravingStrengthEnd(db, id, 2);
+
+    // Assert
+    const state = await loadQuitState(db);
+    expect(state?.cravingEvents[0]?.strengthEnd).toBe(2);
+    expect(await countCravingsBeaten(db)).toBe(1);
+  });
+
+  it('setCravingStrengthEnd_outOfRange_rejectsAndKeepsNull', async () => {
+    // Arrange
+    const id = await addCravingEvent(db, { startedAt: '2026-09-28T10:00:00.000Z', endedAt: '2026-09-28T10:04:00.000Z', outcome: 'passed', activity: null, strengthStart: null, strengthEnd: null }, NOW);
+
+    // Act
+    const act = () => setCravingStrengthEnd(db, id, 6);
+
+    // Assert
+    await expect(act()).rejects.toThrow();
+    const state = await loadQuitState(db);
+    expect(state?.cravingEvents[0]?.strengthEnd).toBeNull();
+  });
+
+  it('setCravingStrengthEnd_unknownId_changesNothing', async () => {
+    // Arrange & Act
+    await setCravingStrengthEnd(db, 999, 3);
+
+    // Assert
+    expect(await countCravingsBeaten(db)).toBe(0);
   });
 });
