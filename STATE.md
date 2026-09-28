@@ -9,8 +9,8 @@ Resume point. Last updated 2026-09-28.
 | --- | --- |
 | Repo | `adziusmaster/smoking-tracker` (private) |
 | Branch | `feat/nicotine-products` (multi-product support, not yet merged); `main` is the v1 cigarettes-only app |
-| Tests | 247 passing across 19 files |
-| Schema | version 3 (adds `product`, `weekly_spend_minor`, `prior_cigarettes_per_day`) |
+| Tests | 285 passing across 23 files |
+| Schema | version 4 (v3: product columns; v4: `craving_events`) |
 | Typecheck | clean |
 | `expo-doctor` | 20/21 — the same patch drift, see Known items |
 | Package name | `com.adziusmaster.smokefree` (permanent once published) |
@@ -29,7 +29,10 @@ end). Sub-projects, each with its own spec → plan → build:
    (`src/content/palette.ts`, contrast-tested), bundled Fraunces + Manrope, component kit in
    `src/ui/kit/`, every screen restyled, tally-mark icon. Directions page:
    <https://claude.ai/artifact/M1zLbZ1ATW5hTk5g2g1bLo>.
-3. **Something new every day** — daily card, savings goal, reasons, stronger SOS, cravings beaten.
+3. **SOS activities** — done on `feat/sos-games`: delay, then breathing / block drop (cites
+   Skorka-Brown 2015) / memory pairs / bubble pop / 5-4-3-2-1 / water, a five-minute bar, and
+   "cravings beaten" on home. Game rules are pure and tested in `src/domain/games/`.
+4. **Something new every day** — daily card, savings goal, reasons.
 4. **Insights & journal.**
 5. **Notification preferences + backup/restore to file.**
 6. **Home-screen widget** (native module — riskiest for EAS builds, so last).
@@ -179,6 +182,23 @@ The app is free, no ads, no purchases — a deliberate decision, not a TODO.
 - **The feature graphic and store screenshots still use the old green** — sub-project 7.
 - No `react-native-svg` / `expo-linear-gradient` by design: the SOS ring and the hero depth are
   plain Views.
+
+## Local Android builds (no EAS credits)
+
+The Android SDK lives in `~/android-sdk` (no sudo); NDK 27.1 was added there with `sdkmanager`.
+
+```
+export JAVA_HOME=$HOME/Library/Java/JavaVirtualMachines/jdk-17.0.20+8/Contents/Home ANDROID_HOME=$HOME/android-sdk
+npx expo prebuild --platform android --no-install && git checkout -- package.json   # prebuild edits the android script
+echo "sdk.dir=$HOME/android-sdk" > android/local.properties
+cd android && NODE_ENV=production ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+Local release APKs are signed with the debug keystore, so reinstalling keeps data; a Play/EAS build
+has a different signature and forces an uninstall. If `adb install` stalls, it is Play Protect's
+"send for a security check" prompt on the phone — tap "Don't send". `android/` is generated and
+git-ignored.
 
 ## Environment gotchas that cost real time
 
