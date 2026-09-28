@@ -192,6 +192,21 @@ The app is free, no ads, no purchases — a deliberate decision, not a TODO.
 - No `react-native-svg` / `expo-linear-gradient` by design: the SOS ring and the hero depth are
   plain Views.
 
+## Release builds: `eas build --local` (no credits, no queue)
+
+The Play AAB is built on this Mac with EAS's own pipeline. It fetches the EAS-managed upload key
+and bumps the remote versionCode, exactly like a cloud build, but costs no build credit:
+
+```
+JAVA_HOME=$HOME/Library/Java/JavaVirtualMachines/jdk-17.0.20+8/Contents/Home \
+ANDROID_HOME=$HOME/android-sdk \
+npx eas-cli build --platform android --profile production --local --output cleared-<versionCode>.aab
+```
+
+Commit first (it builds from git). Bump `version` in `app.json` for each release; versionCode is
+remote-managed (`appVersionSource: remote`) and increments by itself. Cloud builds 5 and 6 were
+cancelled, so their numbers are spent.
+
 ## Local Android builds (no EAS credits)
 
 The Android SDK lives in `~/android-sdk` (no sudo); NDK 27.1 was added there with `sdkmanager`.

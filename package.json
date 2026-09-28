@@ -1,6 +1,6 @@
 {
   "name": "smoking-tracker",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "main": "expo-router/entry",
   "dependencies": {
     "@react-native-community/datetimepicker": "9.1.0",
