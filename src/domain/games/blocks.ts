@@ -21,8 +21,20 @@ export interface BlocksState {
   piece: Piece;
   next: PieceKind;
   lines: number;
+  score: number;
+  /** floor(lines / 10); raises gravity speed and line points. */
+  level: number;
+  /** Rows cleared by the most recent lock, top to bottom, for the flash. */
+  lastCleared: number[];
   over: boolean;
   seed: number;
+}
+
+const LINE_POINTS = [0, 100, 300, 500, 800];
+
+/** Milliseconds per gravity step at `level`: 600 at level 0, 50 faster per level, never below 120. */
+export function gravityMs(level: number): number {
+  return Math.max(120, 600 - level * 50);
 }
 
 const KINDS: readonly PieceKind[] = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
@@ -72,6 +84,9 @@ export function newBlocks(seed: number): BlocksState {
     piece: spawn(first.kind),
     next: second.kind,
     lines: 0,
+    score: 0,
+    level: 0,
+    lastCleared: [],
     over: false,
     seed: second.seed,
   };
@@ -83,8 +98,10 @@ function lockAndSpawn(s: BlocksState): BlocksState {
     const row = board[y];
     if (row) row[x] = COLOUR[s.piece.kind];
   }
+  const lastCleared = board.flatMap((row, y) => (row.every((cell) => cell !== 0) ? [y] : []));
   const kept = board.filter((row) => row.some((cell) => cell === 0));
   const cleared = BOARD_HEIGHT - kept.length;
+  const lines = s.lines + cleared;
   const nextBoard = [...Array.from({ length: cleared }, emptyRow), ...kept];
 
   const upcoming = randomKind(s.seed);
@@ -93,7 +110,10 @@ function lockAndSpawn(s: BlocksState): BlocksState {
     board: nextBoard,
     piece,
     next: upcoming.kind,
-    lines: s.lines + cleared,
+    lines,
+    score: s.score + (LINE_POINTS[cleared] ?? 0) * (s.level + 1),
+    level: Math.floor(lines / 10),
+    lastCleared,
     over: !fits(nextBoard, piece),
     seed: upcoming.seed,
   };
@@ -116,18 +136,32 @@ export function moveBy(s: BlocksState, dx: -1 | 1): BlocksState {
 export function rotate(s: BlocksState): BlocksState {
   if (s.over) return s;
   const turned = { ...s.piece, rotation: ((s.piece.rotation + 1) % 4) as Rotation };
-  for (const kick of [0, -1, 1]) {
+  for (const kick of [0, -1, 1, -2, 2]) {
     const candidate = { ...turned, x: turned.x + kick };
     if (fits(s.board, candidate)) return { ...s, piece: candidate };
   }
   return s;
 }
 
-export function hardDrop(s: BlocksState): BlocksState {
-  if (s.over) return s;
+/** Where the falling piece would land if dropped now, for the ghost outline. */
+export function ghost(s: BlocksState): Piece {
   let piece = s.piece;
   while (fits(s.board, { ...piece, y: piece.y + 1 })) piece = { ...piece, y: piece.y + 1 };
-  return lockAndSpawn({ ...s, piece });
+  return piece;
+}
+
+/** Drop straight to the landing row: 2 points per row fallen, then lock. */
+export function hardDrop(s: BlocksState): BlocksState {
+  if (s.over) return s;
+  const landing = ghost(s);
+  return lockAndSpawn({ ...s, piece: landing, score: s.score + (landing.y - s.piece.y) * 2 });
+}
+
+/** Holding "down": one row and 1 point, or lock if the piece is resting. */
+export function softDrop(s: BlocksState): BlocksState {
+  if (s.over) return s;
+  const down = { ...s.piece, y: s.piece.y + 1 };
+  return fits(s.board, down) ? { ...s, piece: down, score: s.score + 1 } : lockAndSpawn(s);
 }
 
 /** The board with the falling piece drawn in, for rendering. */

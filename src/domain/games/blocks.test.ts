@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BOARD_HEIGHT, BOARD_WIDTH, hardDrop, moveBy, newBlocks, rotate, tick, visibleBoard, type BlocksState, type Cell } from './blocks';
+import { BOARD_HEIGHT, BOARD_WIDTH, ghost, gravityMs, hardDrop, moveBy, newBlocks, rotate, softDrop, tick, visibleBoard, type BlocksState, type Cell } from './blocks';
 
 const emptyBoard = (): Cell[][] => Array.from({ length: BOARD_HEIGHT }, () => Array<Cell>(BOARD_WIDTH).fill(0));
 const withPiece = (s: BlocksState, piece: BlocksState['piece']): BlocksState => ({ ...s, piece });
@@ -107,5 +107,100 @@ describe('blocks', () => {
 
     // Assert
     expect(moved).toBe(s);
+  });
+
+  it('rotate_iPieceNeedingTwoCells_kicksTwoLeft', () => {
+    // Arrange — rotation 3 is a vertical I in its box's second column; flat needs cols x..x+3
+    const s = withPiece(newBlocks(1), { kind: 'I', rotation: 3, x: BOARD_WIDTH - 2, y: 5 });
+
+    // Act
+    const rotated = rotate(s);
+
+    // Assert
+    expect(rotated.piece.rotation).toBe(0);
+    expect(rotated.piece.x).toBe(BOARD_WIDTH - 4);
+  });
+
+  it('tick_clearingTwoRowsAtLevelZero_scoresThreeHundredAndRecordsTheRows', () => {
+    // Arrange — two bottom rows full except the O's two columns
+    const board = emptyBoard();
+    for (const y of [BOARD_HEIGHT - 1, BOARD_HEIGHT - 2]) board[y] = Array.from({ length: BOARD_WIDTH }, (_, x): Cell => (x === 4 || x === 5 ? 0 : 1));
+    const s: BlocksState = { ...newBlocks(3), board, piece: { kind: 'O', rotation: 0, x: 4, y: BOARD_HEIGHT - 2 } };
+
+    // Act
+    const next = tick(s);
+
+    // Assert
+    expect(next.score).toBe(300);
+    expect(next.lines).toBe(2);
+    expect(next.lastCleared).toEqual([BOARD_HEIGHT - 2, BOARD_HEIGHT - 1]);
+  });
+
+  it('tick_clearingAtLevelTwo_multipliesThePoints', () => {
+    // Arrange — 20 lines already: level 2, one row about to clear
+    const board = emptyBoard();
+    board[BOARD_HEIGHT - 1] = Array.from({ length: BOARD_WIDTH }, (_, x): Cell => (x === 4 || x === 5 ? 0 : 1));
+    const s: BlocksState = { ...newBlocks(3), board, lines: 20, level: 2, piece: { kind: 'O', rotation: 0, x: 4, y: BOARD_HEIGHT - 2 } };
+
+    // Act
+    const next = tick(s);
+
+    // Assert — 100 × (2 + 1)
+    expect(next.score).toBe(300);
+  });
+
+  it('tick_reachingTenLines_raisesTheLevel', () => {
+    // Arrange
+    const board = emptyBoard();
+    board[BOARD_HEIGHT - 1] = Array.from({ length: BOARD_WIDTH }, (_, x): Cell => (x === 4 || x === 5 ? 0 : 1));
+    const s: BlocksState = { ...newBlocks(3), board, lines: 9, piece: { kind: 'O', rotation: 0, x: 4, y: BOARD_HEIGHT - 2 } };
+
+    // Act
+    const next = tick(s);
+
+    // Assert
+    expect(next.level).toBe(1);
+  });
+
+  it('softDrop_freeSpaceBelow_movesDownAndScoresOnePoint', () => {
+    // Arrange
+    const s = withPiece(newBlocks(2), { kind: 'O', rotation: 0, x: 4, y: 0 });
+
+    // Act
+    const next = softDrop(s);
+
+    // Assert
+    expect(next.piece.y).toBe(1);
+    expect(next.score).toBe(1);
+  });
+
+  it('hardDrop_fromTheTop_scoresTwoPointsPerRow', () => {
+    // Arrange — an O at y 0 falls to y = H - 2
+    const s = withPiece(newBlocks(5), { kind: 'O', rotation: 0, x: 4, y: 0 });
+
+    // Act
+    const next = hardDrop(s);
+
+    // Assert
+    expect(next.score).toBe((BOARD_HEIGHT - 2) * 2);
+  });
+
+  it('ghost_emptyBoard_landsOnTheFloor', () => {
+    // Arrange
+    const s = withPiece(newBlocks(5), { kind: 'O', rotation: 0, x: 4, y: 0 });
+
+    // Act
+    const landing = ghost(s);
+
+    // Assert
+    expect(landing.y).toBe(BOARD_HEIGHT - 2);
+    expect(landing.x).toBe(4);
+  });
+
+  it('gravityMs_highLevels_neverGoBelowTheFloor', () => {
+    // Arrange & Act & Assert
+    expect(gravityMs(0)).toBe(600);
+    expect(gravityMs(4)).toBe(400);
+    expect(gravityMs(50)).toBe(120);
   });
 });
