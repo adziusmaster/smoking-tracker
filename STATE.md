@@ -9,7 +9,7 @@ Resume point. Last updated 2026-09-28.
 | --- | --- |
 | Repo | `adziusmaster/smoking-tracker` (private) |
 | Branch | `feat/nicotine-products` (multi-product support, not yet merged); `main` is the v1 cigarettes-only app |
-| Tests | 285 passing across 23 files |
+| Tests | 284 passing across 23 files |
 | Schema | version 4 (v3: product columns; v4: `craving_events`) |
 | Typecheck | clean |
 | `expo-doctor` | 20/21 — the same patch drift, see Known items |
