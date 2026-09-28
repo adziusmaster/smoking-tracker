@@ -200,7 +200,7 @@ and bumps the remote versionCode, exactly like a cloud build, but costs no build
 ```
 JAVA_HOME=$HOME/Library/Java/JavaVirtualMachines/jdk-17.0.20+8/Contents/Home \
 ANDROID_HOME=$HOME/android-sdk \
-npx eas-cli build --platform android --profile production --local --output cleared-<versionCode>.aab
+npx eas-cli build --platform android --profile production --local --output builds/cleared-<version>.aab
 ```
 
 Commit first (it builds from git). Bump `version` in `app.json` for each release; versionCode is

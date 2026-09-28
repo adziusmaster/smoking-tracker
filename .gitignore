@@ -29,3 +29,6 @@ ios/
 
 # Test output
 coverage/
+
+# Release AABs (62 MB each): kept here, not committed
+builds/*.aab
