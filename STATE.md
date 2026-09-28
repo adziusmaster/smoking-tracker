@@ -2,21 +2,37 @@
 
 Resume point. Last updated 2026-09-28.
 
-`main` is green and pushed. The app is feature-complete for v1 and nothing is published yet —
-**there are zero installs anywhere**, which matters for several decisions below.
+`main` is green and pushed; 1.2.0 (versionCode 7) is in Play closed testing. Branch
+`feat/better-sos` (not merged, awaiting the owner's phone check) adds the Better SOS round below.
 
 | | |
 | --- | --- |
 | Repo | `adziusmaster/smoking-tracker` (private) |
-| Branch | `feat/nicotine-products` (multi-product support, not yet merged); `main` is the v1 cigarettes-only app |
-| Tests | 295 passing across 24 files |
-| Schema | version 5 (v3: product columns; v4: `craving_events`; v5: `slips.product`) |
+| Branch | `feat/better-sos` — not merged or pushed; `main` = 1.2.0 |
+| Tests | 340 passing |
+| Schema | version 6 (v3: product columns; v4: `craving_events`; v5: `slips.product`; v6: `preferences`, `game_records`, `craving_events.strength_start/_end`) |
 | Typecheck | clean |
 | `expo-doctor` | 20/21 — the same patch drift, see Known items |
 | App name | **Cleared** (launcher); Play title **Cleared: Quit Smoking & Vaping** — renamed 2026-09-28 because "Smoke Free" is an established Play app |
 | Package name | `com.adziusmaster.smokefree` — kept on purpose (invisible to users; changing it means a new Play app, a new key, and wiped local data). DB file stays `smokefree.db`. |
 | EAS project | `@adrzej-dev/smoking-tracker` · `b8ec62ea-af25-4199-99e4-b3fbf9962e00` |
-| Last `versionCode` | 4 (EAS-managed, `appVersionSource: remote`) |
+| Last `versionCode` | 7 (1.2.0, EAS-managed, `appVersionSource: remote`) |
+
+## Better SOS (branch `feat/better-sos`, 2026-09-28)
+
+Spec `docs/superpowers/specs/2026-09-28-better-sos-design.md`, plan `docs/superpowers/plans/2026-09-28-better-sos.md`.
+Bubble pop with a burst animation, pop sound (`assets/sounds/pop.wav`, synthesised by
+`scripts/make-pop.py`) and vibration; sound/vibration switches in Settings plus a mute chip in SOS;
+breathing with phase colours, countdown and outline ring; best scores for all three games; block
+drop with next piece, ghost, levels, scoring, ±2 kicks, hold-to-drop, line flash; "How strong is
+it?" at SOS start and end; "Your reason" (onboarding step 3 + Settings, shown in SOS); Log →
+Cravings (beaten count, strength trend, time of day, slip triggers).
+
+**expo-audio is locked down:** plugin options `recordAudioAndroid/enableBackgroundPlayback/
+enableBackgroundRecording: false`, and `RECORD_AUDIO`, `FOREGROUND_SERVICE`,
+`FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `FOREGROUND_SERVICE_MICROPHONE` in `blockedPermissions`.
+Its default plugin adds those — re-check the built APK permissions (`aapt2 dump permissions`)
+after any expo-audio upgrade. `MODIFY_AUDIO_SETTINGS` (normal permission) stays.
 
 ## Next release (after 1.2.0 / versionCode 7) — to fix
 
