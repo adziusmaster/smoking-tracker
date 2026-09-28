@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { flip, hideUnmatched, isWon, needsHide, newMemory, type MemoryState } from './memory';
+import { deckIndexForRound, flip, hideUnmatched, isWon, needsHide, newMemory, type MemoryState } from './memory';
 
 /** Indexes of the two cards showing `symbol`. */
 const pairOf = (s: MemoryState, symbol: number) =>
@@ -76,5 +76,31 @@ describe('memory', () => {
 
     // Assert
     expect(isWon(s)).toBe(true);
+  });
+});
+
+describe('deckIndexForRound', () => {
+  it('deckIndexForRound_consecutiveRounds_cyclesThroughEveryDeck', () => {
+    // Arrange & Act
+    const indexes = [0, 1, 2, 3, 4, 5].map((round) => deckIndexForRound(round, 5));
+
+    // Assert
+    expect(indexes).toEqual([0, 1, 2, 3, 4, 0]);
+  });
+
+  it('deckIndexForRound_negativeRound_staysInRange', () => {
+    // Arrange & Act
+    const index = deckIndexForRound(-3, 5);
+
+    // Assert
+    expect(index).toBe(2);
+  });
+
+  it('deckIndexForRound_noDecks_returnsZero', () => {
+    // Arrange & Act
+    const index = deckIndexForRound(7, 0);
+
+    // Assert
+    expect(index).toBe(0);
   });
 });

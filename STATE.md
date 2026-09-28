@@ -2,21 +2,37 @@
 
 Resume point. Last updated 2026-09-28.
 
-`main` is green and pushed. The app is feature-complete for v1 and nothing is published yet —
-**there are zero installs anywhere**, which matters for several decisions below.
+`main` is green and pushed; 1.2.0 (versionCode 7) is in Play closed testing. Branch
+`feat/better-sos` (not merged, awaiting the owner's phone check) adds the Better SOS round below.
 
 | | |
 | --- | --- |
 | Repo | `adziusmaster/smoking-tracker` (private) |
-| Branch | `feat/nicotine-products` (multi-product support, not yet merged); `main` is the v1 cigarettes-only app |
-| Tests | 295 passing across 24 files |
-| Schema | version 5 (v3: product columns; v4: `craving_events`; v5: `slips.product`) |
+| Branch | `feat/better-sos` = 1.3.0 (versionCode 8 on the next local production build) — not merged or pushed; `main` = 1.2.0 |
+| Tests | 353 passing |
+| Schema | version 6 (v3: product columns; v4: `craving_events`; v5: `slips.product`; v6: `preferences`, `game_records`, `craving_events.strength_start/_end`) |
 | Typecheck | clean |
 | `expo-doctor` | 20/21 — the same patch drift, see Known items |
 | App name | **Cleared** (launcher); Play title **Cleared: Quit Smoking & Vaping** — renamed 2026-09-28 because "Smoke Free" is an established Play app |
 | Package name | `com.adziusmaster.smokefree` — kept on purpose (invisible to users; changing it means a new Play app, a new key, and wiped local data). DB file stays `smokefree.db`. |
 | EAS project | `@adrzej-dev/smoking-tracker` · `b8ec62ea-af25-4199-99e4-b3fbf9962e00` |
-| Last `versionCode` | 4 (EAS-managed, `appVersionSource: remote`) |
+| Last `versionCode` | 7 (1.2.0, EAS-managed, `appVersionSource: remote`) |
+
+## Better SOS (branch `feat/better-sos`, 2026-09-28)
+
+Spec `docs/superpowers/specs/2026-09-28-better-sos-design.md`, plan `docs/superpowers/plans/2026-09-28-better-sos.md`.
+Bubble pop with a burst animation, pop sound (`assets/sounds/pop.wav`, synthesised by
+`scripts/make-pop.py`) and vibration; sound/vibration switches in Settings plus a mute chip in SOS;
+breathing with phase colours, countdown and outline ring; best scores for all three games; block
+drop with next piece, ghost, levels, scoring, ±2 kicks, hold-to-drop, line flash; "How strong is
+it?" at SOS start and end; "Your reason" (onboarding step 3 + Settings, shown in SOS); Log →
+Cravings (beaten count, strength trend, time of day, slip triggers).
+
+**expo-audio is locked down:** plugin options `recordAudioAndroid/enableBackgroundPlayback/
+enableBackgroundRecording: false`, and `RECORD_AUDIO`, `FOREGROUND_SERVICE`,
+`FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `FOREGROUND_SERVICE_MICROPHONE` in `blockedPermissions`.
+Its default plugin adds those — re-check the built APK permissions (`aapt2 dump permissions`)
+after any expo-audio upgrade. `MODIFY_AUDIO_SETTINGS` (normal permission) stays.
 
 ## Next release (after 1.2.0 / versionCode 7) — to fix
 
@@ -154,6 +170,11 @@ The app is free, no ads, no purchases — a deliberate decision, not a TODO.
 
 ## Known items, none blocking
 
+- **Open-source notices screen, before open testing:** every shipped library (React Native, Expo,
+  react-native-svg, …) is MIT/BSD/ISC-style and the fonts are SIL OFL; their notices should ship
+  with the app. Add a small "Open-source licences" page reachable from Settings. Icons are drawn
+  in-house (`src/ui/kit/SpeakerIcon.tsx`), not taken from an icon set.
+
 - **Changing product in Settings reinterprets logged slips** in the new unit (a slip of 5
   cigarettes becomes 5 pouches). The screen warns before saving; nothing is converted.
 - **Theme once stayed dark after the phone switched back to light** (2026-09-28, right after a
@@ -216,6 +237,23 @@ npx eas-cli build --platform android --profile production --local --output build
 Commit first (it builds from git). Bump `version` in `app.json` for each release; versionCode is
 remote-managed (`appVersionSource: remote`) and increments by itself. Cloud builds 5 and 6 were
 cancelled, so their numbers are spent.
+
+## Testing on the phone: the dev app
+
+The Play build (closed testing) is on the owner's phone with their real data. Local builds are
+signed differently and can neither update it nor be allowed to wipe it, so **local test builds are
+the dev variant**: package `com.adziusmaster.smokefree.dev`, name "Cleared (dev)", installed side by
+side with its own throwaway data.
+
+```
+APP_VARIANT=dev npx expo prebuild --platform android --clean --no-install && git checkout -- package.json
+echo "sdk.dir=$HOME/android-sdk" > android/local.properties
+cd android && NODE_ENV=production ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+Never uninstall `com.adziusmaster.smokefree` from the phone. Release AABs are built without
+`APP_VARIANT` (see above), so they keep the real package.
 
 ## Local Android builds (no EAS credits)
 

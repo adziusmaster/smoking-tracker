@@ -119,6 +119,22 @@ export const MIGRATIONS: Migration[] = [
         CHECK (product IN ('cigarettes','roll-your-own','heated','vape','snus','pouches'));
     `,
   },
+  {
+    version: 6,
+    up: `
+      -- Small settings that are not part of the quit (sound, vibration, the user's reason).
+      CREATE TABLE preferences (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+      -- One best score per SOS game.
+      CREATE TABLE game_records (
+        game        TEXT PRIMARY KEY CHECK (game IN ('blocks','memory','bubbles')),
+        best        INTEGER NOT NULL CHECK (best >= 0),
+        achieved_at TEXT NOT NULL
+      );
+      -- "How strong is it?" (1-5, optional) when SOS starts and when it passes.
+      ALTER TABLE craving_events ADD COLUMN strength_start INTEGER NULL CHECK (strength_start BETWEEN 1 AND 5);
+      ALTER TABLE craving_events ADD COLUMN strength_end INTEGER NULL CHECK (strength_end BETWEEN 1 AND 5);
+    `,
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]?.version ?? 0;

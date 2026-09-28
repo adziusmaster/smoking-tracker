@@ -1,14 +1,19 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
-import type { ActivityId, CravingEvent, ProductId, QuitState, Settings, Slip, SlipTrigger, SmokingPeriod } from '@/domain/types';
+import type { ActivityId, CravingEvent, GameId, GameRecords, Preferences, ProductId, QuitState, Settings, Slip, SlipTrigger, SmokingPeriod } from '@/domain/types';
 import { readableSettingsOrRaw, rowToSettings, settingsToParams, type SettingsRow } from './settingsMapping';
 import {
   DELETE_ALL,
   END_OPEN_SMOKING_PERIOD,
   INSERT_CRAVING_EVENT,
+  UPDATE_CRAVING_STRENGTH_END,
   INSERT_SLIP,
   INSERT_SMOKING_PERIOD,
   SELECT_CHECKINS,
   COUNT_CRAVINGS_BEATEN,
+  SELECT_GAME_RECORDS,
+  SELECT_PREFERENCES,
+  UPSERT_GAME_RECORD,
+  UPSERT_PREFERENCE,
   SELECT_CRAVING_EVENTS,
   SELECT_SETTINGS,
   SELECT_SLIPS,
@@ -49,6 +54,8 @@ interface CravingRow {
   ended_at: string;
   outcome: CravingEvent['outcome'];
   activity: ActivityId | null;
+  strength_start: number | null;
+  strength_end: number | null;
 }
 
 export interface CheckinRow {
@@ -91,6 +98,8 @@ export async function loadQuitState(db: SQLiteDatabase): Promise<QuitState | nul
     endedAt: row.ended_at,
     outcome: row.outcome,
     activity: row.activity,
+    strengthStart: row.strength_start,
+    strengthEnd: row.strength_end,
   }));
 
   return { settings, slips, periods, cravingEvents };
@@ -123,10 +132,54 @@ export async function endSmokingPeriod(db: SQLiteDatabase, endedAt: string): Pro
 
 export async function addCravingEvent(
   db: SQLiteDatabase,
-  input: { startedAt: string; endedAt: string; outcome: CravingEvent['outcome']; activity: ActivityId | null },
+  input: CravingInput,
   now: Date,
-): Promise<void> {
-  await db.runAsync(INSERT_CRAVING_EVENT, input.startedAt, input.endedAt, input.outcome, input.activity, now.toISOString());
+): Promise<number> {
+  const result = await db.runAsync(
+    INSERT_CRAVING_EVENT,
+    input.startedAt,
+    input.endedAt,
+    input.outcome,
+    input.activity,
+    input.strengthStart,
+    input.strengthEnd,
+    now.toISOString(),
+  );
+  return result.lastInsertRowId;
+}
+
+type CravingInput = Omit<CravingEvent, 'id'>;
+
+const PREFERENCE_DEFAULTS: Preferences = { sound: true, vibration: true, reason: '' };
+
+export async function loadPreferences(db: SQLiteDatabase): Promise<Preferences> {
+  const rows = await db.getAllAsync<{ key: string; value: string }>(SELECT_PREFERENCES);
+  const byKey = new Map(rows.map((row) => [row.key, row.value]));
+  return {
+    sound: (byKey.get('sound') ?? 'on') !== 'off',
+    vibration: (byKey.get('vibration') ?? 'on') !== 'off',
+    reason: byKey.get('reason') ?? PREFERENCE_DEFAULTS.reason,
+  };
+}
+
+export async function savePreference(db: SQLiteDatabase, key: 'sound' | 'vibration' | 'reason', value: string): Promise<void> {
+  await db.runAsync(UPSERT_PREFERENCE, key, value);
+}
+
+export async function loadGameRecords(db: SQLiteDatabase): Promise<GameRecords> {
+  const rows = await db.getAllAsync<{ game: GameId; best: number }>(SELECT_GAME_RECORDS);
+  const records: GameRecords = { blocks: null, memory: null, bubbles: null };
+  for (const row of rows) records[row.game] = row.best;
+  return records;
+}
+
+export async function saveGameRecord(db: SQLiteDatabase, game: GameId, best: number, now: Date): Promise<void> {
+  await db.runAsync(UPSERT_GAME_RECORD, game, best, now.toISOString());
+}
+
+/** The "how strong is it now?" answer, added to a craving already saved when it passed. */
+export async function setCravingStrengthEnd(db: SQLiteDatabase, id: number, strengthEnd: number): Promise<void> {
+  await db.runAsync(UPDATE_CRAVING_STRENGTH_END, strengthEnd, id);
 }
 
 /** Passed craving events, read straight from the database so the number shown is never a guess. */
@@ -142,7 +195,7 @@ export async function countCravingsBeaten(db: SQLiteDatabase): Promise<number> {
 export async function logSlipAfterCraving(
   db: SQLiteDatabase,
   slip: { occurredAt: string; unitCount: number; trigger: SlipTrigger | null; note: string | null; product: ProductId | null },
-  craving: { startedAt: string; endedAt: string; outcome: CravingEvent['outcome']; activity: ActivityId | null },
+  craving: CravingInput,
   now: Date,
 ): Promise<void> {
   await db.withTransactionAsync(async () => {
@@ -195,7 +248,9 @@ export async function exportAll(db: SQLiteDatabase): Promise<string> {
     );
   }
   const state = await loadQuitState(db);
-  return JSON.stringify({ exportedAt: new Date().toISOString(), state, checkins }, null, 2);
+  const preferences = await loadPreferences(db);
+  const gameRecords = await loadGameRecords(db);
+  return JSON.stringify({ exportedAt: new Date().toISOString(), state, checkins, preferences, gameRecords }, null, 2);
 }
 
 export async function deleteEverything(db: SQLiteDatabase): Promise<void> {

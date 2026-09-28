@@ -1,15 +1,15 @@
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { addCravingEvent, countCravingsBeaten, logSlipAfterCraving } from '@/data/repositories';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { addCravingEvent, countCravingsBeaten, logSlipAfterCraving, setCravingStrengthEnd } from '@/data/repositories';
 import { PRODUCT_CONTENT } from '@/content/products';
 import { ACTIVITIES, SLIP_BUTTON, SLIP_REASSURANCE, SOS_STEPS } from '@/content/sos';
 import { fillUnitTokens } from '@/domain/format';
 import { parseNonNegativeInt } from '@/domain/parse';
 import { variantForProduct } from '@/domain/products';
 import type { ActivityId, ProductId, SlipTrigger } from '@/domain/types';
-import { Body, Button, Chip, Eyebrow, Field, Label, ProgressRing, Screen, Title } from '@/ui/kit';
+import { Body, Button, Card, Chip, Eyebrow, Field, Label, ProgressRing, Screen, SpeakerIcon, Title } from '@/ui/kit';
 import { ActivityPicker } from '@/ui/sos/ActivityPicker';
 import { BlockDrop } from '@/ui/sos/BlockDrop';
 import { BreatheGuide } from '@/ui/sos/BreatheGuide';
@@ -19,11 +19,14 @@ import { Grounding } from '@/ui/sos/Grounding';
 import { MemoryPairs } from '@/ui/sos/MemoryPairs';
 import { SlipProductPicker } from '@/ui/SlipProductPicker';
 import { WaterStep } from '@/ui/sos/WaterStep';
-import { makeStyles } from '@/ui/theme';
+import { makeStyles, useTheme } from '@/ui/theme';
+import { useFeedback } from '@/ui/useFeedback';
+import { usePreferences } from '@/ui/usePreferences';
 import { useQuitState } from '@/ui/useQuitState';
 import { useSubmitGuard } from '@/ui/useSubmitGuard';
 
 const TRIGGERS: SlipTrigger[] = ['alcohol', 'stress', 'social', 'boredom', 'routine', 'other'];
+const STRENGTHS = [1, 2, 3, 4, 5];
 const DELAY = SOS_STEPS.find((step) => step.id === 'delay');
 const WATER = SOS_STEPS.find((step) => step.id === 'drink');
 const DELAY_SECONDS = DELAY?.seconds ?? 60;
@@ -34,6 +37,7 @@ export default function Sos() {
   const db = useSQLiteContext();
   const router = useRouter();
   const styles = useStyles();
+  const t = useTheme();
   const { height: windowHeight } = useWindowDimensions();
   const { state } = useQuitState();
 
@@ -42,8 +46,12 @@ export default function Sos() {
   const [mode, setMode] = useState<Mode>('delay');
   const [lastActivity, setLastActivity] = useState<ActivityId | null>(null);
   const [delayLeft, setDelayLeft] = useState(DELAY_SECONDS);
-  const [outcome, setOutcome] = useState<'running' | 'passed' | 'slipped'>('running');
+  const [outcome, setOutcome] = useState<'running' | 'rating' | 'passed' | 'slipped'>('running');
+  const [strengthStart, setStrengthStart] = useState<number | null>(null);
+  const { preferences, setSound } = usePreferences();
+  const feedback = useFeedback(preferences);
   const [beatenNow, setBeatenNow] = useState<number | null>(null);
+  const passedId = useRef<number | null>(null);
   const [count, setCount] = useState('1');
   const [trigger, setTrigger] = useState<SlipTrigger | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
@@ -73,15 +81,30 @@ export default function Sos() {
     setMode(activity);
   };
 
+  // "It passed" records the craving straight away, so leaving the optional rating step (back
+  // button, app killed) never loses it; a rating is added to that row afterwards.
   const markPassed = () =>
     run(async () => {
       setFailure(null);
       try {
-        await addCravingEvent(db, { startedAt, endedAt: new Date().toISOString(), outcome: 'passed', activity: lastActivity }, new Date());
+        passedId.current = await addCravingEvent(db, { startedAt, endedAt: new Date().toISOString(), outcome: 'passed', activity: lastActivity, strengthStart, strengthEnd: null }, new Date());
         setBeatenNow(await countCravingsBeaten(db));
       } catch {
         // The craving still passed; failing to record it must not take that away.
+        passedId.current = null;
         setBeatenNow(null);
+      }
+      setOutcome('rating');
+    });
+
+  const rateEnd = (strengthEnd: number | null) =>
+    run(async () => {
+      if (strengthEnd !== null && passedId.current !== null) {
+        try {
+          await setCravingStrengthEnd(db, passedId.current, strengthEnd);
+        } catch {
+          // The rating is optional; the craving itself is already saved.
+        }
       }
       setOutcome('passed');
     });
@@ -94,7 +117,7 @@ export default function Sos() {
         await logSlipAfterCraving(
           db,
           { occurredAt: now.toISOString(), unitCount: slipUnits, trigger, note: null, product: slipProduct },
-          { startedAt, endedAt: now.toISOString(), outcome: 'slipped', activity: lastActivity },
+          { startedAt, endedAt: now.toISOString(), outcome: 'slipped', activity: lastActivity, strengthStart, strengthEnd: null },
           now,
         );
         router.replace('/');
@@ -134,6 +157,17 @@ export default function Sos() {
     );
   }
 
+  if (outcome === 'rating') {
+    return (
+      <Screen scroll={false} centered>
+        <Title>How strong is it now?</Title>
+        <Body tone="muted">Optional. Over time this shows whether your cravings are getting weaker.</Body>
+        <StrengthChips value={null} onChange={(value) => void rateEnd(value)} disabled={submitting} />
+        <Button label="Skip" variant="quiet" onPress={() => void rateEnd(null)} disabled={submitting} />
+      </Screen>
+    );
+  }
+
   if (outcome === 'passed') {
     return (
       <Screen scroll={false} centered>
@@ -159,12 +193,20 @@ export default function Sos() {
       footerSpace={140}
       footer={
         <View style={styles.actions}>
-          <Button label="It’s passed, I’m fine" onPress={markPassed} disabled={submitting} />
+          <Button label="It’s passed, I’m fine" onPress={() => void markPassed()} disabled={submitting} />
           <Button label={SLIP_BUTTON} variant="quiet" onPress={() => setOutcome('slipped')} />
         </View>
       }
     >
       <CravingBar startedAt={startedAt} />
+
+      {preferences.reason ? (
+        <Card>
+          <Eyebrow tone="achieve">Your reason</Eyebrow>
+          {/* In full before a game starts; two lines during one, so the controls stay on screen. */}
+          <Body {...(mode === 'delay' || mode === 'pick' ? {} : { numberOfLines: 2 })}>{preferences.reason}</Body>
+        </Card>
+      ) : null}
 
       {mode === 'delay' ? (
         <>
@@ -176,6 +218,9 @@ export default function Sos() {
             </ProgressRing>
           </View>
           <Body tone="muted">{DELAY ? fillUnitTokens(DELAY.instruction, content.unit) : null}</Body>
+          <Label>How strong is it? (optional)</Label>
+          {/* Optional: tapping the chosen number again clears it. */}
+          <StrengthChips value={strengthStart} onChange={(n) => setStrengthStart(strengthStart === n ? null : n)} />
           <Button label="Skip the wait" variant="secondary" onPress={() => setMode('pick')} />
         </>
       ) : null}
@@ -195,12 +240,25 @@ export default function Sos() {
               <Eyebrow>Ride it out</Eyebrow>
               <Title>{activity.title}</Title>
             </View>
+            {/* Only the games that make a sound get the mute button. */}
+            {mode === 'blocks' || mode === 'bubbles' ? (
+              <Pressable
+                onPress={() => void setSound(!preferences.sound).catch(() => undefined)}
+                style={({ pressed }) => [styles.mute, pressed && styles.mutePressed]}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: preferences.sound }}
+                accessibilityLabel="Sound"
+                hitSlop={8}
+              >
+                <SpeakerIcon on={preferences.sound} color={preferences.sound ? t.color.ink : t.color.muted} />
+              </Pressable>
+            ) : null}
             <Button label="Try something else" variant="quiet" onPress={() => setMode('pick')} />
           </View>
-          {mode === 'breathe' ? <BreatheGuide /> : null}
-          {mode === 'blocks' ? <BlockDrop /> : null}
-          {mode === 'memory' ? <MemoryPairs /> : null}
-          {mode === 'bubbles' ? <BubblePop /> : null}
+          {mode === 'breathe' ? <BreatheGuide onPhaseChange={feedback.tick} /> : null}
+          {mode === 'blocks' ? <BlockDrop onClear={feedback.pop} /> : null}
+          {mode === 'memory' ? <MemoryPairs onMatch={feedback.tick} /> : null}
+          {mode === 'bubbles' ? <BubblePop onPop={feedback.pop} /> : null}
           {mode === 'grounding' ? <Grounding /> : null}
           {mode === 'water' ? <WaterStep instruction={WATER ? fillUnitTokens(WATER.instruction, content.unit) : ''} /> : null}
         </>
@@ -209,9 +267,23 @@ export default function Sos() {
   );
 }
 
+/** 1 (barely there) to 5 (overwhelming). */
+function StrengthChips(props: { value: number | null; onChange: (value: number) => void; disabled?: boolean }) {
+  const styles = useStyles();
+  return (
+    <View style={styles.chips} accessibilityLabel="Craving strength from 1, barely there, to 5, overwhelming">
+      {STRENGTHS.map((n) => (
+        <Chip key={n} label={String(n)} selected={props.value === n} onPress={() => { if (!props.disabled) props.onChange(n); }} />
+      ))}
+    </View>
+  );
+}
+
 const useStyles = makeStyles((t) =>
   StyleSheet.create({
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm },
+    mute: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: t.color.line, backgroundColor: t.color.surface, alignItems: 'center', justifyContent: 'center' },
+    mutePressed: { backgroundColor: t.color.doneWash },
     ringWrap: { alignItems: 'center', paddingVertical: t.space.md },
     seconds: { fontFamily: t.family.display, fontSize: 56, lineHeight: 64, color: t.color.accentText, fontVariant: ['tabular-nums'] },
     actions: { gap: t.space.xs },

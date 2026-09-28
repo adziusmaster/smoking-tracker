@@ -61,3 +61,9 @@ export function hideUnmatched(s: MemoryState): MemoryState {
 export function isWon(s: MemoryState): boolean {
   return s.cards.every((c) => c.matched);
 }
+
+/** Which picture deck a round uses: cycles through all of them, so the next round always differs. */
+export function deckIndexForRound(round: number, deckCount: number): number {
+  if (deckCount <= 0) return 0;
+  return ((round % deckCount) + deckCount) % deckCount;
+}
