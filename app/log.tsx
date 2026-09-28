@@ -11,8 +11,9 @@ import {
   startSmokingPeriod,
   type CheckinRow,
 } from '@/data/repositories';
-import { formatCount } from '@/domain/format';
+import { formatLifetimeSentence } from '@/domain/format';
 import { parsePositiveInt } from '@/domain/parse';
+import { lifetimeBasis } from '@/domain/lifetime';
 import { lifetimeAfterSlip } from '@/domain/savings';
 import type { ProductId, SlipTrigger } from '@/domain/types';
 import { PRODUCT_CONTENT } from '@/content/products';
@@ -66,11 +67,12 @@ export default function Log() {
         await reload();
         const refreshed = await loadQuitState(db);
         const total = refreshed ? lifetimeAfterSlip(refreshed, 0, slipProduct, new Date()) : null;
+        const basis = refreshed ? lifetimeBasis(refreshed.settings) : null;
         setStatus({
           text:
-            total === null
+            total === null || basis === null
               ? 'Slip logged. Your fast clocks restarted; the long ones did not.'
-              : `Slip logged. Your fast clocks restarted; the long ones did not. That brings your estimated lifetime cigarette total to ${formatCount(total)}.`,
+              : `Slip logged. Your fast clocks restarted; the long ones did not. ${formatLifetimeSentence(total, basis)}`,
           tone: 'ok',
         });
       } catch {

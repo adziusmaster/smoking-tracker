@@ -5,7 +5,8 @@ import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { addCravingEvent, countCravingsBeaten, logSlipAfterCraving } from '@/data/repositories';
 import { PRODUCT_CONTENT } from '@/content/products';
 import { ACTIVITIES, SLIP_BUTTON, SLIP_REASSURANCE, SOS_STEPS } from '@/content/sos';
-import { fillUnitTokens, formatCount } from '@/domain/format';
+import { fillUnitTokens, formatLifetimeSentence } from '@/domain/format';
+import { lifetimeBasis } from '@/domain/lifetime';
 import { parseNonNegativeInt } from '@/domain/parse';
 import { variantForProduct } from '@/domain/products';
 import { lifetimeAfterSlip } from '@/domain/savings';
@@ -106,6 +107,7 @@ export default function Sos() {
 
   if (outcome === 'slipped') {
     const lifetime = state ? lifetimeAfterSlip(state, slipUnits, slipProduct, new Date()) : null;
+    const basis = state ? lifetimeBasis(state.settings) : null;
     const reassurance = variantForProduct(SLIP_REASSURANCE, slipProduct);
 
     return (
@@ -113,10 +115,6 @@ export default function Sos() {
         <Title>Alright. Let’s log it accurately.</Title>
         <Body tone="muted">{fillUnitTokens(reassurance, slipContent.unit)}</Body>
         <SlipProductPicker own={own} value={slipProduct} onChange={setSlipChoice} />
-        {lifetime !== null ? (
-          <Body tone="muted">That brings your estimated lifetime cigarette total to {formatCount(lifetime)}.</Body>
-        ) : null}
-
         {slipContent.countsSlips ? (
           <Field
             label={`How many ${slipContent.unit.many}?`}
@@ -126,6 +124,7 @@ export default function Sos() {
             accessibilityLabel={`Number of ${slipContent.unit.many}`}
           />
         ) : null}
+        {lifetime !== null && basis !== null ? <Body tone="muted">{formatLifetimeSentence(lifetime, basis)}</Body> : null}
 
         <Label>What set it off? (optional)</Label>
         <View style={styles.chips}>
