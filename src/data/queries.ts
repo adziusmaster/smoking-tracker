@@ -72,7 +72,6 @@ export const SELECT_CHECKINS = `
   FROM craving_checkins ORDER BY logged_on DESC LIMIT ?
 `;
 
-/** Ordered so children go before parents; used by the wipe-everything action. */
 export const INSERT_CRAVING_EVENT = `
   INSERT INTO craving_events (started_at, ended_at, outcome, activity, created_at)
   VALUES (?, ?, ?, ?, ?)
@@ -83,6 +82,11 @@ export const SELECT_CRAVING_EVENTS = `
   FROM craving_events ORDER BY started_at DESC
 `;
 
+export const COUNT_CRAVINGS_BEATEN = `
+  SELECT COUNT(*) AS beaten FROM craving_events WHERE outcome = 'passed'
+`;
+
+/** Ordered so children go before parents; used by the wipe-everything action. */
 export const DELETE_ALL = [
   'DELETE FROM craving_events',
   'DELETE FROM craving_checkins',

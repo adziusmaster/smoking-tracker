@@ -8,6 +8,7 @@ import {
   INSERT_SLIP,
   INSERT_SMOKING_PERIOD,
   SELECT_CHECKINS,
+  COUNT_CRAVINGS_BEATEN,
   SELECT_CRAVING_EVENTS,
   SELECT_SETTINGS,
   SELECT_SLIPS,
@@ -126,6 +127,28 @@ export async function addCravingEvent(
   await db.runAsync(INSERT_CRAVING_EVENT, input.startedAt, input.endedAt, input.outcome, input.activity, now.toISOString());
 }
 
+/** Passed craving events, read straight from the database so the number shown is never a guess. */
+export async function countCravingsBeaten(db: SQLiteDatabase): Promise<number> {
+  const row = await db.getFirstAsync<{ beaten: number }>(COUNT_CRAVINGS_BEATEN);
+  return row?.beaten ?? 0;
+}
+
+/**
+ * A slip logged from SOS writes two rows. They commit together or not at all, so a failure
+ * never leaves a saved slip behind a "nothing was recorded" message that invites a retry.
+ */
+export async function logSlipAfterCraving(
+  db: SQLiteDatabase,
+  slip: { occurredAt: string; unitCount: number; trigger: SlipTrigger | null; note: string | null },
+  craving: { startedAt: string; endedAt: string; outcome: CravingEvent['outcome']; activity: ActivityId | null },
+  now: Date,
+): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    await addSlip(db, slip, now);
+    await addCravingEvent(db, craving, now);
+  });
+}
+
 export async function recordMilestoneReached(db: SQLiteDatabase, milestoneId: string, reachedAt: string): Promise<void> {
   await db.runAsync(UPSERT_MILESTONE_EVENT, milestoneId, reachedAt);
 }
@@ -141,7 +164,6 @@ export async function saveCheckin(
 export async function listCheckins(db: SQLiteDatabase, limit: number): Promise<CheckinRow[]> {
   const rows = await db.getAllAsync<{ logged_on: string; craving_intensity: number; mood: number; note: string | null }>(
     SELECT_CHECKINS,
-  SELECT_CRAVING_EVENTS,
     limit,
   );
   return rows.map((row) => ({

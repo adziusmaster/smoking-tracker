@@ -2,10 +2,9 @@ import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { addCravingEvent, addSlip } from '@/data/repositories';
+import { addCravingEvent, countCravingsBeaten, logSlipAfterCraving } from '@/data/repositories';
 import { PRODUCT_CONTENT } from '@/content/products';
 import { ACTIVITIES, SLIP_REASSURANCE, SOS_STEPS } from '@/content/sos';
-import { cravingsBeaten } from '@/domain/cravings';
 import { fillUnitTokens, formatCount } from '@/domain/format';
 import { parseNonNegativeInt } from '@/domain/parse';
 import { pickVariant } from '@/domain/products';
@@ -74,7 +73,7 @@ export default function Sos() {
       setFailure(null);
       try {
         await addCravingEvent(db, { startedAt, endedAt: new Date().toISOString(), outcome: 'passed', activity: lastActivity }, new Date());
-        setBeatenNow((state ? cravingsBeaten(state.cravingEvents) : 0) + 1);
+        setBeatenNow(await countCravingsBeaten(db));
       } catch {
         // The craving still passed; failing to record it must not take that away.
         setBeatenNow(null);
@@ -87,8 +86,12 @@ export default function Sos() {
       setFailure(null);
       try {
         const now = new Date();
-        await addSlip(db, { occurredAt: now.toISOString(), unitCount: slipUnits, trigger, note: null }, now);
-        await addCravingEvent(db, { startedAt, endedAt: now.toISOString(), outcome: 'slipped', activity: lastActivity }, now);
+        await logSlipAfterCraving(
+          db,
+          { occurredAt: now.toISOString(), unitCount: slipUnits, trigger, note: null },
+          { startedAt, endedAt: now.toISOString(), outcome: 'slipped', activity: lastActivity },
+          now,
+        );
         router.replace('/');
       } catch {
         setFailure('Couldn’t save that. Nothing was recorded — try again, and it still counts as logged honestly.');
