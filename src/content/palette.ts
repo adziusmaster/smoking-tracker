@@ -85,3 +85,9 @@ export const PALETTES: { light: Palette; dark: Palette } = {
     doneLine: '#1F4348',
   },
 };
+
+/** Seven piece / glyph colours for the SOS games, each at least 3:1 against `surface`. */
+export const GAME_COLOURS: { light: readonly string[]; dark: readonly string[] } = {
+  light: ['#0E7C86', '#A0561A', '#B42318', '#5B4FB8', '#2E7D32', '#C2185B', '#37474F'],
+  dark: ['#5CC8C2', '#F0A55A', '#FF9C8F', '#A99CF5', '#81C784', '#F48FB1', '#B0BEC5'],
+};

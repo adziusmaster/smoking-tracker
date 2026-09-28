@@ -58,3 +58,23 @@ describe('PALETTES', () => {
     expect(ratio).toBeGreaterThanOrEqual(minimum);
   });
 });
+
+describe('GAME_COLOURS', () => {
+  it('GAME_COLOURS_bothSchemes_haveSevenDistinctColoursVisibleOnSurface', async () => {
+    // Arrange — block-drop pieces and memory glyphs sit on `surface`
+    const { GAME_COLOURS } = await import('./palette');
+
+    // Act
+    const weak = (['light', 'dark'] as const).flatMap((scheme) =>
+      GAME_COLOURS[scheme]
+        .filter((colour) => contrastRatio(colour, PALETTES[scheme].surface) < 3)
+        .map((colour) => `${scheme}:${colour}`),
+    );
+
+    // Assert
+    expect(GAME_COLOURS.light).toHaveLength(7);
+    expect(GAME_COLOURS.dark).toHaveLength(7);
+    expect(new Set(GAME_COLOURS.light).size).toBe(7);
+    expect(weak).toEqual([]);
+  });
+});

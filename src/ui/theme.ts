@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useColorScheme } from 'react-native';
-import { PALETTES, type Palette } from '@/content/palette';
+import { GAME_COLOURS, PALETTES, type Palette } from '@/content/palette';
 
 export type Scheme = 'light' | 'dark';
 
@@ -19,6 +19,8 @@ const FAMILY = {
 export interface Theme {
   scheme: Scheme;
   color: Palette;
+  /** Seven colours for game pieces and glyphs. */
+  game: readonly string[];
   space: typeof SPACE;
   radius: typeof RADIUS;
   font: typeof FONT;
@@ -26,8 +28,8 @@ export interface Theme {
 }
 
 const THEMES: Record<Scheme, Theme> = {
-  light: { scheme: 'light', color: PALETTES.light, space: SPACE, radius: RADIUS, font: FONT, family: FAMILY },
-  dark: { scheme: 'dark', color: PALETTES.dark, space: SPACE, radius: RADIUS, font: FONT, family: FAMILY },
+  light: { scheme: 'light', color: PALETTES.light, game: GAME_COLOURS.light, space: SPACE, radius: RADIUS, font: FONT, family: FAMILY },
+  dark: { scheme: 'dark', color: PALETTES.dark, game: GAME_COLOURS.dark, space: SPACE, radius: RADIUS, font: FONT, family: FAMILY },
 };
 
 export function themeFor(scheme: Scheme): Theme {
