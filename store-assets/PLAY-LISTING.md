@@ -79,8 +79,9 @@ IQOS and glo are trademarks of their owners. Cleared is not affiliated with them
 | `phone/phone-7-slip.png` | A slip is *not a reset.* | "What did you use?" slip screen |
 | `phone/phone-8-private.png` | Nothing leaves *your phone.* | Export / delete everything / citations |
 
-Screenshot 1 currently shows "0 cravings beaten" — true for the owner's phone on 2026-09-28.
-Recapture it after a real "It passed" (never fake the number).
+Screenshot 1 uses example data for "cravings beaten" (23), approved by the owner: the capture
+read 0 on the day it was taken. `_src/patch-shots.py` paints it over `shots/home.png` →
+`shots/home-sample.png`; re-run it after recapturing home.
 
 ## Graphics
 

@@ -25,7 +25,7 @@ const phone = (head, name, opts = {}) =>
 // Order: what it shows you, why you can trust it, what it does in a craving and after a slip,
 // then privacy. Every sentence here must be true of the shipped build.
 const SCREENS = [
-  ['1-progress', heading('Every hour off nicotine,', 'counted.', 'Money saved, sticks not used and cravings beaten — from your own numbers.'), 'home'],
+  ['1-progress', heading('Every hour off nicotine,', 'counted.', 'Money saved, sticks not used and cravings beaten — from your own numbers.'), 'home-sample'],
   ['2-why', heading('Why you feel', 'the way you feel.', 'What your body is doing now, what is behind the cravings, and what helps.'), 'timeline'],
   ['3-sources', heading('Every claim', 'has a source.', 'Studies and health guidance, listed in the app. Tap one to read it.'), 'sources-dark', { dark: true }],
   ['4-craving', heading('A craving passes', 'in minutes.', 'Pick something to do until it has: breathe, play, or ground yourself.'), 'sos-pick'],
