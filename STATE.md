@@ -9,7 +9,7 @@ Resume point. Last updated 2026-09-28.
 | --- | --- |
 | Repo | `adziusmaster/smoking-tracker` (private) |
 | Branch | `feat/nicotine-products` (multi-product support, not yet merged); `main` is the v1 cigarettes-only app |
-| Tests | 207 passing across 17 files |
+| Tests | 247 passing across 19 files |
 | Schema | version 3 (adds `product`, `weekly_spend_minor`, `prior_cigarettes_per_day`) |
 | Typecheck | clean |
 | `expo-doctor` | 20/21 — the same patch drift, see Known items |
@@ -25,8 +25,10 @@ end). Sub-projects, each with its own spec → plan → build:
 1. **Nicotine products** — done on `feat/nicotine-products`: cigarettes, roll-your-own, heated,
    vape, snus, pouches; product-filtered, citation-checked milestones
    (`docs/citation-check-2026-09.md`).
-2. **Design system + new icon** — full restyle, dark mode. Moved ahead of features so later
-   screens are built once.
+2. **Design system + new icon** — done on `feat/design-system`: "Clear Air" light/dark palettes
+   (`src/content/palette.ts`, contrast-tested), bundled Fraunces + Manrope, component kit in
+   `src/ui/kit/`, every screen restyled, tally-mark icon. Directions page:
+   <https://claude.ai/artifact/M1zLbZ1ATW5hTk5g2g1bLo>.
 3. **Something new every day** — daily card, savings goal, reasons, stronger SOS, cravings beaten.
 4. **Insights & journal.**
 5. **Notification preferences + backup/restore to file.**
@@ -158,6 +160,21 @@ The app is free, no ads, no purchases — a deliberate decision, not a TODO.
 - **The migration's transaction wiring is unverified by tests.** `src/data/db.ts` imports
   native `expo-sqlite` and cannot run under Vitest. The *selection* logic is a pure tested
   helper (`migrationsToApply`); the `withTransactionAsync` wrapping rests on code review.
+
+## Design system notes
+
+- **Colours come only from `src/content/palette.ts`.** Screens use `makeStyles((t) => …)` from
+  `src/ui/theme.ts`; there is no static theme object, so a light-only style cannot compile.
+  `grep -rnE "#[0-9a-fA-F]{3,8}\b|rgba?\(" app src/ui` should return nothing.
+- **Fonts are embedded at build time** by the `expo-font` config plugin (`app.json`); family names
+  are the TTF basenames in `assets/fonts/`. No `useFonts`, no runtime fetch — the blocked
+  `INTERNET` permission is unaffected.
+- **Icons are generated**, never hand-edited: `node store-assets/icon/build.mjs` (needs Google
+  Chrome) renders every variant and fails unless each PNG is 32-bit RGBA. Chrome writes opaque
+  screenshots as 24-bit RGB; the script re-encodes them.
+- **The feature graphic and store screenshots still use the old green** — sub-project 7.
+- No `react-native-svg` / `expo-linear-gradient` by design: the SOS ring and the hero depth are
+  plain Views.
 
 ## Environment gotchas that cost real time
 

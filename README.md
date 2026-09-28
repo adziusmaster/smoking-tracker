@@ -8,6 +8,9 @@ expect next: money saved, units not used, a phase-based coping timeline, and a t
 intervention (SOS). There is no account, no server, and no network call anywhere
 in the app. See `docs/privacy-policy.md` for the policy this claim is backed by.
 
+Styling: light and dark palettes in `src/content/palette.ts`, the runtime theme and
+`makeStyles` in `src/ui/theme.ts`, shared components in `src/ui/kit/`.
+
 **Picking the work back up?** Start with [STATE.md](STATE.md) — it holds the release status,
 what to do next, the decisions already settled, and the environment gotchas worth not
 rediscovering.
