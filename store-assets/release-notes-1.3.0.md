@@ -41,7 +41,19 @@ Sound and vibration can be turned off in Settings.
 - A passed craving is saved the moment you tap "It's passed".
 
 **Settings**
-- Sound and vibration switches; speaker button in the games that make a sound.
+- Sound and vibration switches; a speaker button (our own line icon) in the games that make a
+  sound.
+
+**Fixes since the first 1.3.0 test build**
+- A passed craving is saved even if you press back on "How strong is it now?".
+- Holding ▼ as block drop ends no longer carries fast drop into the next game.
+- Your reason is cut to two lines during games, so the block drop buttons stay on screen.
+- Breathing no longer flashes the hold colour between breathe out and breathe in.
+- The start strength can be cleared by tapping it again.
+
+**Under the hood**
+- `react-native-svg` added (MIT, no permissions) for icons.
+- Database tests for Delete everything and for upgrading an existing install to schema v6.
 
 **Privacy**
 - Still no internet permission. The sound library's microphone and background-service
