@@ -217,6 +217,23 @@ Commit first (it builds from git). Bump `version` in `app.json` for each release
 remote-managed (`appVersionSource: remote`) and increments by itself. Cloud builds 5 and 6 were
 cancelled, so their numbers are spent.
 
+## Testing on the phone: the dev app
+
+The Play build (closed testing) is on the owner's phone with their real data. Local builds are
+signed differently and can neither update it nor be allowed to wipe it, so **local test builds are
+the dev variant**: package `com.adziusmaster.smokefree.dev`, name "Cleared (dev)", installed side by
+side with its own throwaway data.
+
+```
+APP_VARIANT=dev npx expo prebuild --platform android --clean --no-install && git checkout -- package.json
+echo "sdk.dir=$HOME/android-sdk" > android/local.properties
+cd android && NODE_ENV=production ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+Never uninstall `com.adziusmaster.smokefree` from the phone. Release AABs are built without
+`APP_VARIANT` (see above), so they keep the real package.
+
 ## Local Android builds (no EAS credits)
 
 The Android SDK lives in `~/android-sdk` (no sudo); NDK 27.1 was added there with `sdkmanager`.
