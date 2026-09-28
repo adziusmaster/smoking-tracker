@@ -1,41 +1,62 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { Chapter, TipContent } from '@/domain/types';
+import { Body, Card, Eyebrow } from './kit';
 import { MilestoneNode } from './MilestoneNode';
-import { theme } from './theme';
+import { makeStyles } from './theme';
+
+const useStyles = makeStyles((t) =>
+  StyleSheet.create({
+    future: { opacity: 0.55 },
+    block: { gap: t.space.sm },
+    header: { flexDirection: 'row', alignItems: 'center', gap: t.space.sm, marginTop: t.space.lg },
+    badge: { width: 26, height: 26, borderRadius: t.radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: t.color.accent },
+    badgePast: { backgroundColor: t.color.doneLine },
+    badgeFuture: { backgroundColor: t.color.line },
+    badgeText: { fontFamily: t.family.bold, fontSize: t.font.tiny, color: t.color.onAccent },
+    badgeTextMuted: { color: t.color.ink },
+    name: { fontFamily: t.family.display, fontSize: t.font.heading, color: t.color.ink },
+    status: { fontFamily: t.family.bold, fontSize: t.font.micro, letterSpacing: 0.8, textTransform: 'uppercase', color: t.color.faint },
+    tipGap: { marginTop: t.space.sm },
+    bullet: { flexDirection: 'row', gap: t.space.sm },
+  }),
+);
 
 export function ChapterBlock(props: { chapter: Chapter; tips: TipContent | null; tipsAreDangerWindow: boolean }) {
+  const styles = useStyles();
   const { chapter, tips } = props;
   const isCurrent = chapter.status === 'current';
+  const eyebrowTone = props.tipsAreDangerWindow ? 'danger' : 'achieve';
 
   return (
-    <View style={chapter.status === 'future' ? styles.future : undefined}>
+    <View style={[styles.block, chapter.status === 'future' && styles.future]}>
       <View style={styles.header}>
-        <View style={[styles.num, chapter.status === 'past' && styles.numPast, chapter.status === 'future' && styles.numFuture]}>
-          <Text style={styles.numText}>{chapter.status === 'past' ? '✓' : chapter.phase.name.charAt(0)}</Text>
+        <View style={[styles.badge, chapter.status === 'past' && styles.badgePast, chapter.status === 'future' && styles.badgeFuture]}>
+          <Text style={[styles.badgeText, chapter.status !== 'current' && styles.badgeTextMuted]}>
+            {chapter.status === 'past' ? '✓' : chapter.phase.name.charAt(0)}
+          </Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.name}>{chapter.phase.name}</Text>
-          <Text style={styles.range}>{isCurrent ? 'you are here' : chapter.status === 'past' ? 'behind you' : 'ahead'}</Text>
+          <Text style={styles.name} accessibilityRole="header">{chapter.phase.name}</Text>
+          <Text style={styles.status}>{isCurrent ? 'you are here' : chapter.status === 'past' ? 'behind you' : 'ahead'}</Text>
         </View>
       </View>
 
       {isCurrent && tips ? (
-        <View style={[styles.tipBox, props.tipsAreDangerWindow && styles.tipBoxDanger]}>
-          <Text style={[styles.tipLabel, props.tipsAreDangerWindow && styles.tipLabelDanger]}>What’s happening</Text>
-          <Text style={styles.tipText}>{tips.whatsHappening}</Text>
-
-          <Text style={[styles.tipLabel, props.tipsAreDangerWindow && styles.tipLabelDanger, styles.tipLabelSpaced]}>
-            Why you feel this way
-          </Text>
-          <Text style={styles.tipText}>{tips.whyYouFeelThisWay}</Text>
-
-          <Text style={[styles.tipLabel, props.tipsAreDangerWindow && styles.tipLabelDanger, styles.tipLabelSpaced]}>
-            What to do about it
-          </Text>
+        <Card tone={props.tipsAreDangerWindow ? 'danger' : 'plain'}>
+          <Eyebrow tone={eyebrowTone}>What’s happening</Eyebrow>
+          <Body tone="muted">{tips.whatsHappening}</Body>
+          <View style={styles.tipGap} />
+          <Eyebrow tone={eyebrowTone}>Why you feel this way</Eyebrow>
+          <Body tone="muted">{tips.whyYouFeelThisWay}</Body>
+          <View style={styles.tipGap} />
+          <Eyebrow tone={eyebrowTone}>What to do about it</Eyebrow>
           {tips.howToCope.map((tip) => (
-            <Text key={tip} style={styles.tipBullet}>• {tip}</Text>
+            <View key={tip} style={styles.bullet}>
+              <Body tone="muted">•</Body>
+              <View style={{ flex: 1 }}><Body tone="muted">{tip}</Body></View>
+            </View>
           ))}
-        </View>
+        </Card>
       ) : null}
 
       {chapter.milestones.map((milestoneState) => (
@@ -48,28 +69,3 @@ export function ChapterBlock(props: { chapter: Chapter; tips: TipContent | null;
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  future: { opacity: 0.5 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm, marginTop: theme.space.lg, marginBottom: theme.space.md },
-  num: { width: 24, height: 24, borderRadius: theme.radius.sm, backgroundColor: theme.color.heroBg, alignItems: 'center', justifyContent: 'center' },
-  numPast: { backgroundColor: theme.color.done },
-  numFuture: { backgroundColor: theme.color.textFaint },
-  numText: { color: theme.color.heroText, fontSize: theme.font.tiny, fontWeight: '700' },
-  name: { fontSize: theme.font.small, fontWeight: '700', color: theme.color.text },
-  range: { fontSize: 9, color: theme.color.textFaint, textTransform: 'uppercase', letterSpacing: 0.5 },
-  tipBox: {
-    backgroundColor: theme.color.tipBg,
-    borderLeftWidth: 3,
-    borderLeftColor: theme.color.tipAccent,
-    borderRadius: theme.radius.sm,
-    padding: theme.space.md,
-    marginBottom: theme.space.md,
-  },
-  tipBoxDanger: { backgroundColor: theme.color.dangerBg, borderLeftColor: theme.color.danger },
-  tipLabel: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, color: theme.color.tipLabel },
-  tipLabelDanger: { color: theme.color.danger },
-  tipLabelSpaced: { marginTop: theme.space.md },
-  tipText: { fontSize: theme.font.tiny, color: theme.color.textMuted, lineHeight: 17, marginTop: 3 },
-  tipBullet: { fontSize: theme.font.tiny, color: theme.color.textMuted, lineHeight: 17, marginTop: 4 },
-});

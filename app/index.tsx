@@ -1,8 +1,7 @@
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { recordMilestoneReached } from '@/data/repositories';
 import { planNotifications } from '@/domain/notifications';
 import { buildTimeline } from '@/domain/timeline';
@@ -14,7 +13,8 @@ import { SOURCES } from '@/content/sources';
 import { syncNotifications } from '@/notifications/schedule';
 import { ChapterBlock } from '@/ui/ChapterBlock';
 import { Hero } from '@/ui/Hero';
-import { theme } from '@/ui/theme';
+import { Body, Button, Caption, Card, Heading, Screen, Title } from '@/ui/kit';
+import { makeStyles, useTheme } from '@/ui/theme';
 import { useQuitState } from '@/ui/useQuitState';
 
 /** Backs the 19-day danger-window claim. `SOURCES` is a Record, so under
@@ -33,7 +33,8 @@ function isReachedWithTimestamp(
 export default function Timeline() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const t = useTheme();
+  const styles = useStyles();
   const { state, loading, error, reload } = useQuitState();
 
   // Re-tick every minute so the counter is live without a heavy interval.
@@ -122,21 +123,19 @@ export default function Timeline() {
 
   if (!loading && error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorTitle}>Couldn’t load your data</Text>
-        <Text style={styles.errorBody}>{error.message}</Text>
-        <Pressable style={styles.retry} onPress={() => void reload()} accessibilityRole="button">
-          <Text style={styles.retryText}>Retry</Text>
-        </Pressable>
-      </View>
+      <Screen scroll={false} centered>
+        <Title>Couldn’t load your data</Title>
+        <Body tone="muted">{error.message}</Body>
+        <Button label="Retry" onPress={() => void reload()} />
+      </Screen>
     );
   }
 
   if (loading || !timeline || !state) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color={theme.color.heroBg} />
-      </View>
+      <Screen scroll={false} centered>
+        <ActivityIndicator color={t.color.accent} />
+      </Screen>
     );
   }
 
@@ -144,96 +143,71 @@ export default function Timeline() {
   const content = PRODUCT_CONTENT[state.settings.product];
 
   return (
-    <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={[styles.page, { paddingTop: insets.top + theme.space.md }]}>
-        <View style={styles.topBar}>
-          <Link href="/log" style={styles.topLink}>Log</Link>
-          <Link href="/settings" style={styles.topLink}>Settings</Link>
-        </View>
+    <Screen
+      footer={
+        <Pressable
+          style={({ pressed }) => [styles.sos, pressed && styles.sosPressed]}
+          onPress={() => router.push('/sos')}
+          accessibilityRole="button"
+        >
+          <Text style={styles.sosText}>{content.cravingButton}</Text>
+        </Pressable>
+      }
+    >
+      <View style={styles.topBar}>
+        <Link href="/log" style={styles.topLink}>Log</Link>
+        <Link href="/settings" style={styles.topLink}>Settings</Link>
+      </View>
 
-        <Hero
-          elapsed={timeline.elapsed}
-          longestStreak={timeline.longestStreak}
-          savings={timeline.savings}
-          currency={state.settings.currency}
-          phaseName={currentPhase.name}
-          currentlySmoking={timeline.anchors.isCurrentlySmoking}
-          freeWord={content.freeWord}
-          avoidedLabel={content.avoidedLabel}
-          relapseTitle={content.relapseTitle}
+      <Hero
+        elapsed={timeline.elapsed}
+        longestStreak={timeline.longestStreak}
+        savings={timeline.savings}
+        currency={state.settings.currency}
+        phaseName={currentPhase.name}
+        currentlySmoking={timeline.anchors.isCurrentlySmoking}
+        freeWord={content.freeWord}
+        avoidedLabel={content.avoidedLabel}
+        relapseTitle={content.relapseTitle}
+      />
+
+      {dangerWindow.active ? (
+        <Card tone="danger">
+          <Heading tone="danger">Danger window · {dangerWindow.daysRemaining} days left</Heading>
+          <Body tone="muted">
+            On average, a slip that becomes a relapse does so within about 19 days. You’re inside that window, so
+            the guidance below has changed to match.
+          </Body>
+          {/* The 19-day figure is a sourced claim like any milestone, so it is attributed
+              where it is shown rather than only in the Settings citation list. */}
+          {LAPSE_RELAPSE_SOURCE ? (
+            <Caption tone="faint">{LAPSE_RELAPSE_SOURCE.label} · full citations in Settings</Caption>
+          ) : null}
+        </Card>
+      ) : null}
+
+      {timeline.chapters.map((chapter) => (
+        <ChapterBlock
+          key={chapter.phase.id}
+          chapter={chapter}
+          tips={chapter.status === 'current' ? timeline.currentTips : null}
+          tipsAreDangerWindow={chapter.status === 'current' && timeline.currentTipsAreDangerWindow}
         />
+      ))}
 
-        {dangerWindow.active ? (
-          <View style={styles.banner}>
-            <Text style={styles.bannerTitle}>Danger window · {dangerWindow.daysRemaining} days left</Text>
-            <Text style={styles.bannerBody}>
-              On average, a slip that becomes a relapse does so within about 19 days. You’re inside that window, so the
-              guidance below has changed to match.
-            </Text>
-            {/* The 19-day figure is a sourced claim like any milestone, so it is attributed
-                where it is shown rather than only in the Settings citation list. */}
-            {LAPSE_RELAPSE_SOURCE ? (
-              <Text style={styles.bannerSource}>{LAPSE_RELAPSE_SOURCE.label} · full citations in Settings</Text>
-            ) : null}
-          </View>
-        ) : null}
-
-        {timeline.chapters.map((chapter) => (
-          <ChapterBlock
-            key={chapter.phase.id}
-            chapter={chapter}
-            tips={chapter.status === 'current' ? timeline.currentTips : null}
-            tipsAreDangerWindow={chapter.status === 'current' && timeline.currentTipsAreDangerWindow}
-          />
-        ))}
-
-        <Text style={styles.footer}>
-          Every claim above is sourced. See Settings for the citations, and remember this app is not
-          medical advice.
-        </Text>
-      </ScrollView>
-
-      <Pressable style={[styles.sos, { bottom: insets.bottom + theme.space.lg }]} onPress={() => router.push('/sos')}>
-        <Text style={styles.sosText}>{content.cravingButton}</Text>
-      </Pressable>
-    </View>
+      <Caption tone="faint">
+        Every claim above is sourced. See Settings for the citations, and remember this app is not medical advice.
+      </Caption>
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.color.bg, padding: theme.space.lg, gap: theme.space.md },
-  errorTitle: { fontSize: theme.font.title, fontWeight: '700', color: theme.color.text, textAlign: 'center' },
-  errorBody: { fontSize: theme.font.small, color: theme.color.textMuted, textAlign: 'center', lineHeight: 19 },
-  retry: {
-    backgroundColor: theme.color.heroBg,
-    borderRadius: theme.radius.md,
-    paddingVertical: theme.space.sm,
-    paddingHorizontal: theme.space.lg,
-  },
-  retryText: { color: theme.color.heroText, fontSize: theme.font.small, fontWeight: '700' },
-  page: { padding: theme.space.lg, paddingBottom: 120 },
-  topBar: { flexDirection: 'row', justifyContent: 'flex-end', gap: theme.space.lg, marginBottom: theme.space.md },
-  topLink: { fontSize: theme.font.small, fontWeight: '600', color: theme.color.heroBg },
-  banner: {
-    marginTop: theme.space.md,
-    backgroundColor: theme.color.dangerBg,
-    borderWidth: 1,
-    borderColor: theme.color.dangerBorder,
-    borderRadius: theme.radius.md,
-    padding: theme.space.md,
-  },
-  bannerTitle: { fontSize: theme.font.small, fontWeight: '700', color: theme.color.danger },
-  bannerBody: { fontSize: theme.font.tiny, color: theme.color.textMuted, lineHeight: 17, marginTop: 4 },
-  bannerSource: { fontSize: 9, color: theme.color.textFaint, lineHeight: 13, marginTop: 6 },
-  footer: { fontSize: theme.font.tiny, color: theme.color.textFaint, lineHeight: 16, marginTop: theme.space.xl },
-  sos: {
-    position: 'absolute',
-    left: theme.space.lg,
-    right: theme.space.lg,
-    backgroundColor: theme.color.danger,
-    borderRadius: theme.radius.pill,
-    paddingVertical: theme.space.md,
-    alignItems: 'center',
-  },
-  sosText: { color: '#fff', fontSize: theme.font.body, fontWeight: '700' },
-});
+const useStyles = makeStyles((t) =>
+  StyleSheet.create({
+    topBar: { flexDirection: 'row', justifyContent: 'flex-end', gap: t.space.lg },
+    topLink: { fontFamily: t.family.semi, fontSize: t.font.small, color: t.color.accentText, paddingVertical: t.space.xs },
+    sos: { minHeight: 52, borderRadius: t.radius.pill, backgroundColor: t.color.sos, alignItems: 'center', justifyContent: 'center' },
+    sosPressed: { opacity: 0.9 },
+    sosText: { fontFamily: t.family.bold, fontSize: t.font.body, color: t.color.onSos },
+  }),
+);
