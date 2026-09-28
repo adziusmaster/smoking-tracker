@@ -2,13 +2,13 @@
 
 Resume point. Last updated 2026-09-28.
 
-`main` is green and pushed; 1.2.0 (versionCode 7) is in Play closed testing. Branch
-`feat/better-sos` (not merged, awaiting the owner's phone check) adds the Better SOS round below.
+`main` is green and pushed at 1.3.0 (versionCode 8, AAB built, to upload to closed testing);
+1.2.0 (versionCode 7) is the build currently in closed testing.
 
 | | |
 | --- | --- |
 | Repo | `adziusmaster/smoking-tracker` (private) |
-| Branch | `feat/better-sos` = 1.3.0 (versionCode 8 on the next local production build) — not merged or pushed; `main` = 1.2.0 |
+| Branch | `main` = 1.3.0 (Better SOS merged and pushed 2026-09-28) |
 | Tests | 353 passing |
 | Schema | version 6 (v3: product columns; v4: `craving_events`; v5: `slips.product`; v6: `preferences`, `game_records`, `craving_events.strength_start/_end`) |
 | Typecheck | clean |
@@ -16,9 +16,9 @@ Resume point. Last updated 2026-09-28.
 | App name | **Cleared** (launcher); Play title **Cleared: Quit Smoking & Vaping** — renamed 2026-09-28 because "Smoke Free" is an established Play app |
 | Package name | `com.adziusmaster.smokefree` — kept on purpose (invisible to users; changing it means a new Play app, a new key, and wiped local data). DB file stays `smokefree.db`. |
 | EAS project | `@adrzej-dev/smoking-tracker` · `b8ec62ea-af25-4199-99e4-b3fbf9962e00` |
-| Last `versionCode` | 7 (1.2.0, EAS-managed, `appVersionSource: remote`) |
+| Last `versionCode` | 8 (1.3.0, built locally 2026-09-28 → `builds/cleared-1.3.0.aab`; EAS-managed, `appVersionSource: remote`) |
 
-## Better SOS (branch `feat/better-sos`, 2026-09-28)
+## Better SOS (1.3.0, merged 2026-09-28)
 
 Spec `docs/superpowers/specs/2026-09-28-better-sos-design.md`, plan `docs/superpowers/plans/2026-09-28-better-sos.md`.
 Bubble pop with a burst animation, pop sound (`assets/sounds/pop.wav`, synthesised by
@@ -169,6 +169,10 @@ The app is free, no ads, no purchases — a deliberate decision, not a TODO.
   lifetime total** (slip confirmation). They differ once anything is logged.
 
 ## Known items, none blocking
+
+- **expo-doctor:** `expo-asset` is now a direct dependency pinned to 57.0.9 (the version inside the
+  1.3.0 AAB; expo-audio needs it as a peer). The patch-drift check still fails as before — update
+  the Expo patch versions together in a release of their own, then retest on the phone.
 
 - **Open-source notices screen, before open testing:** every shipped library (React Native, Expo,
   react-native-svg, …) is MIT/BSD/ISC-style and the fonts are SIL OFL; their notices should ship
