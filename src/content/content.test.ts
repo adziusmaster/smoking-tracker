@@ -327,3 +327,41 @@ describe('MILESTONES copy', () => {
     expect(restating).toEqual([]);
   });
 });
+
+describe('SOS activities', () => {
+  it('ACTIVITIES_ids_matchTheDatabaseCheckList', async () => {
+    // Arrange — the craving_events.activity CHECK in migration v4 is the source of truth
+    const { ACTIVITIES } = await import('./sos');
+    const { MIGRATIONS } = await import('@/data/schema');
+    const v4 = MIGRATIONS.find((m) => m.version === 4)?.up ?? '';
+    const allowed = [...(/activity IN \(([^)]*)\)/.exec(v4)?.[1] ?? '').matchAll(/'([a-z]+)'/g)].map((m) => m[1]);
+
+    // Act
+    const ids = ACTIVITIES.map((a) => a.id);
+
+    // Assert
+    expect([...ids].sort()).toEqual([...allowed].sort());
+  });
+
+  it('ACTIVITIES_sourceIds_resolve', async () => {
+    // Arrange
+    const { ACTIVITIES } = await import('./sos');
+
+    // Act
+    const unresolved = ACTIVITIES.filter((a) => a.sourceId !== null && !(a.sourceId in SOURCES)).map((a) => a.id);
+
+    // Assert
+    expect(unresolved).toEqual([]);
+  });
+
+  it('GROUNDING_STEPS_countDownFromFiveToOne', async () => {
+    // Arrange
+    const { GROUNDING_STEPS } = await import('./sos');
+
+    // Act
+    const counts = GROUNDING_STEPS.map((s) => s.count);
+
+    // Assert
+    expect(counts).toEqual([5, 4, 3, 2, 1]);
+  });
+});
