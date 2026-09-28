@@ -71,7 +71,7 @@ export async function loadQuitState(db: SQLiteDatabase): Promise<QuitState | nul
     note: row.note,
   }));
 
-  return { settings, slips, periods };
+  return { settings, slips, periods, cravingEvents: [] };
 }
 
 export async function saveSettings(db: SQLiteDatabase, settings: Settings, now: Date): Promise<void> {

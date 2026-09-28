@@ -8,7 +8,7 @@ const QUIT = '2026-06-26T08:00:00+02:00';
 const state = (overrides: Partial<QuitState> = {}): QuitState => ({
   settings: cigaretteSettings({ quitDate: QUIT, cigaretteHistory: null }),
   slips: [],
-  periods: [],
+  periods: [], cravingEvents: [],
   ...overrides,
 });
 

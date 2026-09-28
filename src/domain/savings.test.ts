@@ -6,7 +6,7 @@ import type { QuitState, Settings } from './types';
 const baseState = (overrides: Partial<QuitState> = {}): QuitState => ({
   settings: cigaretteSettings(),
   slips: [],
-  periods: [],
+  periods: [], cravingEvents: [],
   ...overrides,
 });
 
@@ -94,7 +94,7 @@ describe('computeSavings', () => {
 
   it('computeSavings_vapeFortyThreeDays_moneyFromWeeklySpend', () => {
     // Arrange — 43 days x 15 = 645 uses; 645 x 2100 / (7 x 15) = 12_900
-    const state: QuitState = { settings: vape(), slips: [], periods: [] };
+    const state: QuitState = { settings: vape(), slips: [], periods: [], cravingEvents: [] };
 
     // Act
     const result = computeSavings(state, new Date('2026-08-08T08:00:00+02:00'));
@@ -108,7 +108,7 @@ describe('computeSavings', () => {
 
   it('computeSavings_vapeRateChanged_recomputesMoneyFromWeeklySpend', () => {
     // Arrange — double the rate, same weekly spend: money over 43 days is unchanged (43/7 weeks of spend)
-    const state: QuitState = { settings: vape({ unitsPerDay: 30 }), slips: [], periods: [] };
+    const state: QuitState = { settings: vape({ unitsPerDay: 30 }), slips: [], periods: [], cravingEvents: [] };
 
     // Act
     const result = computeSavings(state, new Date('2026-08-08T08:00:00+02:00'));
@@ -123,7 +123,7 @@ describe('computeSavings', () => {
     const state: QuitState = {
       settings: vape(),
       slips: [{ id: 1, occurredAt: '2026-08-01T00:00:00+02:00', unitCount: 5, trigger: null, note: null }],
-      periods: [],
+      periods: [], cravingEvents: [],
     };
 
     // Act
@@ -138,7 +138,7 @@ describe('computeSavings', () => {
     const state: QuitState = {
       settings: cigaretteSettings({ product: 'heated', cigaretteHistory: { months: 60, cigarettesPerDay: 10 } }),
       slips: [{ id: 1, occurredAt: '2026-08-01T00:00:00+02:00', unitCount: 3, trigger: null, note: null }],
-      periods: [],
+      periods: [], cravingEvents: [],
     };
 
     // Act
@@ -156,7 +156,7 @@ const vape = (overrides: Partial<Settings> = {}): Settings =>
 describe('lifetimeAfterSlip', () => {
   it('lifetimeAfterSlip_cigarettes_addsTheNewSlip', () => {
     // Arrange
-    const state: QuitState = { settings: cigaretteSettings(), slips: [], periods: [] };
+    const state: QuitState = { settings: cigaretteSettings(), slips: [], periods: [], cravingEvents: [] };
 
     // Act
     const result = lifetimeAfterSlip(state, 2, new Date('2026-08-08T08:00:00+02:00'));
@@ -170,7 +170,7 @@ describe('lifetimeAfterSlip', () => {
     const state: QuitState = {
       settings: cigaretteSettings({ product: 'heated', cigaretteHistory: { months: 60, cigarettesPerDay: 10 } }),
       slips: [],
-      periods: [],
+      periods: [], cravingEvents: [],
     };
 
     // Act
@@ -182,7 +182,7 @@ describe('lifetimeAfterSlip', () => {
 
   it('lifetimeAfterSlip_cigarettesWithoutHistory_isNull', () => {
     // Arrange
-    const state: QuitState = { settings: cigaretteSettings({ cigaretteHistory: null }), slips: [], periods: [] };
+    const state: QuitState = { settings: cigaretteSettings({ cigaretteHistory: null }), slips: [], periods: [], cravingEvents: [] };
 
     // Act
     const result = lifetimeAfterSlip(state, 1, new Date('2026-08-08T08:00:00+02:00'));

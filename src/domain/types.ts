@@ -65,11 +65,24 @@ export interface SmokingPeriod {
   note: string | null;
 }
 
+export type ActivityId = 'breathe' | 'blocks' | 'memory' | 'bubbles' | 'grounding' | 'water';
+
+/** One use of the craving SOS that ended with an answer. Leaving SOS without one records nothing. */
+export interface CravingEvent {
+  id: number;
+  startedAt: string;
+  endedAt: string;
+  outcome: 'passed' | 'slipped';
+  /** The last activity used, if any. */
+  activity: ActivityId | null;
+}
+
 /** Every stored fact the domain needs. */
 export interface QuitState {
   settings: Settings;
   slips: Slip[];
   periods: SmokingPeriod[];
+  cravingEvents: CravingEvent[];
 }
 
 export interface Elapsed {

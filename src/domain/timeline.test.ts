@@ -24,7 +24,7 @@ const milestones: Milestone[] = [
 const state: QuitState = {
   settings: cigaretteSettings({ quitDate: QUIT }),
   slips: [],
-  periods: [],
+  periods: [], cravingEvents: [],
 };
 
 describe('buildTimeline', () => {
@@ -124,7 +124,7 @@ describe('buildTimeline', () => {
 
 describe('buildTimeline by product', () => {
   const buildReal = (settings: Settings, now: Date = NOW): TimelineViewModel =>
-    buildTimeline({ state: { settings, slips: [], periods: [] }, milestones: MILESTONES, phases: PHASES, dangerTips: DANGER_WINDOW_TIPS, unit: CIG, now });
+    buildTimeline({ state: { settings, slips: [], periods: [], cravingEvents: [] }, milestones: MILESTONES, phases: PHASES, dangerTips: DANGER_WINDOW_TIPS, unit: CIG, now });
   const ids = (vm: TimelineViewModel) => vm.chapters.flatMap((c) => c.milestones.map((s) => s.milestone.id));
   const find = (vm: TimelineViewModel, id: string) => vm.chapters.flatMap((c) => c.milestones).find((s) => s.milestone.id === id);
   const heatedSwitcher = cigaretteSettings({ quitDate: QUIT, product: 'heated', cigaretteHistory: { months: 60, cigarettesPerDay: 10 } });
@@ -212,7 +212,7 @@ describe('buildTimeline tips', () => {
     const withSlip: QuitState = {
       settings,
       slips: [{ id: 1, occurredAt: '2026-08-07T22:00:00+02:00', unitCount: 1, trigger: null, note: null }],
-      periods: [],
+      periods: [], cravingEvents: [],
     };
 
     // Act
