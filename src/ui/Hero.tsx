@@ -1,7 +1,21 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { formatCount, formatElapsed, formatMinutesNotLost, formatMoneyMinor } from '@/domain/format';
-import type { Savings, Elapsed, Streak } from '@/domain/types';
-import { theme } from './theme';
+import type { Elapsed, Savings, Streak } from '@/domain/types';
+import { Body, Card, Heading, StatTile } from './kit';
+import { makeStyles } from './theme';
+
+const useStyles = makeStyles((t) =>
+  StyleSheet.create({
+    hero: { backgroundColor: t.color.heroTo, borderRadius: t.radius.lg, padding: t.space.lg, overflow: 'hidden' },
+    // One large disc of the darker hero colour clipped into the corner stands in for a gradient,
+    // which would need a native module.
+    depth: { position: 'absolute', width: 260, height: 260, borderRadius: 130, top: -110, left: -90, backgroundColor: t.color.heroFrom },
+    big: { fontFamily: t.family.display, fontSize: t.font.display, lineHeight: 40, color: t.color.onHero, letterSpacing: -0.5 },
+    sub: { fontFamily: t.family.medium, fontSize: t.font.small, color: t.color.onHero, marginTop: t.space.xs },
+    row: { flexDirection: 'row', gap: t.space.sm, marginTop: t.space.lg },
+    beaten: { fontFamily: t.family.semi, fontSize: t.font.small, color: t.color.onHero, marginTop: t.space.sm },
+  }),
+);
 
 export function Hero(props: {
   elapsed: Elapsed;
@@ -15,53 +29,42 @@ export function Hero(props: {
   freeWord: string;
   avoidedLabel: string;
   relapseTitle: string;
+  cravingsBeaten: number;
 }) {
+  const styles = useStyles();
+
   if (props.currentlySmoking) {
     return (
-      <View style={[styles.hero, styles.heroSmoking]}>
-        <Text style={styles.smokingTitle}>{props.relapseTitle}</Text>
-        <Text style={styles.smokingBody}>
+      <Card tone="danger">
+        <Heading tone="danger">{props.relapseTitle}</Heading>
+        <Body tone="muted">
           That’s logged, not judged. Your best run was {formatElapsed(props.longestStreak.elapsed)} — you’ve
           already proved you can do this once. End the period from the Log screen whenever you’re ready to
           start again.
-        </Text>
-      </View>
+        </Body>
+      </Card>
     );
   }
 
   return (
     <View style={styles.hero}>
-      <Text style={styles.big}>{formatElapsed(props.elapsed)}</Text>
+      <View style={styles.depth} />
+      <Text style={styles.big} accessibilityRole="header">{formatElapsed(props.elapsed)}</Text>
       <Text style={styles.sub}>{props.freeWord} · {props.phaseName}</Text>
       <View style={styles.row}>
-        <Stat value={formatMoneyMinor(props.savings.moneySavedMinor, props.currency)} label="saved" />
-        <Stat value={formatCount(props.savings.unitsAvoided)} label={props.avoidedLabel} />
+        <StatTile value={formatMoneyMinor(props.savings.moneySavedMinor, props.currency)} label="saved" />
+        <StatTile value={formatCount(props.savings.unitsAvoided)} label={props.avoidedLabel} />
         {props.savings.minutesNotLost !== null ? (
-          <Stat value={formatMinutesNotLost(props.savings.minutesNotLost)} label="time not lost" />
-        ) : null}
+          <StatTile value={formatMinutesNotLost(props.savings.minutesNotLost)} label="time not lost" />
+        ) : (
+          <StatTile value={formatCount(props.cravingsBeaten)} label="cravings beaten" />
+        )}
       </View>
+      {props.savings.minutesNotLost !== null && props.cravingsBeaten > 0 ? (
+        <Text style={styles.beaten}>
+          {formatCount(props.cravingsBeaten)} {props.cravingsBeaten === 1 ? 'craving' : 'cravings'} beaten
+        </Text>
+      ) : null}
     </View>
   );
 }
-
-function Stat(props: { value: string; label: string }) {
-  return (
-    <View style={styles.stat}>
-      <Text style={styles.statValue}>{props.value}</Text>
-      <Text style={styles.statLabel}>{props.label}</Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  hero: { backgroundColor: theme.color.heroBg, borderRadius: theme.radius.lg, padding: theme.space.lg },
-  heroSmoking: { backgroundColor: theme.color.danger },
-  big: { fontSize: theme.font.hero, fontWeight: '700', color: theme.color.heroText, letterSpacing: -0.5 },
-  sub: { fontSize: theme.font.small, color: theme.color.heroText, opacity: 0.75, marginTop: theme.space.xs },
-  row: { flexDirection: 'row', gap: theme.space.sm, marginTop: theme.space.lg },
-  stat: { flex: 1, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: theme.radius.sm, padding: theme.space.sm },
-  statValue: { color: theme.color.heroText, fontSize: theme.font.small, fontWeight: '700' },
-  statLabel: { color: theme.color.heroText, opacity: 0.7, fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.4, marginTop: 2 },
-  smokingTitle: { fontSize: theme.font.title, fontWeight: '700', color: theme.color.heroText },
-  smokingBody: { fontSize: theme.font.small, color: theme.color.heroText, opacity: 0.9, lineHeight: 19, marginTop: theme.space.sm },
-});

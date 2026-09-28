@@ -56,6 +56,21 @@ export function isConservativelyAnchored(milestone: Milestone, settings: Setting
   return milestone.audience === 'smoking-history' && !isCombustible(settings.product);
 }
 
+/** What a slip can be logged as, own product included: any nicotine product can end a quit. */
+export function slipProductOptions(own: ProductId): ProductId[] {
+  return ['cigarettes', 'roll-your-own', 'heated', 'vape', own === 'snus' ? 'snus' : 'pouches'];
+}
+
+/** A slip's product, with null resolved to the user's own. */
+export function slipProductOf(slip: { product: ProductId | null }, own: ProductId): ProductId {
+  return slip.product ?? own;
+}
+
+/** The copy variant for a given product — e.g. the slip screen follows what was used, not what was quit. */
+export function variantForProduct<T>(variants: CopyVariants<T>, product: ProductId): T {
+  return isCombustible(product) ? variants.smoke : variants.nicotine;
+}
+
 /** Copy that names smoke (carbon monoxide, tar) has a nicotine-only twin for other products. */
 export function pickVariant<T>(variants: CopyVariants<T>, settings: Settings): T {
   return isCombustible(settings.product) ? variants.smoke : variants.nicotine;

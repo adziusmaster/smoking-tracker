@@ -9,8 +9,6 @@ export interface ProductContent {
   /** "smoke-free" only where the product is smoked. */
   freeWord: string;
   avoidedLabel: string;
-  cravingButton: string;
-  slipVerb: string;
   relapseTitle: string;
   /** Vape slips are one session each; there is nothing meaningful to count. */
   countsSlips: boolean;
@@ -28,8 +26,6 @@ export const PRODUCT_CONTENT: Record<ProductId, ProductContent> = {
     unit: { one: 'cigarette', many: 'cigarettes' },
     freeWord: 'smoke-free',
     avoidedLabel: 'not smoked',
-    cravingButton: 'I want to smoke',
-    slipVerb: 'I smoked',
     relapseTitle: 'You’re smoking again right now',
     countsSlips: true,
     perDayLabel: 'Cigarettes per day',
@@ -44,8 +40,6 @@ export const PRODUCT_CONTENT: Record<ProductId, ProductContent> = {
     unit: { one: 'roll-up', many: 'roll-ups' },
     freeWord: 'smoke-free',
     avoidedLabel: 'not smoked',
-    cravingButton: 'I want to smoke',
-    slipVerb: 'I smoked',
     relapseTitle: 'You’re smoking again right now',
     countsSlips: true,
     perDayLabel: 'Roll-ups per day',
@@ -60,8 +54,6 @@ export const PRODUCT_CONTENT: Record<ProductId, ProductContent> = {
     unit: { one: 'stick', many: 'sticks' },
     freeWord: 'nicotine-free',
     avoidedLabel: 'sticks not used',
-    cravingButton: 'I want a stick',
-    slipVerb: 'I used a stick',
     relapseTitle: 'You’re using heated tobacco again right now',
     countsSlips: true,
     perDayLabel: 'Sticks per day',
@@ -76,8 +68,6 @@ export const PRODUCT_CONTENT: Record<ProductId, ProductContent> = {
     unit: { one: 'vape', many: 'vapes' },
     freeWord: 'nicotine-free',
     avoidedLabel: 'vapes skipped (approx.)',
-    cravingButton: 'I want to vape',
-    slipVerb: 'I vaped',
     relapseTitle: 'You’re vaping again right now',
     countsSlips: false,
     perDayLabel: 'Uses per day',
@@ -92,8 +82,6 @@ export const PRODUCT_CONTENT: Record<ProductId, ProductContent> = {
     unit: { one: 'pouch', many: 'pouches' },
     freeWord: 'nicotine-free',
     avoidedLabel: 'pouches not used',
-    cravingButton: 'I want a pouch',
-    slipVerb: 'I used a pouch',
     relapseTitle: 'You’re using snus again right now',
     countsSlips: true,
     perDayLabel: 'Pouches per day',
@@ -108,8 +96,6 @@ export const PRODUCT_CONTENT: Record<ProductId, ProductContent> = {
     unit: { one: 'pouch', many: 'pouches' },
     freeWord: 'nicotine-free',
     avoidedLabel: 'pouches not used',
-    cravingButton: 'I want a pouch',
-    slipVerb: 'I used a pouch',
     relapseTitle: 'You’re using pouches again right now',
     countsSlips: true,
     perDayLabel: 'Pouches per day',
@@ -117,6 +103,16 @@ export const PRODUCT_CONTENT: Record<ProductId, ProductContent> = {
     packPriceLabel: 'Price per can',
     defaultPerPack: 20,
   },
+};
+
+/** How each product is named when logging a slip ("What did you use?"). */
+export const SLIP_LABEL: Record<ProductId, string> = {
+  cigarettes: 'Cigarette',
+  'roll-your-own': 'Roll-up',
+  heated: 'Heated stick',
+  vape: 'Vape',
+  snus: 'Snus',
+  pouches: 'Pouch',
 };
 
 /** Onboarding shows snus and tobacco-free pouches as one card, then asks which. */

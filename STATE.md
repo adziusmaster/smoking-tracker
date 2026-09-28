@@ -1,4 +1,4 @@
-# STATE — Smoke Free
+# STATE — Cleared
 
 Resume point. Last updated 2026-09-28.
 
@@ -9,11 +9,12 @@ Resume point. Last updated 2026-09-28.
 | --- | --- |
 | Repo | `adziusmaster/smoking-tracker` (private) |
 | Branch | `feat/nicotine-products` (multi-product support, not yet merged); `main` is the v1 cigarettes-only app |
-| Tests | 207 passing across 17 files |
-| Schema | version 3 (adds `product`, `weekly_spend_minor`, `prior_cigarettes_per_day`) |
+| Tests | 295 passing across 24 files |
+| Schema | version 5 (v3: product columns; v4: `craving_events`; v5: `slips.product`) |
 | Typecheck | clean |
 | `expo-doctor` | 20/21 — the same patch drift, see Known items |
-| Package name | `com.adziusmaster.smokefree` (permanent once published) |
+| App name | **Cleared** (launcher); Play title **Cleared: Quit Smoking & Vaping** — renamed 2026-09-28 because "Smoke Free" is an established Play app |
+| Package name | `com.adziusmaster.smokefree` — kept on purpose (invisible to users; changing it means a new Play app, a new key, and wiped local data). DB file stays `smokefree.db`. |
 | EAS project | `@adrzej-dev/smoking-tracker` · `b8ec62ea-af25-4199-99e4-b3fbf9962e00` |
 | Last `versionCode` | 4 (EAS-managed, `appVersionSource: remote`) |
 
@@ -25,9 +26,18 @@ end). Sub-projects, each with its own spec → plan → build:
 1. **Nicotine products** — done on `feat/nicotine-products`: cigarettes, roll-your-own, heated,
    vape, snus, pouches; product-filtered, citation-checked milestones
    (`docs/citation-check-2026-09.md`).
-2. **Design system + new icon** — full restyle, dark mode. Moved ahead of features so later
-   screens are built once.
-3. **Something new every day** — daily card, savings goal, reasons, stronger SOS, cravings beaten.
+2. **Design system + new icon** — done on `feat/design-system`: "Clear Air" light/dark palettes
+   (`src/content/palette.ts`, contrast-tested), bundled Fraunces + Manrope, component kit in
+   `src/ui/kit/`, every screen restyled, tally-mark icon. Directions page:
+   <https://claude.ai/artifact/M1zLbZ1ATW5hTk5g2g1bLo>.
+3. **SOS activities** — done on `feat/sos-games`: delay, then breathing / block drop (cites
+   Skorka-Brown 2015) / memory pairs / bubble pop / 5-4-3-2-1 / water, a five-minute bar, and
+   "cravings beaten" on home. Game rules are pure and tested in `src/domain/games/`.
+   Craving/slip buttons are product-neutral ("I’m having a craving" / "I slipped"); a slip records
+   what was used (`slips.product`, null = own product). Any slip restarts the fast clocks; only
+   own-product slips reduce "units not used"; cigarette/roll-up slips add to the lifetime total.
+   Repository functions now run in Node via `src/data/testDb.ts`.
+4. **Something new every day** — daily card, savings goal, reasons.
 4. **Insights & journal.**
 5. **Notification preferences + backup/restore to file.**
 6. **Home-screen widget** (native module — riskiest for EAS builds, so last).
@@ -98,9 +108,10 @@ The app is free, no ads, no purchases — a deliberate decision, not a TODO.
   testing does **not** count toward it. Recruit ~15 for margin; dropping below 12 risks
   restarting the clock.
 - **Play Console was locked until 12 Aug 2026.**
-- Privacy policy is live and required by Play: <https://adziusmaster.github.io/smokefree-privacy/>
-  Source: `adziusmaster/smokefree-privacy` (public, deliberately — only the policy is public).
-  Keep it in sync with `docs/privacy-policy.md`.
+- Privacy policy is live and required by Play: <https://lechdigital.nl/projects/cleared/privacy/>
+  Source: `../lech-digital/projects/cleared/privacy/index.html` (GitHub Pages; pushing `main`
+  deploys). Keep it in sync with `docs/privacy-policy.md`. The old
+  `adziusmaster.github.io/smokefree-privacy/` page is superseded and no longer linked.
 - Data Safety answers: collects nothing, shares nothing, deletion in-app. **Verified against
   the built artifact**, not just the source.
 - Store listing copy: `docs/play-store-listing.md`. Graphics: `store-assets/`.
@@ -123,6 +134,9 @@ The app is free, no ads, no purchases — a deliberate decision, not a TODO.
   permission-checked artifact, and this dependency tree has already broken one EAS build.
   Do not upgrade casually before a release.
 - **`lifetime_baseline` is retained, not dropped.** Superseded by `smoked_for_months`.
+- **No lifetime cigarette total after a slip** (owner's call, 2026-09-28: "an abstract number that
+  says nothing"). The slip screen and Log confirmation no longer show it; the pre-quit estimate in
+  Settings remains. `Savings.lifetimeCigarettes` is still computed and tested but not shown.
 - **The lifetime total is an estimate and must always be labelled one.** It applies the
   current daily rate retroactively and overestimates for most people. Two distinct figures
   exist and must not share a label: the **pre-quit estimate** (Settings) and the **running
@@ -132,6 +146,10 @@ The app is free, no ads, no purchases — a deliberate decision, not a TODO.
 
 - **Changing product in Settings reinterprets logged slips** in the new unit (a slip of 5
   cigarettes becomes 5 pouches). The screen warns before saving; nothing is converted.
+- **Theme once stayed dark after the phone switched back to light** (2026-09-28, right after a
+  fresh install): the SOS screen rendered dark until the app was force-stopped. Not reproduced in
+  five attempts (foreground, background via Home and via Back, fresh SOS mount). If it recurs, note
+  the exact steps; `useColorScheme` is the only source of the scheme (`src/ui/theme.ts`).
 - **Heated tobacco has no heart-rate milestone** — deliberately; no study measures it. See the
   spec's amendment note.
 - **Settings save can claim success after a failed refresh.** `useQuitState().reload()` catches
@@ -158,6 +176,38 @@ The app is free, no ads, no purchases — a deliberate decision, not a TODO.
 - **The migration's transaction wiring is unverified by tests.** `src/data/db.ts` imports
   native `expo-sqlite` and cannot run under Vitest. The *selection* logic is a pure tested
   helper (`migrationsToApply`); the `withTransactionAsync` wrapping rests on code review.
+
+## Design system notes
+
+- **Colours come only from `src/content/palette.ts`.** Screens use `makeStyles((t) => …)` from
+  `src/ui/theme.ts`; there is no static theme object, so a light-only style cannot compile.
+  `grep -rnE "#[0-9a-fA-F]{3,8}\b|rgba?\(" app src/ui` should return nothing.
+- **Fonts are embedded at build time** by the `expo-font` config plugin (`app.json`); family names
+  are the TTF basenames in `assets/fonts/`. No `useFonts`, no runtime fetch — the blocked
+  `INTERNET` permission is unaffected.
+- **Icons are generated**, never hand-edited: `node store-assets/icon/build.mjs` (needs Google
+  Chrome) renders every variant and fails unless each PNG is 32-bit RGBA. Chrome writes opaque
+  screenshots as 24-bit RGB; the script re-encodes them.
+- **The feature graphic and store screenshots still use the old green** — sub-project 7.
+- No `react-native-svg` / `expo-linear-gradient` by design: the SOS ring and the hero depth are
+  plain Views.
+
+## Local Android builds (no EAS credits)
+
+The Android SDK lives in `~/android-sdk` (no sudo); NDK 27.1 was added there with `sdkmanager`.
+
+```
+export JAVA_HOME=$HOME/Library/Java/JavaVirtualMachines/jdk-17.0.20+8/Contents/Home ANDROID_HOME=$HOME/android-sdk
+npx expo prebuild --platform android --no-install && git checkout -- package.json   # prebuild edits the android script
+echo "sdk.dir=$HOME/android-sdk" > android/local.properties
+cd android && NODE_ENV=production ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+Local release APKs are signed with the debug keystore, so reinstalling keeps data; a Play/EAS build
+has a different signature and forces an uninstall. If `adb install` stalls, it is Play Protect's
+"send for a security check" prompt on the phone — tap "Don't send". `android/` is generated and
+git-ignored.
 
 ## Environment gotchas that cost real time
 

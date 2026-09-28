@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Smoke Free",
+    "name": "Cleared",
     "slug": "smoking-tracker",
     "scheme": "smokefree",
     "version": "1.0.0",
@@ -11,7 +11,9 @@
       "package": "com.adziusmaster.smokefree",
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png"
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png",
+        "backgroundColor": "#0E7C86"
       },
       "permissions": [
         "POST_NOTIFICATIONS"
@@ -19,7 +21,8 @@
       "blockedPermissions": [
         "android.permission.INTERNET",
         "android.permission.SYSTEM_ALERT_WINDOW"
-      ]
+      ],
+      "backgroundColor": "#F2F6F7"
     },
     "plugins": [
       "expo-router",
@@ -31,10 +34,26 @@
         {
           "image": "./assets/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#0f3d2e"
+          "backgroundColor": "#F2F6F7",
+          "dark": {
+            "backgroundColor": "#0A1418"
+          }
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Fraunces_600SemiBold.ttf",
+            "./assets/fonts/Manrope_400Regular.ttf",
+            "./assets/fonts/Manrope_500Medium.ttf",
+            "./assets/fonts/Manrope_600SemiBold.ttf",
+            "./assets/fonts/Manrope_700Bold.ttf"
+          ]
+        }
+      ],
+      "./plugins/with-transparent-navigation-bar"
     ],
     "extra": {
       "router": {},

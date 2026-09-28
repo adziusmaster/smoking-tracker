@@ -12,6 +12,8 @@ import {
   UPSERT_CHECKIN,
   UPSERT_MILESTONE_EVENT,
   UPSERT_SETTINGS,
+  INSERT_CRAVING_EVENT,
+  SELECT_CRAVING_EVENTS,
 } from './queries';
 
 let db: Database.Database;
@@ -33,7 +35,7 @@ describe('migrations', () => {
 
     // Assert
     expect(rows.map((r) => r.name).sort()).toEqual([
-      'craving_checkins', 'milestone_events', 'settings', 'slips', 'smoking_periods',
+      'craving_checkins', 'craving_events', 'milestone_events', 'settings', 'slips', 'smoking_periods',
     ]);
   });
 });
@@ -104,8 +106,8 @@ describe('settings', () => {
 describe('slips', () => {
   it('SELECT_SLIPS_multipleRows_returnsMostRecentFirst', () => {
     // Arrange
-    db.prepare(INSERT_SLIP).run('2026-07-04T20:00:00+02:00', 1, null, null, NOW);
-    db.prepare(INSERT_SLIP).run('2026-08-05T22:00:00+02:00', 3, 'alcohol', 'party', NOW);
+    db.prepare(INSERT_SLIP).run('2026-07-04T20:00:00+02:00', 1, null, null, null, NOW);
+    db.prepare(INSERT_SLIP).run('2026-08-05T22:00:00+02:00', 3, 'alcohol', 'party', null, NOW);
 
     // Act
     const rows = db.prepare(SELECT_SLIPS).all() as { occurred_at: string }[];
@@ -116,7 +118,7 @@ describe('slips', () => {
 
   it('INSERT_SLIP_unknownTrigger_isRejected', () => {
     // Arrange & Act
-    const act = () => db.prepare(INSERT_SLIP).run('2026-08-05T22:00:00+02:00', 3, 'peer-pressure', null, NOW);
+    const act = () => db.prepare(INSERT_SLIP).run('2026-08-05T22:00:00+02:00', 3, 'peer-pressure', null, null, NOW);
 
     // Assert
     expect(act).toThrow(/CHECK constraint failed/);
@@ -124,7 +126,7 @@ describe('slips', () => {
 
   it('INSERT_SLIP_zeroCigarettes_isRejected', () => {
     // Arrange & Act
-    const act = () => db.prepare(INSERT_SLIP).run('2026-08-05T22:00:00+02:00', 0, null, null, NOW);
+    const act = () => db.prepare(INSERT_SLIP).run('2026-08-05T22:00:00+02:00', 0, null, null, null, NOW);
 
     // Assert
     expect(act).toThrow(/CHECK constraint failed/);
@@ -234,9 +236,9 @@ describe('migration v2', () => {
     expect(row.smoked_for_months).toBe(0);
   });
 
-  it('SCHEMA_VERSION_afterAddingV3_isThree', () => {
+  it('SCHEMA_VERSION_afterAddingV5_isFive', () => {
     // Arrange & Act & Assert
-    expect(SCHEMA_VERSION).toBe(3);
+    expect(SCHEMA_VERSION).toBe(5);
   });
 
   it('MIGRATIONS_freshDatabase_hasSmokedForMonthsColumn', () => {
@@ -263,7 +265,7 @@ describe('migrationsToApply', () => {
     const selected = migrationsToApply(0);
 
     // Assert
-    expect(selected.map((m) => m.version)).toEqual([1, 2, 3]);
+    expect(selected.map((m) => m.version)).toEqual([1, 2, 3, 4, 5]);
   });
 
   it('migrationsToApply_fromAV1Database_selectsV2AndV3', () => {
@@ -271,7 +273,7 @@ describe('migrationsToApply', () => {
     const selected = migrationsToApply(1);
 
     // Assert
-    expect(selected.map((m) => m.version)).toEqual([2, 3]);
+    expect(selected.map((m) => m.version)).toEqual([2, 3, 4, 5]);
   });
 
   it('migrationsToApply_afterTheWholeSetHasBeenApplied_selectsNothingSoASecondPassIsANoOp', () => {
@@ -313,7 +315,7 @@ describe('DELETE_ALL', () => {
   it('DELETE_ALL_appliedInOrder_emptiesEveryTable', () => {
     // Arrange
     insertSettings();
-    db.prepare(INSERT_SLIP).run('2026-08-05T22:00:00+02:00', 3, 'alcohol', null, NOW);
+    db.prepare(INSERT_SLIP).run('2026-08-05T22:00:00+02:00', 3, 'alcohol', null, null, NOW);
     db.prepare(UPSERT_CHECKIN).run('2026-08-08', 3, 3, null, NOW);
 
     // Act
@@ -355,12 +357,12 @@ describe('migration v3', () => {
     expect(act).toThrow(/CHECK constraint failed/);
   });
 
-  it('migrationsToApply_fromVersionTwo_selectsOnlyVersionThree', () => {
+  it('migrationsToApply_fromVersionTwo_selectsThreeOnwards', () => {
     // Arrange & Act
     const pending = migrationsToApply(2);
 
     // Assert
-    expect(pending.map((m) => m.version)).toEqual([3]);
+    expect(pending.map((m) => m.version)).toEqual([3, 4, 5]);
   });
 
   it('settings_rowWrittenBeforeV3_defaultsToCigarettes', () => {
@@ -377,5 +379,86 @@ describe('migration v3', () => {
     // Assert
     expect(row.product).toBe('cigarettes');
     expect(row.weekly_spend_minor).toBeNull();
+  });
+});
+
+describe('migration v4 — craving events', () => {
+  it('INSERT_CRAVING_EVENT_passedWithActivity_roundTrips', () => {
+    // Arrange
+    db.prepare(INSERT_CRAVING_EVENT).run('2026-09-28T10:00:00.000Z', '2026-09-28T10:04:00.000Z', 'passed', 'blocks', NOW);
+
+    // Act
+    const rows = db.prepare(SELECT_CRAVING_EVENTS).all() as { outcome: string; activity: string | null }[];
+
+    // Assert
+    expect(rows).toEqual([expect.objectContaining({ outcome: 'passed', activity: 'blocks' })]);
+  });
+
+  it('craving_events_unknownOutcome_isRejected', () => {
+    // Arrange & Act
+    const act = () => db.prepare(INSERT_CRAVING_EVENT).run('2026-09-28T10:00:00.000Z', '2026-09-28T10:01:00.000Z', 'maybe', null, NOW);
+
+    // Assert
+    expect(act).toThrow(/CHECK constraint failed/);
+  });
+
+  it('craving_events_unknownActivity_isRejected', () => {
+    // Arrange & Act
+    const act = () => db.prepare(INSERT_CRAVING_EVENT).run('2026-09-28T10:00:00.000Z', '2026-09-28T10:01:00.000Z', 'passed', 'chess', NOW);
+
+    // Assert
+    expect(act).toThrow(/CHECK constraint failed/);
+  });
+
+  it('craving_events_endBeforeStart_isRejected', () => {
+    // Arrange & Act
+    const act = () => db.prepare(INSERT_CRAVING_EVENT).run('2026-09-28T10:05:00.000Z', '2026-09-28T10:01:00.000Z', 'passed', null, NOW);
+
+    // Assert
+    expect(act).toThrow(/CHECK constraint failed/);
+  });
+
+  it('SELECT_CRAVING_EVENTS_twoEvents_returnsNewestFirst', () => {
+    // Arrange
+    db.prepare(INSERT_CRAVING_EVENT).run('2026-09-27T10:00:00.000Z', '2026-09-27T10:04:00.000Z', 'passed', null, NOW);
+    db.prepare(INSERT_CRAVING_EVENT).run('2026-09-28T10:00:00.000Z', '2026-09-28T10:04:00.000Z', 'slipped', null, NOW);
+
+    // Act
+    const rows = db.prepare(SELECT_CRAVING_EVENTS).all() as { started_at: string }[];
+
+    // Assert
+    expect(rows.map((r) => r.started_at)).toEqual(['2026-09-28T10:00:00.000Z', '2026-09-27T10:00:00.000Z']);
+  });
+});
+
+describe('migration v5 — slip product', () => {
+  it('INSERT_SLIP_withProduct_roundTrips', () => {
+    // Arrange
+    db.prepare(INSERT_SLIP).run('2026-09-28T10:00:00.000Z', 2, null, null, 'cigarettes', NOW);
+
+    // Act
+    const rows = db.prepare(SELECT_SLIPS).all() as { product: string | null }[];
+
+    // Assert
+    expect(rows[0]?.product).toBe('cigarettes');
+  });
+
+  it('INSERT_SLIP_withoutProduct_storesNullMeaningTheUsersOwnProduct', () => {
+    // Arrange
+    db.prepare(INSERT_SLIP).run('2026-09-28T10:00:00.000Z', 2, null, null, null, NOW);
+
+    // Act
+    const rows = db.prepare(SELECT_SLIPS).all() as { product: string | null }[];
+
+    // Assert
+    expect(rows[0]?.product).toBeNull();
+  });
+
+  it('INSERT_SLIP_unknownProduct_isRejected', () => {
+    // Arrange & Act
+    const act = () => db.prepare(INSERT_SLIP).run('2026-09-28T10:00:00.000Z', 2, null, null, 'cigars', NOW);
+
+    // Assert
+    expect(act).toThrow(/CHECK constraint failed/);
   });
 });

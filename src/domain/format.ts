@@ -43,3 +43,4 @@ export function formatCount(value: number): string {
 export function fillUnitTokens(text: string, unit: UnitWords): string {
   return text.replaceAll('{units}', unit.many).replaceAll('{unit}', unit.one);
 }
+

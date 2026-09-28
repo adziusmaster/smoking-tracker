@@ -1,7 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { formatMilestoneDate } from '@/domain/format';
 import type { MilestoneState, SlipBehavior } from '@/domain/types';
-import { theme } from './theme';
+import { Caption, Card, Eyebrow, ProgressBar } from './kit';
+import { SourceLinks } from './SourceLinks';
+import { makeStyles } from './theme';
 
 // Keyed by the exact SlipBehavior union (not a bare `Record<string, string>`), so indexing
 // with `milestone.slipBehavior` is exhaustively covered and never yields `undefined` under
@@ -12,7 +14,20 @@ const BEHAVIOUR_LABEL: Record<SlipBehavior, string> = {
   qualitative: 'No fixed timeline',
 };
 
+const useStyles = makeStyles((t) =>
+  StyleSheet.create({
+    future: { opacity: 0.6 },
+    title: { fontFamily: t.family.semi, fontSize: t.font.body, lineHeight: 21, color: t.color.ink },
+    body: { fontFamily: t.family.body, fontSize: t.font.small, lineHeight: 19, color: t.color.muted },
+    footer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: t.space.xs, marginTop: t.space.xs },
+    compact: { flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: 4 },
+    tick: { fontFamily: t.family.bold, fontSize: t.font.small, color: t.color.accentText },
+    compactText: { flex: 1, fontFamily: t.family.medium, fontSize: t.font.small, color: t.color.muted },
+  }),
+);
+
 export function MilestoneNode(props: { state: MilestoneState; compact: boolean }) {
+  const styles = useStyles();
   const { state, compact } = props;
   const { milestone, status } = state;
 
@@ -28,61 +43,35 @@ export function MilestoneNode(props: { state: MilestoneState; compact: boolean }
     );
   }
 
-  const cardStyle = [
-    styles.card,
-    status === 'reached' && styles.cardDone,
-    status === 'in-progress' && styles.cardActive,
-    status === 'future' && styles.cardFuture,
-  ];
+  const statusLine =
+    (status === 'in-progress' ? 'Happening now' : status === 'reached' ? 'Reached' : 'Ahead of you') +
+    (state.projectedAt && status === 'future' ? ` · ${formatMilestoneDate(state.projectedAt)}` : '') +
+    (state.reachedAt && status === 'reached' ? ` · ${formatMilestoneDate(state.reachedAt)}` : '');
 
   return (
-    <View style={styles.node}>
-      <View style={[styles.dot, status === 'reached' && styles.dotDone, status === 'in-progress' && styles.dotActive]} />
-      <View style={cardStyle}>
-        <Text style={styles.time}>
-          {status === 'in-progress' ? 'Happening now' : status === 'reached' ? 'Reached' : 'Ahead of you'}
-          {state.projectedAt && status === 'future' ? ` · ${formatMilestoneDate(state.projectedAt)}` : ''}
-          {state.reachedAt && status === 'reached' ? ` · ${formatMilestoneDate(state.reachedAt)}` : ''}
-        </Text>
-        <Text style={styles.title}>{milestone.title}</Text>
-        {milestone.body ? <Text style={styles.body}>{milestone.body}</Text> : null}
+    <Card
+      tone={status === 'in-progress' ? 'now' : status === 'reached' ? 'done' : 'plain'}
+      style={status === 'future' ? styles.future : undefined}
+    >
+      <Eyebrow tone={status === 'in-progress' ? 'achieve' : 'faint'}>{statusLine}</Eyebrow>
+      <Text style={styles.title}>{milestone.title}</Text>
+      {milestone.body ? <Text style={styles.body}>{milestone.body}</Text> : null}
 
-        {state.progress !== null ? (
-          <View style={styles.bar}>
-            <View style={[styles.barFill, { width: `${Math.round(state.progress * 100)}%` }]} />
-          </View>
-        ) : null}
+      {state.progress !== null ? (
+        <ProgressBar progress={state.progress} accessibilityLabel={`${milestone.title} progress`} />
+      ) : null}
 
-        {state.conservativelyAnchored ? (
-          <Text style={styles.note}>
-            Measured in people who quit smoking. Counted from your final quit date, which is conservative if
-            you stopped cigarettes earlier.
-          </Text>
-        ) : null}
+      {state.conservativelyAnchored ? (
+        <Caption tone="faint">
+          Measured in people who quit smoking. Counted from your final quit date, which is conservative if you
+          stopped cigarettes earlier.
+        </Caption>
+      ) : null}
 
-        <Text style={styles.badge}>{BEHAVIOUR_LABEL[milestone.slipBehavior]}</Text>
+      <View style={styles.footer}>
+        <Caption tone="faint">{BEHAVIOUR_LABEL[milestone.slipBehavior]}</Caption>
       </View>
-    </View>
+      <SourceLinks ids={[milestone.sourceId]} />
+    </Card>
   );
 }
-
-const styles = StyleSheet.create({
-  node: { flexDirection: 'row', gap: theme.space.md, marginBottom: theme.space.md },
-  dot: { width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: theme.color.border, backgroundColor: theme.color.surface, marginTop: theme.space.md },
-  dotDone: { backgroundColor: theme.color.done, borderColor: theme.color.done },
-  dotActive: { backgroundColor: theme.color.active, borderColor: theme.color.active },
-  card: { flex: 1, borderWidth: 1, borderColor: theme.color.border, borderRadius: theme.radius.md, padding: theme.space.md, backgroundColor: theme.color.surface },
-  cardDone: { backgroundColor: theme.color.doneBg, borderColor: theme.color.doneBorder },
-  cardActive: { backgroundColor: theme.color.activeBg, borderColor: theme.color.activeBorder, borderWidth: 2 },
-  cardFuture: { opacity: 0.55 },
-  time: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, color: theme.color.textFaint },
-  title: { fontSize: theme.font.small, fontWeight: '600', color: theme.color.text, marginTop: 2, marginBottom: 3 },
-  body: { fontSize: theme.font.tiny, color: theme.color.textMuted, lineHeight: 16 },
-  bar: { height: 4, backgroundColor: theme.color.border, borderRadius: 3, marginTop: theme.space.sm, overflow: 'hidden' },
-  barFill: { height: '100%', backgroundColor: theme.color.active },
-  badge: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4, color: theme.color.textFaint, marginTop: theme.space.sm },
-  note: { fontSize: 10, color: theme.color.textFaint, lineHeight: 14, marginTop: theme.space.sm },
-  compact: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm, paddingVertical: 5 },
-  tick: { color: theme.color.done, fontWeight: '700', fontSize: theme.font.small },
-  compactText: { flex: 1, fontSize: theme.font.tiny, color: theme.color.textMuted },
-});

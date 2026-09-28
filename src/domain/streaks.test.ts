@@ -9,6 +9,7 @@ const state = (periods: SmokingPeriod[] = []): QuitState => ({
   settings: cigaretteSettings({ quitDate: QUIT, cigaretteHistory: null }),
   slips: [],
   periods,
+  cravingEvents: [],
 });
 
 const period = (startedAt: string, endedAt: string | null): SmokingPeriod => ({

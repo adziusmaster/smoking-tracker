@@ -1,12 +1,15 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
-import type { QuitState, Settings, Slip, SlipTrigger, SmokingPeriod } from '@/domain/types';
+import type { ActivityId, CravingEvent, ProductId, QuitState, Settings, Slip, SlipTrigger, SmokingPeriod } from '@/domain/types';
 import { readableSettingsOrRaw, rowToSettings, settingsToParams, type SettingsRow } from './settingsMapping';
 import {
   DELETE_ALL,
   END_OPEN_SMOKING_PERIOD,
+  INSERT_CRAVING_EVENT,
   INSERT_SLIP,
   INSERT_SMOKING_PERIOD,
   SELECT_CHECKINS,
+  COUNT_CRAVINGS_BEATEN,
+  SELECT_CRAVING_EVENTS,
   SELECT_SETTINGS,
   SELECT_SLIPS,
   SELECT_SMOKING_PERIODS,
@@ -29,6 +32,7 @@ interface SlipRow {
   cigarette_count: number;
   trigger: SlipTrigger | null;
   note: string | null;
+  product: ProductId | null;
 }
 
 interface PeriodRow {
@@ -37,6 +41,14 @@ interface PeriodRow {
   ended_at: string | null;
   average_cigarettes_per_day: number;
   note: string | null;
+}
+
+interface CravingRow {
+  id: number;
+  started_at: string;
+  ended_at: string;
+  outcome: CravingEvent['outcome'];
+  activity: ActivityId | null;
 }
 
 export interface CheckinRow {
@@ -61,6 +73,7 @@ export async function loadQuitState(db: SQLiteDatabase): Promise<QuitState | nul
     unitCount: row.cigarette_count,
     trigger: row.trigger,
     note: row.note,
+    product: row.product,
   }));
 
   const periods: SmokingPeriod[] = periodRows.map((row) => ({
@@ -71,7 +84,16 @@ export async function loadQuitState(db: SQLiteDatabase): Promise<QuitState | nul
     note: row.note,
   }));
 
-  return { settings, slips, periods };
+  const cravingRows = await db.getAllAsync<CravingRow>(SELECT_CRAVING_EVENTS);
+  const cravingEvents: CravingEvent[] = cravingRows.map((row) => ({
+    id: row.id,
+    startedAt: row.started_at,
+    endedAt: row.ended_at,
+    outcome: row.outcome,
+    activity: row.activity,
+  }));
+
+  return { settings, slips, periods, cravingEvents };
 }
 
 export async function saveSettings(db: SQLiteDatabase, settings: Settings, now: Date): Promise<void> {
@@ -81,10 +103,10 @@ export async function saveSettings(db: SQLiteDatabase, settings: Settings, now: 
 
 export async function addSlip(
   db: SQLiteDatabase,
-  input: { occurredAt: string; unitCount: number; trigger: SlipTrigger | null; note: string | null },
+  input: { occurredAt: string; unitCount: number; trigger: SlipTrigger | null; note: string | null; product: ProductId | null },
   now: Date,
 ): Promise<void> {
-  await db.runAsync(INSERT_SLIP, input.occurredAt, input.unitCount, input.trigger, input.note, now.toISOString());
+  await db.runAsync(INSERT_SLIP, input.occurredAt, input.unitCount, input.trigger, input.note, input.product, now.toISOString());
 }
 
 export async function startSmokingPeriod(
@@ -97,6 +119,36 @@ export async function startSmokingPeriod(
 
 export async function endSmokingPeriod(db: SQLiteDatabase, endedAt: string): Promise<void> {
   await db.runAsync(END_OPEN_SMOKING_PERIOD, endedAt);
+}
+
+export async function addCravingEvent(
+  db: SQLiteDatabase,
+  input: { startedAt: string; endedAt: string; outcome: CravingEvent['outcome']; activity: ActivityId | null },
+  now: Date,
+): Promise<void> {
+  await db.runAsync(INSERT_CRAVING_EVENT, input.startedAt, input.endedAt, input.outcome, input.activity, now.toISOString());
+}
+
+/** Passed craving events, read straight from the database so the number shown is never a guess. */
+export async function countCravingsBeaten(db: SQLiteDatabase): Promise<number> {
+  const row = await db.getFirstAsync<{ beaten: number }>(COUNT_CRAVINGS_BEATEN);
+  return row?.beaten ?? 0;
+}
+
+/**
+ * A slip logged from SOS writes two rows. They commit together or not at all, so a failure
+ * never leaves a saved slip behind a "nothing was recorded" message that invites a retry.
+ */
+export async function logSlipAfterCraving(
+  db: SQLiteDatabase,
+  slip: { occurredAt: string; unitCount: number; trigger: SlipTrigger | null; note: string | null; product: ProductId | null },
+  craving: { startedAt: string; endedAt: string; outcome: CravingEvent['outcome']; activity: ActivityId | null },
+  now: Date,
+): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    await addSlip(db, slip, now);
+    await addCravingEvent(db, craving, now);
+  });
 }
 
 export async function recordMilestoneReached(db: SQLiteDatabase, milestoneId: string, reachedAt: string): Promise<void> {

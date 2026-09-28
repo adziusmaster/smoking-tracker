@@ -93,6 +93,32 @@ export const MIGRATIONS: Migration[] = [
         CHECK (prior_cigarettes_per_day > 0);
     `,
   },
+  {
+    version: 4,
+    up: `
+      -- One row per craving SOS that ended with an answer. Leaving SOS without one records
+      -- nothing. "passed" rows are the "cravings beaten" count on the home screen.
+      CREATE TABLE craving_events (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        started_at  TEXT NOT NULL,
+        ended_at    TEXT NOT NULL,
+        outcome     TEXT NOT NULL CHECK (outcome IN ('passed','slipped')),
+        activity    TEXT     NULL CHECK (activity IN ('breathe','blocks','memory','bubbles','grounding','water')),
+        created_at  TEXT NOT NULL,
+        CHECK (ended_at >= started_at)
+      );
+    `,
+  },
+  {
+    version: 5,
+    up: `
+      -- What the slip was. NULL means the user's own product, which is what every slip before
+      -- this column meant. A slip of any product restarts the fast clocks; only own-product
+      -- slips come off "units not used" and money saved.
+      ALTER TABLE slips ADD COLUMN product TEXT NULL
+        CHECK (product IN ('cigarettes','roll-your-own','heated','vape','snus','pouches'));
+    `,
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]?.version ?? 0;

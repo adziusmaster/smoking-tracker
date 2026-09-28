@@ -55,6 +55,8 @@ export interface Slip {
   unitCount: number;
   trigger: SlipTrigger | null;
   note: string | null;
+  /** What was used; null means the user's own product (every slip logged before this field). */
+  product: ProductId | null;
 }
 
 export interface SmokingPeriod {
@@ -65,11 +67,24 @@ export interface SmokingPeriod {
   note: string | null;
 }
 
+export type ActivityId = 'breathe' | 'blocks' | 'memory' | 'bubbles' | 'grounding' | 'water';
+
+/** One use of the craving SOS that ended with an answer. Leaving SOS without one records nothing. */
+export interface CravingEvent {
+  id: number;
+  startedAt: string;
+  endedAt: string;
+  outcome: 'passed' | 'slipped';
+  /** The last activity used, if any. */
+  activity: ActivityId | null;
+}
+
 /** Every stored fact the domain needs. */
 export interface QuitState {
   settings: Settings;
   slips: Slip[];
   periods: SmokingPeriod[];
+  cravingEvents: CravingEvent[];
 }
 
 export interface Elapsed {
@@ -162,6 +177,8 @@ export interface Phase {
   howToCopeSmokeOnly: readonly string[];
   /** Replaces name for non-combustible products ("Non-Smoker" → "Nicotine-Free"). */
   nameNicotine: string | null;
+  /** Source ids the phase copy relies on; rendered as links. */
+  sources: readonly string[];
 }
 
 export interface UnitWords {
@@ -173,6 +190,7 @@ export interface TipContent {
   whatsHappening: string;
   whyYouFeelThisWay: string;
   howToCope: readonly string[];
+  sourceIds: readonly string[];
 }
 
 /** The post-slip tip set. Its first line names carbon monoxide, hence the variants. */
@@ -180,6 +198,7 @@ export interface DangerTips {
   whatsHappening: CopyVariants<string>;
   whyYouFeelThisWay: string;
   howToCope: readonly string[];
+  sources: readonly string[];
 }
 
 export interface DangerWindow {

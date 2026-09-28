@@ -10,9 +10,9 @@ const NOW = new Date('2026-08-08T08:00:00+02:00');
 const CIG = { one: 'cigarette', many: 'cigarettes' };
 
 const phases: Phase[] = [
-  { id: 'crash', name: 'The Crash', startMs: 0, endMs: 3 * MS_PER_DAY, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [] },
-  { id: 'fog', name: 'The Fog', startMs: 3 * MS_PER_DAY, endMs: 28 * MS_PER_DAY, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [] },
-  { id: 'consolidation', name: 'Consolidation', startMs: 28 * MS_PER_DAY, endMs: null, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [] },
+  { id: 'crash', name: 'The Crash', startMs: 0, endMs: 3 * MS_PER_DAY, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [], sources: [] },
+  { id: 'fog', name: 'The Fog', startMs: 3 * MS_PER_DAY, endMs: 28 * MS_PER_DAY, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [], sources: [] },
+  { id: 'consolidation', name: 'Consolidation', startMs: 28 * MS_PER_DAY, endMs: null, whatsHappening: '', whyYouFeelThisWay: '', howToCope: ['x'], nameNicotine: null, whatsHappeningNicotine: '', whatsHappeningOral: null, howToCopeSmokeOnly: [], sources: [] },
 ];
 
 const milestones: Milestone[] = [
@@ -24,7 +24,7 @@ const milestones: Milestone[] = [
 const state: QuitState = {
   settings: cigaretteSettings({ quitDate: QUIT }),
   slips: [],
-  periods: [],
+  periods: [], cravingEvents: [],
 };
 
 describe('buildTimeline', () => {
@@ -73,7 +73,7 @@ describe('buildTimeline', () => {
     // Arrange — slip 10 hours before now, so the 24 h CO milestone is unreached again
     const withSlip: QuitState = {
       ...state,
-      slips: [{ id: 1, occurredAt: '2026-08-07T22:00:00+02:00', unitCount: 3, trigger: 'alcohol', note: null }],
+      slips: [{ id: 1, occurredAt: '2026-08-07T22:00:00+02:00', unitCount: 3, trigger: 'alcohol', note: null, product: null }],
     };
 
     // Act
@@ -124,7 +124,7 @@ describe('buildTimeline', () => {
 
 describe('buildTimeline by product', () => {
   const buildReal = (settings: Settings, now: Date = NOW): TimelineViewModel =>
-    buildTimeline({ state: { settings, slips: [], periods: [] }, milestones: MILESTONES, phases: PHASES, dangerTips: DANGER_WINDOW_TIPS, unit: CIG, now });
+    buildTimeline({ state: { settings, slips: [], periods: [], cravingEvents: [] }, milestones: MILESTONES, phases: PHASES, dangerTips: DANGER_WINDOW_TIPS, unit: CIG, now });
   const ids = (vm: TimelineViewModel) => vm.chapters.flatMap((c) => c.milestones.map((s) => s.milestone.id));
   const find = (vm: TimelineViewModel, id: string) => vm.chapters.flatMap((c) => c.milestones).find((s) => s.milestone.id === id);
   const heatedSwitcher = cigaretteSettings({ quitDate: QUIT, product: 'heated', cigaretteHistory: { months: 60, cigarettesPerDay: 10 } });
@@ -211,8 +211,8 @@ describe('buildTimeline tips', () => {
     const settings = cigaretteSettings({ quitDate: QUIT, product: 'vape', cost: { kind: 'weekly', weeklySpendMinor: 1500 }, cigaretteHistory: null });
     const withSlip: QuitState = {
       settings,
-      slips: [{ id: 1, occurredAt: '2026-08-07T22:00:00+02:00', unitCount: 1, trigger: null, note: null }],
-      periods: [],
+      slips: [{ id: 1, occurredAt: '2026-08-07T22:00:00+02:00', unitCount: 1, trigger: null, note: null, product: null }],
+      periods: [], cravingEvents: [],
     };
 
     // Act

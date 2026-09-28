@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  slipProductOptions,
   applicableMilestones,
   audienceIncludes,
   hasSmokingHistory,
@@ -163,5 +164,23 @@ describe('pickVariant', () => {
     // Assert
     expect(smoker).toBe('CO');
     expect(switcher).toBe('nicotine');
+  });
+});
+
+describe('slipProductOptions', () => {
+  it('slipProductOptions_heatedUser_offersEveryProductWithPouchesLast', () => {
+    // Arrange & Act
+    const options = slipProductOptions('heated');
+
+    // Assert
+    expect(options).toEqual(['cigarettes', 'roll-your-own', 'heated', 'vape', 'pouches']);
+  });
+
+  it('slipProductOptions_snusUser_offersSnusInPlaceOfPouches', () => {
+    // Arrange & Act
+    const options = slipProductOptions('snus');
+
+    // Assert
+    expect(options).toEqual(['cigarettes', 'roll-your-own', 'heated', 'vape', 'snus']);
   });
 });

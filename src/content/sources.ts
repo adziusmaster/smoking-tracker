@@ -138,4 +138,10 @@ export const SOURCES: Record<string, Source> = {
     url: 'https://www.fda.gov/tobacco-products/ctp-newsroom/fda-authorizes-20-zyn-nicotine-pouches-be-marketed-specific-modified-risk-claim',
     tier: 'a',
   },
+  'tetris-cravings': {
+    id: 'tetris-cravings',
+    label: 'Skorka-Brown et al. — Playing Tetris decreases drug and other cravings in real world settings (Addictive Behaviors, 2015)',
+    url: 'https://pubmed.ncbi.nlm.nih.gov/26275843/',
+    tier: 'a',
+  },
 };

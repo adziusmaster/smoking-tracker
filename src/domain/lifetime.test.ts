@@ -64,3 +64,4 @@ describe('estimateCigarettesBeforeQuitting', () => {
     expect(result).toBe(3_653);
   });
 });
+

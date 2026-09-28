@@ -1,61 +1,102 @@
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { addSlip } from '@/data/repositories';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { addCravingEvent, countCravingsBeaten, logSlipAfterCraving } from '@/data/repositories';
 import { PRODUCT_CONTENT } from '@/content/products';
-import { SLIP_REASSURANCE, SOS_STEPS } from '@/content/sos';
-import { fillUnitTokens, formatCount } from '@/domain/format';
+import { ACTIVITIES, SLIP_BUTTON, SLIP_REASSURANCE, SOS_STEPS } from '@/content/sos';
+import { fillUnitTokens } from '@/domain/format';
 import { parseNonNegativeInt } from '@/domain/parse';
-import { pickVariant } from '@/domain/products';
-import { lifetimeAfterSlip } from '@/domain/savings';
-import type { SlipTrigger } from '@/domain/types';
-import { theme } from '@/ui/theme';
+import { variantForProduct } from '@/domain/products';
+import type { ActivityId, ProductId, SlipTrigger } from '@/domain/types';
+import { Body, Button, Chip, Eyebrow, Field, Label, ProgressRing, Screen, Title } from '@/ui/kit';
+import { ActivityPicker } from '@/ui/sos/ActivityPicker';
+import { BlockDrop } from '@/ui/sos/BlockDrop';
+import { BreatheGuide } from '@/ui/sos/BreatheGuide';
+import { BubblePop } from '@/ui/sos/BubblePop';
+import { CravingBar } from '@/ui/sos/CravingBar';
+import { Grounding } from '@/ui/sos/Grounding';
+import { MemoryPairs } from '@/ui/sos/MemoryPairs';
+import { SlipProductPicker } from '@/ui/SlipProductPicker';
+import { WaterStep } from '@/ui/sos/WaterStep';
+import { makeStyles } from '@/ui/theme';
 import { useQuitState } from '@/ui/useQuitState';
 import { useSubmitGuard } from '@/ui/useSubmitGuard';
 
 const TRIGGERS: SlipTrigger[] = ['alcohol', 'stress', 'social', 'boredom', 'routine', 'other'];
+const DELAY = SOS_STEPS.find((step) => step.id === 'delay');
+const WATER = SOS_STEPS.find((step) => step.id === 'drink');
+const DELAY_SECONDS = DELAY?.seconds ?? 60;
+
+type Mode = 'delay' | 'pick' | ActivityId;
 
 export default function Sos() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const styles = useStyles();
+  const { height: windowHeight } = useWindowDimensions();
   const { state } = useQuitState();
 
-  const [stepIndex, setStepIndex] = useState(0);
-  const [remaining, setRemaining] = useState(SOS_STEPS[0]?.seconds ?? 60);
+  // When the craving started: the five-minute bar and the recorded event both count from here.
+  const startedAt = useRef(new Date().toISOString()).current;
+  const [mode, setMode] = useState<Mode>('delay');
+  const [lastActivity, setLastActivity] = useState<ActivityId | null>(null);
+  const [delayLeft, setDelayLeft] = useState(DELAY_SECONDS);
   const [outcome, setOutcome] = useState<'running' | 'passed' | 'slipped'>('running');
+  const [beatenNow, setBeatenNow] = useState<number | null>(null);
   const [count, setCount] = useState('1');
   const [trigger, setTrigger] = useState<SlipTrigger | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const { submitting, run } = useSubmitGuard();
-  // Cigarette wording until the stored product has loaded — the screen must work instantly.
-  const content = PRODUCT_CONTENT[state?.settings.product ?? 'cigarettes'];
-  const slipUnits = content.countsSlips ? Math.max(1, parseNonNegativeInt(count) ?? 1) : 1;
+  // The user's own product (cigarettes until the stored one has loaded — the screen must work
+  // instantly), and what the slip was, which can be anything: an IQOS quitter can slip on a cigarette.
+  const own: ProductId = state?.settings.product ?? 'cigarettes';
+  const content = PRODUCT_CONTENT[own];
+  const [slipChoice, setSlipChoice] = useState<ProductId | null>(null);
+  const slipProduct = slipChoice ?? own;
+  const slipContent = PRODUCT_CONTENT[slipProduct];
+  const slipUnits = slipContent.countsSlips ? Math.max(1, parseNonNegativeInt(count) ?? 1) : 1;
+  const ringSize = Math.round(Math.min(200, Math.max(140, windowHeight * 0.26)));
 
   useEffect(() => {
-    if (outcome !== 'running') return;
-    const id = setInterval(() => setRemaining((value) => value - 1), 1000);
+    if (mode !== 'delay' || outcome !== 'running') return;
+    const id = setInterval(() => setDelayLeft((value) => value - 1), 1000);
     return () => clearInterval(id);
-  }, [outcome]);
+  }, [mode, outcome]);
 
   useEffect(() => {
-    if (remaining > 0) return;
-    const next = stepIndex + 1;
-    if (next < SOS_STEPS.length) {
-      setStepIndex(next);
-      setRemaining(SOS_STEPS[next]?.seconds ?? 60);
-    } else {
+    if (mode === 'delay' && delayLeft <= 0) setMode('pick');
+  }, [mode, delayLeft]);
+
+  const choose = (activity: ActivityId) => {
+    setLastActivity(activity);
+    setMode(activity);
+  };
+
+  const markPassed = () =>
+    run(async () => {
+      setFailure(null);
+      try {
+        await addCravingEvent(db, { startedAt, endedAt: new Date().toISOString(), outcome: 'passed', activity: lastActivity }, new Date());
+        setBeatenNow(await countCravingsBeaten(db));
+      } catch {
+        // The craving still passed; failing to record it must not take that away.
+        setBeatenNow(null);
+      }
       setOutcome('passed');
-    }
-  }, [remaining, stepIndex]);
+    });
 
   const logSlip = () =>
     run(async () => {
       setFailure(null);
       try {
-        await addSlip(db, { occurredAt: new Date().toISOString(), unitCount: slipUnits, trigger, note: null }, new Date());
+        const now = new Date();
+        await logSlipAfterCraving(
+          db,
+          { occurredAt: now.toISOString(), unitCount: slipUnits, trigger, note: null, product: slipProduct },
+          { startedAt, endedAt: now.toISOString(), outcome: 'slipped', activity: lastActivity },
+          now,
+        );
         router.replace('/');
       } catch {
         setFailure('Couldn’t save that. Nothing was recorded — try again, and it still counts as logged honestly.');
@@ -63,114 +104,118 @@ export default function Sos() {
     });
 
   if (outcome === 'slipped') {
-    const lifetime = state ? lifetimeAfterSlip(state, slipUnits, new Date()) : null;
-    const reassurance = state ? pickVariant(SLIP_REASSURANCE, state.settings) : SLIP_REASSURANCE.smoke;
+    const reassurance = variantForProduct(SLIP_REASSURANCE, slipProduct);
 
     return (
-      <ScrollView contentContainerStyle={[styles.page, { paddingTop: insets.top + theme.space.xl }]}>
-        <Text style={styles.h1}>Alright. Let’s log it accurately.</Text>
-        <Text style={styles.body}>{fillUnitTokens(reassurance, content.unit)}</Text>
-        {lifetime !== null ? (
-          <Text style={styles.body}>
-            That brings your estimated lifetime cigarette total to {formatCount(lifetime)}.
-          </Text>
+      <Screen>
+        <Title>Alright. Let’s log it accurately.</Title>
+        <Body tone="muted">{fillUnitTokens(reassurance, slipContent.unit)}</Body>
+        <SlipProductPicker own={own} value={slipProduct} onChange={setSlipChoice} />
+        {slipContent.countsSlips ? (
+          <Field
+            label={`How many ${slipContent.unit.many}?`}
+            value={count}
+            onChangeText={setCount}
+            keyboardType="number-pad"
+            accessibilityLabel={`Number of ${slipContent.unit.many}`}
+          />
         ) : null}
 
-        {content.countsSlips ? (
-          <>
-            <Text style={styles.label}>How many {content.unit.many}?</Text>
-            <TextInput
-              style={styles.input}
-              value={count}
-              onChangeText={setCount}
-              keyboardType="number-pad"
-              accessibilityLabel={`Number of ${content.unit.many}`}
-            />
-          </>
-        ) : null}
-
-        <Text style={styles.label}>What set it off? (optional)</Text>
+        <Label>What set it off? (optional)</Label>
         <View style={styles.chips}>
           {TRIGGERS.map((option) => (
-            <Pressable
-              key={option}
-              onPress={() => setTrigger(trigger === option ? null : option)}
-              style={[styles.chip, trigger === option && styles.chipActive]}
-            >
-              <Text style={[styles.chipText, trigger === option && styles.chipTextActive]}>{option}</Text>
-            </Pressable>
+            <Chip key={option} label={option} selected={trigger === option} onPress={() => setTrigger(trigger === option ? null : option)} />
           ))}
         </View>
 
-        <Pressable style={[styles.cta, submitting && styles.ctaDisabled]} onPress={logSlip} disabled={submitting}>
-          <Text style={styles.ctaText}>Log it and carry on</Text>
-        </Pressable>
-
-        {failure ? <Text style={styles.failure}>{failure}</Text> : null}
-      </ScrollView>
+        <Button label="Log it and carry on" onPress={logSlip} disabled={submitting} />
+        {failure ? <Body tone="danger">{failure}</Body> : null}
+      </Screen>
     );
   }
 
   if (outcome === 'passed') {
     return (
-      <View style={[styles.page, styles.centered, { paddingTop: insets.top + theme.space.xl }]}>
-        <Text style={styles.h1}>It passed.</Text>
-        <Text style={styles.body}>
-          That is what cravings do — five minutes, every time, whether you feed them or not. You now have
-          direct evidence of that, which is worth more than anything this app can tell you.
-        </Text>
-        <Pressable style={styles.cta} onPress={() => router.replace('/')}>
-          <Text style={styles.ctaText}>Back to the timeline</Text>
-        </Pressable>
-      </View>
+      <Screen scroll={false} centered>
+        <Title>It passed.</Title>
+        {beatenNow !== null ? (
+          <Text style={styles.beaten}>
+            That’s {beatenNow} {beatenNow === 1 ? 'craving' : 'cravings'} beaten.
+          </Text>
+        ) : null}
+        <Body tone="muted">
+          That is what cravings do — a few minutes, every time, whether you feed them or not. You now have direct
+          evidence of that, which is worth more than anything this app can tell you.
+        </Body>
+        <Button label="Back to the timeline" onPress={() => router.replace('/')} />
+      </Screen>
     );
   }
 
-  const step = SOS_STEPS[stepIndex];
+  const activity = ACTIVITIES.find((a) => a.id === mode);
 
   return (
-    <View style={[styles.page, { paddingTop: insets.top + theme.space.xl }]}>
-      <Text style={styles.stepCount}>Step {stepIndex + 1} of {SOS_STEPS.length}</Text>
-      <Text style={styles.h1}>{step?.heading}</Text>
-      <Text style={styles.timer}>{Math.max(0, remaining)}</Text>
-      <Text style={styles.body}>{step ? fillUnitTokens(step.instruction, content.unit) : null}</Text>
+    <Screen
+      footerSpace={140}
+      footer={
+        <View style={styles.actions}>
+          <Button label="It’s passed, I’m fine" onPress={markPassed} disabled={submitting} />
+          <Button label={SLIP_BUTTON} variant="quiet" onPress={() => setOutcome('slipped')} />
+        </View>
+      }
+    >
+      <CravingBar startedAt={startedAt} />
 
-      <View style={{ flex: 1 }} />
+      {mode === 'delay' ? (
+        <>
+          <Eyebrow>First, wait one minute</Eyebrow>
+          <Title>{DELAY?.heading ?? 'Delay'}</Title>
+          <View style={styles.ringWrap} accessible accessibilityLabel={`${Math.max(0, delayLeft)} seconds left`}>
+            <ProgressRing progress={Math.max(0, delayLeft) / DELAY_SECONDS} size={ringSize} thickness={12}>
+              <Text style={styles.seconds}>{Math.max(0, delayLeft)}</Text>
+            </ProgressRing>
+          </View>
+          <Body tone="muted">{DELAY ? fillUnitTokens(DELAY.instruction, content.unit) : null}</Body>
+          <Button label="Skip the wait" variant="secondary" onPress={() => setMode('pick')} />
+        </>
+      ) : null}
 
-      <Pressable style={styles.secondary} onPress={() => setOutcome('passed')}>
-        <Text style={styles.secondaryText}>It’s passed, I’m fine</Text>
-      </Pressable>
-      <Pressable style={styles.tertiary} onPress={() => setOutcome('slipped')}>
-        <Text style={styles.tertiaryText}>{content.slipVerb}</Text>
-      </Pressable>
-    </View>
+      {mode === 'pick' ? (
+        <>
+          <Eyebrow>Ride it out</Eyebrow>
+          <Title>Pick something to do</Title>
+          <ActivityPicker onPick={choose} />
+        </>
+      ) : null}
+
+      {activity ? (
+        <>
+          <View style={styles.activityHead}>
+            <View style={{ flex: 1 }}>
+              <Eyebrow>Ride it out</Eyebrow>
+              <Title>{activity.title}</Title>
+            </View>
+            <Button label="Try something else" variant="quiet" onPress={() => setMode('pick')} />
+          </View>
+          {mode === 'breathe' ? <BreatheGuide /> : null}
+          {mode === 'blocks' ? <BlockDrop /> : null}
+          {mode === 'memory' ? <MemoryPairs /> : null}
+          {mode === 'bubbles' ? <BubblePop /> : null}
+          {mode === 'grounding' ? <Grounding /> : null}
+          {mode === 'water' ? <WaterStep instruction={WATER ? fillUnitTokens(WATER.instruction, content.unit) : ''} /> : null}
+        </>
+      ) : null}
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  page: { flex: 1, padding: theme.space.lg, gap: theme.space.md, backgroundColor: theme.color.bg },
-  centered: { justifyContent: 'center' },
-  stepCount: { fontSize: theme.font.tiny, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, color: theme.color.textFaint },
-  h1: { fontSize: theme.font.title, fontWeight: '700', color: theme.color.text },
-  timer: { fontSize: 64, fontWeight: '700', color: theme.color.heroBg, letterSpacing: -2 },
-  body: { fontSize: theme.font.body, color: theme.color.textMuted, lineHeight: 22 },
-  label: { fontSize: theme.font.small, fontWeight: '600', color: theme.color.text, marginTop: theme.space.md },
-  input: {
-    borderWidth: 1, borderColor: theme.color.border, borderRadius: theme.radius.md,
-    backgroundColor: theme.color.surface, paddingHorizontal: theme.space.md,
-    paddingVertical: theme.space.sm, fontSize: theme.font.body, color: theme.color.text,
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.sm },
-  chip: { borderWidth: 1, borderColor: theme.color.border, borderRadius: theme.radius.pill, paddingHorizontal: theme.space.md, paddingVertical: 6, backgroundColor: theme.color.surface },
-  chipActive: { backgroundColor: theme.color.heroBg, borderColor: theme.color.heroBg },
-  chipText: { fontSize: theme.font.tiny, color: theme.color.textMuted },
-  chipTextActive: { color: theme.color.heroText, fontWeight: '600' },
-  cta: { backgroundColor: theme.color.heroBg, borderRadius: theme.radius.md, paddingVertical: theme.space.md, alignItems: 'center', marginTop: theme.space.lg },
-  ctaText: { color: theme.color.heroText, fontSize: theme.font.body, fontWeight: '700' },
-  ctaDisabled: { opacity: 0.5 },
-  failure: { fontSize: theme.font.small, color: theme.color.danger, marginTop: theme.space.md, lineHeight: 19 },
-  secondary: { backgroundColor: theme.color.done, borderRadius: theme.radius.md, paddingVertical: theme.space.md, alignItems: 'center' },
-  secondaryText: { color: '#fff', fontSize: theme.font.body, fontWeight: '700' },
-  tertiary: { paddingVertical: theme.space.md, alignItems: 'center' },
-  tertiaryText: { color: theme.color.textFaint, fontSize: theme.font.small },
-});
+const useStyles = makeStyles((t) =>
+  StyleSheet.create({
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm },
+    ringWrap: { alignItems: 'center', paddingVertical: t.space.md },
+    seconds: { fontFamily: t.family.display, fontSize: 56, lineHeight: 64, color: t.color.accentText, fontVariant: ['tabular-nums'] },
+    actions: { gap: t.space.xs },
+    activityHead: { flexDirection: 'row', alignItems: 'flex-end', gap: t.space.sm },
+    beaten: { fontFamily: t.family.display, fontSize: t.font.title, lineHeight: 28, color: t.color.accentText },
+  }),
+);

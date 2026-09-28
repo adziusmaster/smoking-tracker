@@ -16,3 +16,4 @@ export function estimateCigarettesBeforeQuitting(settings: Settings): number | n
   const perDay = isCombustible(settings.product) ? settings.unitsPerDay : history.cigarettesPerDay;
   return Math.round(history.months * DAYS_PER_MONTH_AVG * perDay);
 }
+

@@ -1,24 +1,22 @@
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 import {
   addSlip,
   endSmokingPeriod,
   listCheckins,
-  loadQuitState,
   saveCheckin,
   startSmokingPeriod,
   type CheckinRow,
 } from '@/data/repositories';
-import { formatCount } from '@/domain/format';
 import { parsePositiveInt } from '@/domain/parse';
-import { lifetimeAfterSlip } from '@/domain/savings';
-import type { SlipTrigger } from '@/domain/types';
+import type { ProductId, SlipTrigger } from '@/domain/types';
 import { PRODUCT_CONTENT } from '@/content/products';
 import { CravingChart } from '@/ui/CravingChart';
-import { theme } from '@/ui/theme';
+import { SlipProductPicker } from '@/ui/SlipProductPicker';
+import { Body, Button, Caption, Chip, Field, Heading, Label, Screen, Title } from '@/ui/kit';
+import { makeStyles } from '@/ui/theme';
 import { useQuitState } from '@/ui/useQuitState';
 import { useSubmitGuard } from '@/ui/useSubmitGuard';
 
@@ -30,11 +28,12 @@ type Status = { text: string; tone: 'ok' | 'error' };
 export default function Log() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const styles = useStyles();
   const { state, reload } = useQuitState();
 
   const [checkins, setCheckins] = useState<CheckinRow[]>([]);
   const [slipCount, setSlipCount] = useState('1');
+  const [slipChoice, setSlipChoice] = useState<ProductId | null>(null);
   const [slipTrigger, setSlipTrigger] = useState<SlipTrigger | null>(null);
   const [craving, setCraving] = useState(3);
   const [mood, setMood] = useState(3);
@@ -50,23 +49,19 @@ export default function Log() {
 
   const currentlySmoking = state?.periods.some((period) => period.endedAt === null) ?? false;
 
-  const content = PRODUCT_CONTENT[state?.settings.product ?? 'cigarettes'];
+  const own: ProductId = state?.settings.product ?? 'cigarettes';
+  const content = PRODUCT_CONTENT[own];
+  // A slip can be any product: an IQOS quitter can slip on a cigarette.
+  const slipProduct = slipChoice ?? own;
+  const slipContent = PRODUCT_CONTENT[slipProduct];
 
   const submitSlip = () =>
     run(async () => {
       try {
-        const units = content.countsSlips ? (parsePositiveInt(slipCount) ?? 1) : 1;
-        await addSlip(db, { occurredAt: new Date().toISOString(), unitCount: units, trigger: slipTrigger, note: null }, new Date());
+        const units = slipContent.countsSlips ? (parsePositiveInt(slipCount) ?? 1) : 1;
+        await addSlip(db, { occurredAt: new Date().toISOString(), unitCount: units, trigger: slipTrigger, note: null, product: slipProduct }, new Date());
         await reload();
-        const refreshed = await loadQuitState(db);
-        const total = refreshed ? lifetimeAfterSlip(refreshed, 0, new Date()) : null;
-        setStatus({
-          text:
-            total === null
-              ? 'Slip logged. Your fast clocks restarted; the long ones did not.'
-              : `Slip logged. Your fast clocks restarted; the long ones did not. That brings your estimated lifetime cigarette total to ${formatCount(total)}.`,
-          tone: 'ok',
-        });
+        setStatus({ text: 'Slip logged. Your fast clocks restarted; the long ones did not.', tone: 'ok' });
       } catch {
         setStatus({ text: 'Couldn’t save that slip. Nothing was recorded — please try again.', tone: 'error' });
       }
@@ -111,107 +106,79 @@ export default function Log() {
     : 'Not a slip — a return to regular use. Roughly how many times a day?';
 
   return (
-    <ScrollView contentContainerStyle={[styles.page, { paddingTop: insets.top + theme.space.lg }]}>
-      <Pressable onPress={() => router.back()}><Text style={styles.close}>Close</Text></Pressable>
+    <Screen>
+      <View style={styles.topBar}>
+        <Button label="Close" variant="quiet" onPress={() => router.back()} />
+      </View>
 
-      <Text style={styles.h2}>Today’s check-in</Text>
+      <Title>Log</Title>
+
+      <Heading>Today’s check-in</Heading>
       <Scale label="Craving intensity" value={craving} onChange={setCraving} />
       <Scale label="Mood" value={mood} onChange={setMood} />
-      <Pressable style={[styles.cta, submitting && styles.ctaDisabled]} onPress={submitCheckin} disabled={submitting}>
-        <Text style={styles.ctaText}>Save check-in</Text>
-      </Pressable>
+      <Button label="Save check-in" onPress={submitCheckin} disabled={submitting} />
 
-      <Text style={styles.h2}>Craving over the last 30 days</Text>
+      <Heading>Craving over the last 30 days</Heading>
       <CravingChart checkins={checkins} />
 
-      <Text style={styles.h2}>Log a slip</Text>
-      <Text style={styles.hint}>
-        {content.countsSlips
-          ? `A few ${content.unit.many}, still quit. This subtracts exactly what you used — nothing more.`
-          : 'A slip, still quit. It restarts the fast clocks and nothing else.'}
-      </Text>
-      {content.countsSlips ? (
-        <TextInput
-          style={styles.input}
+      <Heading>Log a slip</Heading>
+      <Caption tone="faint">A slip, still quit. It restarts the fast clocks and nothing else is taken away.</Caption>
+      <SlipProductPicker own={own} value={slipProduct} onChange={setSlipChoice} />
+      {slipContent.countsSlips ? (
+        <Field
+          label={`How many ${slipContent.unit.many}?`}
           value={slipCount}
           onChangeText={setSlipCount}
           keyboardType="number-pad"
-          accessibilityLabel={`Number of ${content.unit.many}`}
+          accessibilityLabel={`Number of ${slipContent.unit.many}`}
         />
       ) : null}
       <View style={styles.chips}>
         {TRIGGERS.map((option) => (
-          <Pressable key={option} onPress={() => setSlipTrigger(slipTrigger === option ? null : option)} style={[styles.chip, slipTrigger === option && styles.chipActive]}>
-            <Text style={[styles.chipText, slipTrigger === option && styles.chipTextActive]}>{option}</Text>
-          </Pressable>
+          <Chip key={option} label={option} selected={slipTrigger === option} onPress={() => setSlipTrigger(slipTrigger === option ? null : option)} />
         ))}
       </View>
-      <Pressable style={[styles.cta, submitting && styles.ctaDisabled]} onPress={submitSlip} disabled={submitting}>
-        <Text style={styles.ctaText}>Log slip</Text>
-      </Pressable>
+      <Button label="Log slip" onPress={submitSlip} disabled={submitting} />
 
-      <Text style={styles.h2}>{currentlySmoking ? 'Start again' : 'I’ve gone back to it'}</Text>
+      <Heading>{currentlySmoking ? 'Start again' : 'I’ve gone back to it'}</Heading>
       {currentlySmoking ? (
-        <Text style={styles.hint}>
-          Ends the current smoking period. Your long-term recovery clocks restart from today, and your
-          longest smoke-free run so far stays on record — nothing you already did is erased.
-        </Text>
+        <Caption tone="faint">
+          Ends the current period. Your long-term recovery clocks restart from today, and your longest run so far
+          stays on record — nothing you already did is erased.
+        </Caption>
       ) : (
-        <>
-          <Text style={styles.hint}>{relapsePrompt}</Text>
-          <TextInput style={styles.input} value={relapseAvg} onChangeText={setRelapseAvg} keyboardType="number-pad" accessibilityLabel={relapsePrompt} />
-        </>
+        <Field label={relapsePrompt} value={relapseAvg} onChangeText={setRelapseAvg} keyboardType="number-pad" />
       )}
-      <Pressable
-        style={[styles.cta, styles.ctaMuted, submitting && styles.ctaDisabled]}
+      <Button
+        label={currentlySmoking ? 'I’ve stopped again' : 'Log a relapse'}
+        variant="secondary"
         onPress={toggleRelapse}
         disabled={submitting}
-      >
-        <Text style={styles.ctaText}>{currentlySmoking ? 'I’ve stopped again' : 'Log a relapse'}</Text>
-      </Pressable>
+      />
 
-      {status ? (
-        <Text style={[styles.status, status.tone === 'error' && styles.statusError]}>{status.text}</Text>
-      ) : null}
-    </ScrollView>
+      {status ? <Body tone={status.tone === 'error' ? 'danger' : 'accent'}>{status.text}</Body> : null}
+    </Screen>
   );
 }
 
 function Scale(props: { label: string; value: number; onChange: (next: number) => void }) {
+  const styles = useStyles();
   return (
-    <View style={{ gap: theme.space.xs }}>
-      <Text style={styles.label}>{props.label}</Text>
+    <View style={styles.scale}>
+      <Label>{props.label}</Label>
       <View style={styles.chips}>
         {SCALE.map((option) => (
-          <Pressable key={option} onPress={() => props.onChange(option)} style={[styles.chip, props.value === option && styles.chipActive]}>
-            <Text style={[styles.chipText, props.value === option && styles.chipTextActive]}>{option}</Text>
-          </Pressable>
+          <Chip key={option} label={String(option)} selected={props.value === option} onPress={() => props.onChange(option)} />
         ))}
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  page: { padding: theme.space.lg, paddingBottom: theme.space.xxl, gap: theme.space.md, backgroundColor: theme.color.bg },
-  close: { fontSize: theme.font.small, fontWeight: '600', color: theme.color.heroBg, alignSelf: 'flex-end' },
-  h2: { fontSize: theme.font.body, fontWeight: '700', color: theme.color.text, marginTop: theme.space.lg },
-  hint: { fontSize: theme.font.tiny, color: theme.color.textFaint, lineHeight: 16 },
-  label: { fontSize: theme.font.small, fontWeight: '600', color: theme.color.text },
-  input: {
-    borderWidth: 1, borderColor: theme.color.border, borderRadius: theme.radius.md,
-    backgroundColor: theme.color.surface, paddingHorizontal: theme.space.md,
-    paddingVertical: theme.space.sm, fontSize: theme.font.body, color: theme.color.text,
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.sm },
-  chip: { borderWidth: 1, borderColor: theme.color.border, borderRadius: theme.radius.pill, paddingHorizontal: theme.space.md, paddingVertical: 6, backgroundColor: theme.color.surface },
-  chipActive: { backgroundColor: theme.color.heroBg, borderColor: theme.color.heroBg },
-  chipText: { fontSize: theme.font.tiny, color: theme.color.textMuted },
-  chipTextActive: { color: theme.color.heroText, fontWeight: '600' },
-  cta: { backgroundColor: theme.color.heroBg, borderRadius: theme.radius.md, paddingVertical: theme.space.md, alignItems: 'center' },
-  ctaMuted: { backgroundColor: theme.color.textFaint },
-  ctaDisabled: { opacity: 0.5 },
-  ctaText: { color: theme.color.heroText, fontSize: theme.font.body, fontWeight: '700' },
-  status: { fontSize: theme.font.small, color: theme.color.done, marginTop: theme.space.md, lineHeight: 19 },
-  statusError: { color: theme.color.danger },
-});
+const useStyles = makeStyles((t) =>
+  StyleSheet.create({
+    topBar: { flexDirection: 'row', justifyContent: 'flex-end' },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm },
+    scale: { gap: t.space.xs },
+  }),
+);
