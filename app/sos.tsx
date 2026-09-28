@@ -1,6 +1,4 @@
 import { useRouter } from 'expo-router';
-import Volume2 from 'lucide-react-native/icons/volume-2';
-import VolumeX from 'lucide-react-native/icons/volume-x';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -11,7 +9,7 @@ import { fillUnitTokens } from '@/domain/format';
 import { parseNonNegativeInt } from '@/domain/parse';
 import { variantForProduct } from '@/domain/products';
 import type { ActivityId, ProductId, SlipTrigger } from '@/domain/types';
-import { Body, Button, Card, Chip, Eyebrow, Field, Label, ProgressRing, Screen, Title } from '@/ui/kit';
+import { Body, Button, Card, Chip, Eyebrow, Field, Label, ProgressRing, Screen, SpeakerIcon, Title } from '@/ui/kit';
 import { ActivityPicker } from '@/ui/sos/ActivityPicker';
 import { BlockDrop } from '@/ui/sos/BlockDrop';
 import { BreatheGuide } from '@/ui/sos/BreatheGuide';
@@ -252,11 +250,7 @@ export default function Sos() {
                 accessibilityLabel="Sound"
                 hitSlop={8}
               >
-                {preferences.sound ? (
-                  <Volume2 size={22} strokeWidth={1.75} color={t.color.ink} />
-                ) : (
-                  <VolumeX size={22} strokeWidth={1.75} color={t.color.muted} />
-                )}
+                <SpeakerIcon on={preferences.sound} color={preferences.sound ? t.color.ink : t.color.muted} />
               </Pressable>
             ) : null}
             <Button label="Try something else" variant="quiet" onPress={() => setMode('pick')} />

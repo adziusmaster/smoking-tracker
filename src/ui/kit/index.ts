@@ -7,3 +7,4 @@ export { ProgressRing } from './ProgressRing';
 export { Screen } from './Screen';
 export { StatTile } from './StatTile';
 export { Body, Caption, Eyebrow, Heading, Label, Title, type Tone } from './Type';
+export { SpeakerIcon } from './SpeakerIcon';
