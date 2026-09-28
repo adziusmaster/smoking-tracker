@@ -77,6 +77,21 @@ export interface CravingEvent {
   outcome: 'passed' | 'slipped';
   /** The last activity used, if any. */
   activity: ActivityId | null;
+  /** "How strong is it?" 1-5 when SOS started and when it passed; null when skipped. */
+  strengthStart: number | null;
+  strengthEnd: number | null;
+}
+
+export type GameId = 'blocks' | 'memory' | 'bubbles';
+
+/** Best score per game; null until a game has been finished once. */
+export type GameRecords = Record<GameId, number | null>;
+
+export interface Preferences {
+  sound: boolean;
+  vibration: boolean;
+  /** Why the user is quitting, shown during a craving. Empty when not given. */
+  reason: string;
 }
 
 /** Every stored fact the domain needs. */

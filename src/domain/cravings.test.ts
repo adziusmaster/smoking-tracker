@@ -3,7 +3,7 @@ import { cravingsBeaten, sosProgress } from './cravings';
 import type { CravingEvent } from './types';
 
 const event = (outcome: CravingEvent['outcome']): CravingEvent => ({
-  id: 1, startedAt: '2026-09-28T10:00:00.000Z', endedAt: '2026-09-28T10:04:00.000Z', outcome, activity: null,
+  id: 1, startedAt: '2026-09-28T10:00:00.000Z', endedAt: '2026-09-28T10:04:00.000Z', outcome, activity: null, strengthStart: null, strengthEnd: null,
 });
 
 describe('cravings', () => {

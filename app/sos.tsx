@@ -77,7 +77,7 @@ export default function Sos() {
     run(async () => {
       setFailure(null);
       try {
-        await addCravingEvent(db, { startedAt, endedAt: new Date().toISOString(), outcome: 'passed', activity: lastActivity }, new Date());
+        await addCravingEvent(db, { startedAt, endedAt: new Date().toISOString(), outcome: 'passed', activity: lastActivity, strengthStart: null, strengthEnd: null }, new Date());
         setBeatenNow(await countCravingsBeaten(db));
       } catch {
         // The craving still passed; failing to record it must not take that away.
@@ -94,7 +94,7 @@ export default function Sos() {
         await logSlipAfterCraving(
           db,
           { occurredAt: now.toISOString(), unitCount: slipUnits, trigger, note: null, product: slipProduct },
-          { startedAt, endedAt: now.toISOString(), outcome: 'slipped', activity: lastActivity },
+          { startedAt, endedAt: now.toISOString(), outcome: 'slipped', activity: lastActivity, strengthStart: null, strengthEnd: null },
           now,
         );
         router.replace('/');

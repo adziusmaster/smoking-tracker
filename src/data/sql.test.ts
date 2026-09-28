@@ -14,6 +14,8 @@ import {
   UPSERT_SETTINGS,
   INSERT_CRAVING_EVENT,
   SELECT_CRAVING_EVENTS,
+  UPSERT_GAME_RECORD,
+  UPSERT_PREFERENCE,
 } from './queries';
 
 let db: Database.Database;
@@ -35,7 +37,7 @@ describe('migrations', () => {
 
     // Assert
     expect(rows.map((r) => r.name).sort()).toEqual([
-      'craving_checkins', 'craving_events', 'milestone_events', 'settings', 'slips', 'smoking_periods',
+      'craving_checkins', 'craving_events', 'game_records', 'milestone_events', 'preferences', 'settings', 'slips', 'smoking_periods',
     ]);
   });
 });
@@ -236,9 +238,9 @@ describe('migration v2', () => {
     expect(row.smoked_for_months).toBe(0);
   });
 
-  it('SCHEMA_VERSION_afterAddingV5_isFive', () => {
+  it('SCHEMA_VERSION_afterAddingV6_isSix', () => {
     // Arrange & Act & Assert
-    expect(SCHEMA_VERSION).toBe(5);
+    expect(SCHEMA_VERSION).toBe(6);
   });
 
   it('MIGRATIONS_freshDatabase_hasSmokedForMonthsColumn', () => {
@@ -265,7 +267,7 @@ describe('migrationsToApply', () => {
     const selected = migrationsToApply(0);
 
     // Assert
-    expect(selected.map((m) => m.version)).toEqual([1, 2, 3, 4, 5]);
+    expect(selected.map((m) => m.version)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
   it('migrationsToApply_fromAV1Database_selectsV2AndV3', () => {
@@ -273,7 +275,7 @@ describe('migrationsToApply', () => {
     const selected = migrationsToApply(1);
 
     // Assert
-    expect(selected.map((m) => m.version)).toEqual([2, 3, 4, 5]);
+    expect(selected.map((m) => m.version)).toEqual([2, 3, 4, 5, 6]);
   });
 
   it('migrationsToApply_afterTheWholeSetHasBeenApplied_selectsNothingSoASecondPassIsANoOp', () => {
@@ -362,7 +364,7 @@ describe('migration v3', () => {
     const pending = migrationsToApply(2);
 
     // Assert
-    expect(pending.map((m) => m.version)).toEqual([3, 4, 5]);
+    expect(pending.map((m) => m.version)).toEqual([3, 4, 5, 6]);
   });
 
   it('settings_rowWrittenBeforeV3_defaultsToCigarettes', () => {
@@ -385,7 +387,7 @@ describe('migration v3', () => {
 describe('migration v4 — craving events', () => {
   it('INSERT_CRAVING_EVENT_passedWithActivity_roundTrips', () => {
     // Arrange
-    db.prepare(INSERT_CRAVING_EVENT).run('2026-09-28T10:00:00.000Z', '2026-09-28T10:04:00.000Z', 'passed', 'blocks', NOW);
+    db.prepare(INSERT_CRAVING_EVENT).run('2026-09-28T10:00:00.000Z', '2026-09-28T10:04:00.000Z', 'passed', 'blocks', null, null, NOW);
 
     // Act
     const rows = db.prepare(SELECT_CRAVING_EVENTS).all() as { outcome: string; activity: string | null }[];
@@ -396,7 +398,7 @@ describe('migration v4 — craving events', () => {
 
   it('craving_events_unknownOutcome_isRejected', () => {
     // Arrange & Act
-    const act = () => db.prepare(INSERT_CRAVING_EVENT).run('2026-09-28T10:00:00.000Z', '2026-09-28T10:01:00.000Z', 'maybe', null, NOW);
+    const act = () => db.prepare(INSERT_CRAVING_EVENT).run('2026-09-28T10:00:00.000Z', '2026-09-28T10:01:00.000Z', 'maybe', null, null, null, NOW);
 
     // Assert
     expect(act).toThrow(/CHECK constraint failed/);
@@ -404,7 +406,7 @@ describe('migration v4 — craving events', () => {
 
   it('craving_events_unknownActivity_isRejected', () => {
     // Arrange & Act
-    const act = () => db.prepare(INSERT_CRAVING_EVENT).run('2026-09-28T10:00:00.000Z', '2026-09-28T10:01:00.000Z', 'passed', 'chess', NOW);
+    const act = () => db.prepare(INSERT_CRAVING_EVENT).run('2026-09-28T10:00:00.000Z', '2026-09-28T10:01:00.000Z', 'passed', 'chess', null, null, NOW);
 
     // Assert
     expect(act).toThrow(/CHECK constraint failed/);
@@ -412,7 +414,7 @@ describe('migration v4 — craving events', () => {
 
   it('craving_events_endBeforeStart_isRejected', () => {
     // Arrange & Act
-    const act = () => db.prepare(INSERT_CRAVING_EVENT).run('2026-09-28T10:05:00.000Z', '2026-09-28T10:01:00.000Z', 'passed', null, NOW);
+    const act = () => db.prepare(INSERT_CRAVING_EVENT).run('2026-09-28T10:05:00.000Z', '2026-09-28T10:01:00.000Z', 'passed', null, null, null, NOW);
 
     // Assert
     expect(act).toThrow(/CHECK constraint failed/);
@@ -420,8 +422,8 @@ describe('migration v4 — craving events', () => {
 
   it('SELECT_CRAVING_EVENTS_twoEvents_returnsNewestFirst', () => {
     // Arrange
-    db.prepare(INSERT_CRAVING_EVENT).run('2026-09-27T10:00:00.000Z', '2026-09-27T10:04:00.000Z', 'passed', null, NOW);
-    db.prepare(INSERT_CRAVING_EVENT).run('2026-09-28T10:00:00.000Z', '2026-09-28T10:04:00.000Z', 'slipped', null, NOW);
+    db.prepare(INSERT_CRAVING_EVENT).run('2026-09-27T10:00:00.000Z', '2026-09-27T10:04:00.000Z', 'passed', null, null, null, NOW);
+    db.prepare(INSERT_CRAVING_EVENT).run('2026-09-28T10:00:00.000Z', '2026-09-28T10:04:00.000Z', 'slipped', null, null, null, NOW);
 
     // Act
     const rows = db.prepare(SELECT_CRAVING_EVENTS).all() as { started_at: string }[];
@@ -460,5 +462,58 @@ describe('migration v5 — slip product', () => {
 
     // Assert
     expect(act).toThrow(/CHECK constraint failed/);
+  });
+});
+
+describe('migration v6 — preferences, records, craving strength', () => {
+  it('UPSERT_PREFERENCE_twice_keepsTheLatestValue', () => {
+    // Arrange
+    db.prepare(UPSERT_PREFERENCE).run('sound', 'on');
+
+    // Act
+    db.prepare(UPSERT_PREFERENCE).run('sound', 'off');
+    const rows = db.prepare('SELECT key, value FROM preferences').all();
+
+    // Assert
+    expect(rows).toEqual([{ key: 'sound', value: 'off' }]);
+  });
+
+  it('game_records_unknownGame_isRejected', () => {
+    // Arrange & Act
+    const act = () => db.prepare(UPSERT_GAME_RECORD).run('chess', 10, NOW);
+
+    // Assert
+    expect(act).toThrow(/CHECK constraint failed/);
+  });
+
+  it('UPSERT_GAME_RECORD_twice_replacesTheBest', () => {
+    // Arrange
+    db.prepare(UPSERT_GAME_RECORD).run('bubbles', 12, NOW);
+
+    // Act
+    db.prepare(UPSERT_GAME_RECORD).run('bubbles', 30, NOW);
+    const rows = db.prepare('SELECT game, best FROM game_records').all();
+
+    // Assert
+    expect(rows).toEqual([{ game: 'bubbles', best: 30 }]);
+  });
+
+  it('craving_events_strengthOutOfRange_isRejected', () => {
+    // Arrange & Act
+    const act = () => db.prepare(INSERT_CRAVING_EVENT).run('2026-09-28T10:00:00.000Z', '2026-09-28T10:04:00.000Z', 'passed', null, 6, null, NOW);
+
+    // Assert
+    expect(act).toThrow(/CHECK constraint failed/);
+  });
+
+  it('INSERT_CRAVING_EVENT_withStrengths_roundTrips', () => {
+    // Arrange
+    db.prepare(INSERT_CRAVING_EVENT).run('2026-09-28T10:00:00.000Z', '2026-09-28T10:04:00.000Z', 'passed', 'breathe', 4, 2, NOW);
+
+    // Act
+    const rows = db.prepare(SELECT_CRAVING_EVENTS).all() as { strength_start: number; strength_end: number }[];
+
+    // Assert
+    expect(rows[0]).toEqual(expect.objectContaining({ strength_start: 4, strength_end: 2 }));
   });
 });

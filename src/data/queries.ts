@@ -73,14 +73,28 @@ export const SELECT_CHECKINS = `
 `;
 
 export const INSERT_CRAVING_EVENT = `
-  INSERT INTO craving_events (started_at, ended_at, outcome, activity, created_at)
-  VALUES (?, ?, ?, ?, ?)
+  INSERT INTO craving_events (started_at, ended_at, outcome, activity, strength_start, strength_end, created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?)
 `;
 
 export const SELECT_CRAVING_EVENTS = `
-  SELECT id, started_at, ended_at, outcome, activity
+  SELECT id, started_at, ended_at, outcome, activity, strength_start, strength_end
   FROM craving_events ORDER BY started_at DESC
 `;
+
+export const UPSERT_PREFERENCE = `
+  INSERT INTO preferences (key, value) VALUES (?, ?)
+  ON CONFLICT (key) DO UPDATE SET value = excluded.value
+`;
+
+export const SELECT_PREFERENCES = `SELECT key, value FROM preferences`;
+
+export const UPSERT_GAME_RECORD = `
+  INSERT INTO game_records (game, best, achieved_at) VALUES (?, ?, ?)
+  ON CONFLICT (game) DO UPDATE SET best = excluded.best, achieved_at = excluded.achieved_at
+`;
+
+export const SELECT_GAME_RECORDS = `SELECT game, best FROM game_records`;
 
 export const COUNT_CRAVINGS_BEATEN = `
   SELECT COUNT(*) AS beaten FROM craving_events WHERE outcome = 'passed'
@@ -88,6 +102,8 @@ export const COUNT_CRAVINGS_BEATEN = `
 
 /** Ordered so children go before parents; used by the wipe-everything action. */
 export const DELETE_ALL = [
+  'DELETE FROM preferences',
+  'DELETE FROM game_records',
   'DELETE FROM craving_events',
   'DELETE FROM craving_checkins',
   'DELETE FROM milestone_events',
