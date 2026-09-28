@@ -11,7 +11,9 @@
       "package": "com.adziusmaster.smokefree",
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png"
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png",
+        "backgroundColor": "#0E7C86"
       },
       "permissions": [
         "POST_NOTIFICATIONS"
