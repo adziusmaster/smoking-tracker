@@ -8,8 +8,8 @@ Resume point. Last updated 2026-09-28.
 | | |
 | --- | --- |
 | Repo | `adziusmaster/smoking-tracker` (private) |
-| Branch | `feat/better-sos` — not merged or pushed; `main` = 1.2.0 |
-| Tests | 340 passing |
+| Branch | `feat/better-sos` = 1.3.0 (versionCode 8 on the next local production build) — not merged or pushed; `main` = 1.2.0 |
+| Tests | 353 passing |
 | Schema | version 6 (v3: product columns; v4: `craving_events`; v5: `slips.product`; v6: `preferences`, `game_records`, `craving_events.strength_start/_end`) |
 | Typecheck | clean |
 | `expo-doctor` | 20/21 — the same patch drift, see Known items |
