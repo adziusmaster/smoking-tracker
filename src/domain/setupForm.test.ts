@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultValues, parseSetupForm, switchProduct, valuesFromSettings, type SetupFormValues } from './setupForm';
+import { defaultValues, durationToMonths, monthsToDuration, parseSetupForm, switchProduct, valuesFromSettings, type SetupFormValues } from './setupForm';
 import { cigaretteSettings } from './testSettings';
 
 const STICKS = { perDay: 'Sticks per day', perPack: 'Sticks per pack', packPrice: 'Price per pack' };
@@ -21,8 +21,8 @@ const values = (overrides: Partial<SetupFormValues> = {}): SetupFormValues => ({
   packPrice: '8,50',
   weeklySpend: '',
   smokedBefore: false,
-  historyYears: '',
-  historyMonths: '',
+  historyAmount: '',
+  historyUnit: 'years',
   priorPerDay: '',
   ...overrides,
 });
@@ -49,7 +49,7 @@ describe('parseSetupForm', () => {
 
   it('parseSetupForm_heatedSmokedBefore_buildsHistoryFromPriorRate', () => {
     // Arrange & Act
-    const result = parseSetupForm(values({ smokedBefore: true, historyYears: '10', historyMonths: '6', priorPerDay: '20' }), context);
+    const result = parseSetupForm(values({ smokedBefore: true, historyAmount: '126', historyUnit: 'months', priorPerDay: '20' }), context);
 
     // Assert
     expect(result.ok && result.settings.cigaretteHistory).toEqual({ months: 126, cigarettesPerDay: 20 });
@@ -57,7 +57,7 @@ describe('parseSetupForm', () => {
 
   it('parseSetupForm_heatedSmokedBeforeWithoutRate_isAnError', () => {
     // Arrange & Act
-    const result = parseSetupForm(values({ smokedBefore: true, historyYears: '10', priorPerDay: '' }), context);
+    const result = parseSetupForm(values({ smokedBefore: true, historyAmount: '10', priorPerDay: '' }), context);
 
     // Assert
     expect(result).toEqual({ ok: false, error: 'Cigarettes per day must be a whole number above zero.' });
@@ -68,12 +68,12 @@ describe('parseSetupForm', () => {
     const result = parseSetupForm(values({ smokedBefore: true, priorPerDay: '10' }), context);
 
     // Assert
-    expect(result).toEqual({ ok: false, error: 'How long did you smoke? Enter years, months, or both.' });
+    expect(result).toEqual({ ok: false, error: 'How long did you smoke? Enter a number.' });
   });
 
   it('parseSetupForm_heatedNotSmokedBeforeWithStaleHistory_ignoresIt', () => {
     // Arrange & Act — the user answered Yes, typed numbers, then switched to No
-    const result = parseSetupForm(values({ smokedBefore: false, historyYears: '10', priorPerDay: '10' }), context);
+    const result = parseSetupForm(values({ smokedBefore: false, historyAmount: '10', priorPerDay: '10' }), context);
 
     // Assert
     expect(result.ok && result.settings.cigaretteHistory).toBeNull();
@@ -81,7 +81,7 @@ describe('parseSetupForm', () => {
 
   it('parseSetupForm_cigarettesWithYears_historyRateIsDailyRate', () => {
     // Arrange & Act
-    const result = parseSetupForm(values({ product: 'cigarettes', unitsPerDay: '15', historyYears: '8' }), { ...context, labels: CIGS });
+    const result = parseSetupForm(values({ product: 'cigarettes', unitsPerDay: '15', historyAmount: '8' }), { ...context, labels: CIGS });
 
     // Assert
     expect(result.ok && result.settings.cigaretteHistory).toEqual({ months: 96, cigarettesPerDay: 15 });
@@ -116,10 +116,10 @@ describe('parseSetupForm', () => {
 
   it('parseSetupForm_moreThanEightyYears_isAnError', () => {
     // Arrange & Act
-    const result = parseSetupForm(values({ product: 'cigarettes', historyYears: '500' }), { ...context, labels: CIGS });
+    const result = parseSetupForm(values({ product: 'cigarettes', historyAmount: '500' }), { ...context, labels: CIGS });
 
     // Assert
-    expect(result).toEqual({ ok: false, error: 'Years must be 80 or fewer.' });
+    expect(result).toEqual({ ok: false, error: 'That is more than 80 years.' });
   });
 
   it('parseSetupForm_futureQuitMoment_isAnError', () => {
@@ -169,7 +169,7 @@ describe('valuesFromSettings', () => {
 describe('switchProduct', () => {
   it('switchProduct_heatedToSnus_keepsSharedFieldsAndFillsBlankPackDefault', () => {
     // Arrange
-    const before = values({ unitsPerPack: '', smokedBefore: true, historyYears: '5', priorPerDay: '10' });
+    const before = values({ unitsPerPack: '', smokedBefore: true, historyAmount: '5', priorPerDay: '10' });
 
     // Act
     const after = switchProduct(before, 'snus', 20);
@@ -219,5 +219,47 @@ describe('switchProduct from a combustible product', () => {
 
     // Assert
     expect(switched.smokedBefore).toBe(false);
+  });
+});
+
+describe('durations', () => {
+  it('durationToMonths_years_multipliesByTwelve', () => {
+    // Arrange & Act & Assert
+    expect(durationToMonths(15, 'years')).toBe(180);
+  });
+
+  it('durationToMonths_weeksAndDays_roundToTheNearestMonthButNeverToZero', () => {
+    // Arrange & Act
+    const tenWeeks = durationToMonths(10, 'weeks');
+    const threeWeeks = durationToMonths(3, 'weeks');
+    const fiveDays = durationToMonths(5, 'days');
+
+    // Assert — any real smoking history must stay a history
+    expect(tenWeeks).toBe(2);
+    expect(threeWeeks).toBe(1);
+    expect(fiveDays).toBe(1);
+  });
+
+  it('durationToMonths_zero_isZero', () => {
+    // Arrange & Act & Assert
+    expect(durationToMonths(0, 'days')).toBe(0);
+  });
+
+  it('monthsToDuration_wholeYears_showsYearsOtherwiseMonths', () => {
+    // Arrange & Act
+    const fifteenYears = monthsToDuration(180);
+    const eighteenMonths = monthsToDuration(18);
+
+    // Assert
+    expect(fifteenYears).toEqual({ amount: 15, unit: 'years' });
+    expect(eighteenMonths).toEqual({ amount: 18, unit: 'months' });
+  });
+
+  it('parseSetupForm_threeWeeksBeforeHeated_keepsAOneMonthHistory', () => {
+    // Arrange & Act
+    const result = parseSetupForm(values({ smokedBefore: true, historyAmount: '3', historyUnit: 'weeks', priorPerDay: '5' }), context);
+
+    // Assert
+    expect(result.ok && result.settings.cigaretteHistory).toEqual({ months: 1, cigarettesPerDay: 5 });
   });
 });
