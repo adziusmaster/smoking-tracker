@@ -1,12 +1,14 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
-import type { QuitState, Settings, Slip, SlipTrigger, SmokingPeriod } from '@/domain/types';
+import type { ActivityId, CravingEvent, QuitState, Settings, Slip, SlipTrigger, SmokingPeriod } from '@/domain/types';
 import { readableSettingsOrRaw, rowToSettings, settingsToParams, type SettingsRow } from './settingsMapping';
 import {
   DELETE_ALL,
   END_OPEN_SMOKING_PERIOD,
+  INSERT_CRAVING_EVENT,
   INSERT_SLIP,
   INSERT_SMOKING_PERIOD,
   SELECT_CHECKINS,
+  SELECT_CRAVING_EVENTS,
   SELECT_SETTINGS,
   SELECT_SLIPS,
   SELECT_SMOKING_PERIODS,
@@ -37,6 +39,14 @@ interface PeriodRow {
   ended_at: string | null;
   average_cigarettes_per_day: number;
   note: string | null;
+}
+
+interface CravingRow {
+  id: number;
+  started_at: string;
+  ended_at: string;
+  outcome: CravingEvent['outcome'];
+  activity: ActivityId | null;
 }
 
 export interface CheckinRow {
@@ -71,7 +81,16 @@ export async function loadQuitState(db: SQLiteDatabase): Promise<QuitState | nul
     note: row.note,
   }));
 
-  return { settings, slips, periods, cravingEvents: [] };
+  const cravingRows = await db.getAllAsync<CravingRow>(SELECT_CRAVING_EVENTS);
+  const cravingEvents: CravingEvent[] = cravingRows.map((row) => ({
+    id: row.id,
+    startedAt: row.started_at,
+    endedAt: row.ended_at,
+    outcome: row.outcome,
+    activity: row.activity,
+  }));
+
+  return { settings, slips, periods, cravingEvents };
 }
 
 export async function saveSettings(db: SQLiteDatabase, settings: Settings, now: Date): Promise<void> {
@@ -99,6 +118,14 @@ export async function endSmokingPeriod(db: SQLiteDatabase, endedAt: string): Pro
   await db.runAsync(END_OPEN_SMOKING_PERIOD, endedAt);
 }
 
+export async function addCravingEvent(
+  db: SQLiteDatabase,
+  input: { startedAt: string; endedAt: string; outcome: CravingEvent['outcome']; activity: ActivityId | null },
+  now: Date,
+): Promise<void> {
+  await db.runAsync(INSERT_CRAVING_EVENT, input.startedAt, input.endedAt, input.outcome, input.activity, now.toISOString());
+}
+
 export async function recordMilestoneReached(db: SQLiteDatabase, milestoneId: string, reachedAt: string): Promise<void> {
   await db.runAsync(UPSERT_MILESTONE_EVENT, milestoneId, reachedAt);
 }
@@ -114,6 +141,7 @@ export async function saveCheckin(
 export async function listCheckins(db: SQLiteDatabase, limit: number): Promise<CheckinRow[]> {
   const rows = await db.getAllAsync<{ logged_on: string; craving_intensity: number; mood: number; note: string | null }>(
     SELECT_CHECKINS,
+  SELECT_CRAVING_EVENTS,
     limit,
   );
   return rows.map((row) => ({

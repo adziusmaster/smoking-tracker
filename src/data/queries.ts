@@ -73,7 +73,18 @@ export const SELECT_CHECKINS = `
 `;
 
 /** Ordered so children go before parents; used by the wipe-everything action. */
+export const INSERT_CRAVING_EVENT = `
+  INSERT INTO craving_events (started_at, ended_at, outcome, activity, created_at)
+  VALUES (?, ?, ?, ?, ?)
+`;
+
+export const SELECT_CRAVING_EVENTS = `
+  SELECT id, started_at, ended_at, outcome, activity
+  FROM craving_events ORDER BY started_at DESC
+`;
+
 export const DELETE_ALL = [
+  'DELETE FROM craving_events',
   'DELETE FROM craving_checkins',
   'DELETE FROM milestone_events',
   'DELETE FROM smoking_periods',
