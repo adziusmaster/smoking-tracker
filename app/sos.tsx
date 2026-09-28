@@ -143,7 +143,7 @@ const useStyles = makeStyles((t) =>
   StyleSheet.create({
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm },
     ringWrap: { alignItems: 'center', paddingVertical: t.space.md },
-    actions: { gap: t.space.xs, backgroundColor: t.color.bg },
+    actions: { gap: t.space.xs },
     seconds: { fontFamily: t.family.display, fontSize: 56, lineHeight: 64, color: t.color.accentText, fontVariant: ['tabular-nums'] },
   }),
 );

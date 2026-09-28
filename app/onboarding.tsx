@@ -65,8 +65,20 @@ export default function Onboarding() {
 
   const isLast = step === STEPS.length - 1;
 
+  // Back / Next are pinned to the bottom of every step, so they never move as the form changes.
+  const nav = (
+    <View style={styles.nav}>
+      {step > 0 ? (
+        <View style={styles.navItem}><Button label="Back" variant="secondary" onPress={back} /></View>
+      ) : null}
+      <View style={styles.navItem}>
+        <Button label={isLast ? 'Start tracking' : 'Next'} onPress={isLast ? submit : next} />
+      </View>
+    </View>
+  );
+
   return (
-    <Screen>
+    <Screen footer={nav} footerSpace={88}>
       <Eyebrow>Step {step + 1} of {STEPS.length}</Eyebrow>
       <Title accessibilityRole="header">{STEPS[step]}</Title>
 
@@ -89,15 +101,6 @@ export default function Onboarding() {
 
       {error ? <Body tone="danger">{error}</Body> : null}
 
-      <View style={styles.nav}>
-        {step > 0 ? (
-          <View style={styles.navItem}><Button label="Back" variant="secondary" onPress={back} /></View>
-        ) : null}
-        <View style={styles.navItem}>
-          <Button label={isLast ? 'Start tracking' : 'Next'} onPress={isLast ? submit : next} />
-        </View>
-      </View>
-
       {isLast ? (
         <Caption tone="faint">
           This app is not medical advice. If you want real support, your GP or a national quitline will do more for
@@ -110,7 +113,7 @@ export default function Onboarding() {
 
 const useStyles = makeStyles((t) =>
   StyleSheet.create({
-    nav: { flexDirection: 'row', gap: t.space.sm, marginTop: t.space.sm },
+    nav: { flexDirection: 'row', gap: t.space.sm },
     navItem: { flex: 1 },
   }),
 );

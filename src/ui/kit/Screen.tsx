@@ -7,7 +7,8 @@ const useStyles = makeStyles((t) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: t.color.bg },
     content: { paddingHorizontal: t.space.lg, gap: t.space.md },
-    footer: { position: 'absolute', left: t.space.lg, right: t.space.lg },
+    // Full-width band in the page colour, so scrolled content never shows through behind it.
+    footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: t.space.lg, paddingTop: t.space.sm, backgroundColor: t.color.bg },
   }),
 );
 
@@ -37,7 +38,7 @@ export function Screen(props: {
           {props.children}
         </ScrollView>
       )}
-      {props.footer ? <View style={[styles.footer, { bottom: insets.bottom + 16 }]}>{props.footer}</View> : null}
+      {props.footer ? <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>{props.footer}</View> : null}
     </View>
   );
 }

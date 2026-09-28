@@ -52,7 +52,8 @@
             "./assets/fonts/Manrope_700Bold.ttf"
           ]
         }
-      ]
+      ],
+      "./plugins/with-transparent-navigation-bar"
     ],
     "extra": {
       "router": {},
