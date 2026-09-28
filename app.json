@@ -19,7 +19,8 @@
       "blockedPermissions": [
         "android.permission.INTERNET",
         "android.permission.SYSTEM_ALERT_WINDOW"
-      ]
+      ],
+      "backgroundColor": "#F2F6F7"
     },
     "plugins": [
       "expo-router",
@@ -31,10 +32,25 @@
         {
           "image": "./assets/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#0f3d2e"
+          "backgroundColor": "#F2F6F7",
+          "dark": {
+            "backgroundColor": "#0A1418"
+          }
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Fraunces_600SemiBold.ttf",
+            "./assets/fonts/Manrope_400Regular.ttf",
+            "./assets/fonts/Manrope_500Medium.ttf",
+            "./assets/fonts/Manrope_600SemiBold.ttf",
+            "./assets/fonts/Manrope_700Bold.ttf"
+          ]
+        }
+      ]
     ],
     "extra": {
       "router": {},
