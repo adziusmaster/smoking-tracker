@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { PRODUCT_CONTENT, VAPE_FREQUENCY_CHIPS } from '@/content/products';
 import { isCombustible } from '@/domain/products';
-import type { SetupFormValues } from '@/domain/setupForm';
+import type { DurationUnit, SetupFormValues } from '@/domain/setupForm';
 import { Caption, Chip, Field, Label } from './kit';
 import { makeStyles } from './theme';
 
@@ -17,19 +17,32 @@ const useStyles = makeStyles((t) =>
     group: { gap: t.space.md },
     field: { gap: t.space.xs },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm },
-    duo: { flexDirection: 'row', gap: t.space.sm },
+    amount: { flexDirection: 'row' },
   }),
 );
+
+const DURATION_UNITS: [DurationUnit, string][] = [
+  ['years', 'Years'],
+  ['months', 'Months'],
+  ['weeks', 'Weeks'],
+  ['days', 'Days'],
+];
 
 export function UsageFields({ values, onChange, section }: Props) {
   const styles = useStyles();
   const content = PRODUCT_CONTENT[values.product];
   const set = (patch: Partial<SetupFormValues>) => onChange({ ...values, ...patch });
 
-  const yearsMonths = (
-    <View style={styles.duo}>
-      <Field bare label="Years smoked" value={values.historyYears} onChangeText={(historyYears) => set({ historyYears })} keyboardType="number-pad" placeholder="years" />
-      <Field bare label="Additional months smoked" value={values.historyMonths} onChangeText={(historyMonths) => set({ historyMonths })} keyboardType="number-pad" placeholder="months" />
+  const duration = (
+    <View style={styles.field}>
+      <View style={styles.amount}>
+        <Field bare label="How long you smoked" value={values.historyAmount} onChangeText={(historyAmount) => set({ historyAmount })} keyboardType="number-pad" placeholder="e.g. 10" />
+      </View>
+      <View style={styles.chips}>
+        {DURATION_UNITS.map(([unit, label]) => (
+          <Chip key={unit} label={label} selected={values.historyUnit === unit} onPress={() => set({ historyUnit: unit })} />
+        ))}
+      </View>
     </View>
   );
 
@@ -38,8 +51,8 @@ export function UsageFields({ values, onChange, section }: Props) {
       return (
         <View style={styles.field}>
           <Label>How long did you smoke? (optional)</Label>
-          <Caption tone="faint">Used only for an estimate of your lifetime cigarette total. Leave blank to skip.</Caption>
-          {yearsMonths}
+          <Caption tone="faint">Used only for the estimate of cigarettes smoked, shown in Settings. Leave blank to skip.</Caption>
+          {duration}
         </View>
       );
     }
@@ -56,10 +69,10 @@ export function UsageFields({ values, onChange, section }: Props) {
         {values.smokedBefore ? (
           <>
             <View style={styles.field}>
-              <Label>For how long?</Label>
-              {yearsMonths}
+              <Label>How long did you smoke cigarettes?</Label>
+              {duration}
             </View>
-            <Field label="Cigarettes per day back then" value={values.priorPerDay} onChangeText={(priorPerDay) => set({ priorPerDay })} keyboardType="number-pad" />
+            <Field label="About how many cigarettes a day?" value={values.priorPerDay} onChangeText={(priorPerDay) => set({ priorPerDay })} keyboardType="number-pad" />
           </>
         ) : null}
       </View>

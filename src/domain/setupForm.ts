@@ -4,6 +4,24 @@ import type { CigaretteHistory, CostModel, ProductId, Settings } from './types';
 
 export const MAX_HISTORY_YEARS = 80;
 
+export type DurationUnit = 'years' | 'months' | 'weeks' | 'days';
+
+const MONTHS_PER: Record<DurationUnit, number> = { years: 12, months: 1, weeks: 12 / 52.18, days: 1 / 30.44 };
+
+/**
+ * History is stored in whole months. Weeks and days round to the nearest month, but a real
+ * history never rounds to zero: having one is what decides the long-term milestones.
+ */
+export function durationToMonths(amount: number, unit: DurationUnit): number {
+  if (amount <= 0) return 0;
+  return Math.max(1, Math.round(amount * MONTHS_PER[unit]));
+}
+
+/** How a stored history reads back in the form: whole years when it is, else months. */
+export function monthsToDuration(months: number): { amount: number; unit: DurationUnit } {
+  return months % 12 === 0 ? { amount: months / 12, unit: 'years' } : { amount: months, unit: 'months' };
+}
+
 /** What the onboarding and Settings forms hold: raw text, exactly as typed. */
 export interface SetupFormValues {
   product: ProductId;
@@ -13,8 +31,9 @@ export interface SetupFormValues {
   weeklySpend: string;
   /** Only read for non-combustible products. */
   smokedBefore: boolean;
-  historyYears: string;
-  historyMonths: string;
+  /** How long cigarettes were smoked: a number plus the unit chosen next to it. */
+  historyAmount: string;
+  historyUnit: DurationUnit;
   /** Only read for non-combustible products with smokedBefore. */
   priorPerDay: string;
 }
@@ -59,19 +78,17 @@ export function parseSetupForm(
   let cigaretteHistory: CigaretteHistory | null = null;
   if (combustible || values.smokedBefore) {
     // Blank means "not given"; a non-empty unreadable value is an error, never a silent zero.
-    const years = values.historyYears.trim() === '' ? 0 : parseNonNegativeInt(values.historyYears);
-    const months = values.historyMonths.trim() === '' ? 0 : parseNonNegativeInt(values.historyMonths);
-    if (years === null) return fail('Years must be a whole number, or left blank.');
-    if (months === null) return fail('Months must be a whole number, or left blank.');
-    if (years > MAX_HISTORY_YEARS) return fail(`Years must be ${MAX_HISTORY_YEARS} or fewer.`);
-    const totalMonths = years * 12 + months;
+    const amount = values.historyAmount.trim() === '' ? 0 : parseNonNegativeInt(values.historyAmount);
+    if (amount === null) return fail('How long you smoked must be a whole number, or left blank.');
+    const totalMonths = durationToMonths(amount, values.historyUnit);
+    if (totalMonths > MAX_HISTORY_YEARS * 12) return fail(`That is more than ${MAX_HISTORY_YEARS} years.`);
 
     if (combustible) {
       cigaretteHistory = totalMonths > 0 ? { months: totalMonths, cigarettesPerDay: unitsPerDay } : null;
     } else {
       const priorPerDay = parsePositiveInt(values.priorPerDay);
       if (priorPerDay === null) return fail('Cigarettes per day must be a whole number above zero.');
-      if (totalMonths === 0) return fail('How long did you smoke? Enter years, months, or both.');
+      if (totalMonths === 0) return fail('How long did you smoke? Enter a number.');
       cigaretteHistory = { months: totalMonths, cigarettesPerDay: priorPerDay };
     }
   }
@@ -104,8 +121,8 @@ export function valuesFromSettings(settings: Settings): SetupFormValues {
     packPrice: settings.cost.kind === 'pack' ? money(settings.cost.packPriceMinor) : '',
     weeklySpend: settings.cost.kind === 'weekly' ? money(settings.cost.weeklySpendMinor) : '',
     smokedBefore: history !== null && !combustible,
-    historyYears: history ? String(Math.floor(history.months / 12)) : '',
-    historyMonths: history ? String(history.months % 12) : '',
+    historyAmount: history ? String(monthsToDuration(history.months).amount) : '',
+    historyUnit: history ? monthsToDuration(history.months).unit : 'years',
     priorPerDay: history && !combustible ? String(history.cigarettesPerDay) : '',
   };
 }
@@ -118,8 +135,8 @@ export function defaultValues(product: ProductId, defaultPerPack: number | null)
     packPrice: '',
     weeklySpend: '',
     smokedBefore: false,
-    historyYears: '',
-    historyMonths: '',
+    historyAmount: '',
+    historyUnit: 'years',
     priorPerDay: '',
   };
 }
@@ -136,7 +153,7 @@ export function switchProduct(values: SetupFormValues, product: ProductId, defau
   // A smoker moving to a non-combustible product keeps their cigarette history: it is what the
   // long-term milestones measure. Without this the "smoked before?" answer defaults to No and
   // saving silently deletes the history.
-  const hadHistory = values.historyYears.trim() !== '' || values.historyMonths.trim() !== '';
+  const hadHistory = values.historyAmount.trim() !== '';
   if (isCombustible(values.product) && !isCombustible(product) && hadHistory) {
     return { ...next, smokedBefore: true, priorPerDay: values.priorPerDay.trim() === '' ? values.unitsPerDay : values.priorPerDay };
   }
