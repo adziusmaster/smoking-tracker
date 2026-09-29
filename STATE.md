@@ -34,98 +34,64 @@ enableBackgroundRecording: false`, and `RECORD_AUDIO`, `FOREGROUND_SERVICE`,
 Its default plugin adds those — re-check the built APK permissions (`aapt2 dump permissions`)
 after any expo-audio upgrade. `MODIFY_AUDIO_SETTINGS` (normal permission) stays.
 
-## Next release (after 1.2.0 / versionCode 7) — to fix
+## Handover — where we stopped (2026-09-29)
 
-- **Play warning on versionCode 7: "There is no deobfuscation file associated with this App
-  Bundle."** Harmless today (R8 is off, so nothing is obfuscated), but the AAB is 62 MB. Plan:
-  add `expo-build-properties` (config-only plugin) with `android.enableMinifyInReleaseBuilds` and
-  `android.enableShrinkResourcesInReleaseBuilds` set to true; build locally; test the release
-  build thoroughly on the phone (R8 can strip reflection-used RN code — only visible at runtime);
-  upload `android/app/build/outputs/mapping/release/mapping.txt` with the AAB and keep a copy in
-  `builds/` next to it. Run `npm ci` after adding the dependency.
+**State:** `main` = 1.3.0, pushed. `builds/cleared-1.3.0.aab` (versionCode 8) is built and verified
+(no INTERNET / RECORD_AUDIO / FOREGROUND_SERVICE; `android.permission.DUMP` in the manifest is
+profileinstaller's receiver protection, also in 1.2.0 — not a requested permission). Release notes:
+`store-assets/release-notes-1.3.0.md` (Play text 444/500). The owner tested the dev build on the
+phone and approved it. 1.2.0 (versionCode 7) is what closed testers currently have.
 
-## Release roadmap (decided 2026-09-28)
+**Next, in this order:**
 
-The owner chose to **build everything before closed testing** (the 14-day clock starts at the
-end). Sub-projects, each with its own spec → plan → build:
+1. **Upload 1.3.0 to closed testing** (owner does this in Play Console; paste the Play text from
+   the release notes). Confirm whether it went up before doing anything else.
+2. **Privacy policy: list what 1.3.0 added.** `docs/privacy-policy.md` ("What it stores, and
+   where", line ~14) doesn't yet mention craving strength ratings, "your reason", best game
+   scores, or the sound/vibration settings. All on-device only, so Data Safety answers are
+   unchanged — the list just needs completing. Update both `docs/privacy-policy.md` and
+   `../lech-digital/projects/cleared/privacy/index.html`; pushing that repo's `main` publishes
+   it, so ask the owner first.
+3. **Next release (1.3.1 or 1.4.0): R8 + deobfuscation file** — the Play warning "There is no
+   deobfuscation file associated with this App Bundle". Add `expo-build-properties` (config-only)
+   with `android.enableMinifyInReleaseBuilds` and `android.enableShrinkResourcesInReleaseBuilds`
+   true; `npm ci`; build the **dev variant first** and walk every screen on the phone (R8 can
+   strip reflection-used RN code — only visible at runtime: SOS games, audio, SQLite, share/export,
+   notifications); then the production AAB, and upload
+   `android/app/build/outputs/mapping/release/mapping.txt` with it (keep a copy in `builds/`).
+   Keep this release free of features so any crash is attributable to R8.
+4. **Open-source licences page** in Settings (see Known items). Before open testing.
+5. **Store listing refresh before open testing:** screenshots don't show the new games,
+   breathing colours, or Log → Cravings. Store screenshots may use flattering example data (the
+   owner asked for "23 cravings beaten" in shot 1); the app itself never fabricates numbers.
+6. **Deferred minors from the Better SOS review** (none visible enough to block):
+   - preference saves (`setSound`/`setVibration`/`setReason`) have no `.catch` — a failed save
+     leaves the switch showing the new state; `useFeedback` `seekTo` rejection unhandled;
+   - bubble pop writes the record on every pop once past the best (throttle / save on unmount);
+   - onboarding saves the reason outside the settings write (wrap both in a transaction);
+   - Settings keeps the untrimmed reason in state after saving;
+   - BreatheGuide JS clock vs `Animated.loop` drift over long sessions (measure on device).
+7. **Expo patch drift** (`expo-doctor` check fails): update all Expo patch versions together in a
+   release of their own, retest on the phone. `expo-asset` is pinned at 57.0.9 on purpose (the
+   version inside 1.3.0).
 
-1. **Nicotine products** — done on `feat/nicotine-products`: cigarettes, roll-your-own, heated,
-   vape, snus, pouches; product-filtered, citation-checked milestones
-   (`docs/citation-check-2026-09.md`).
-2. **Design system + new icon** — done on `feat/design-system`: "Clear Air" light/dark palettes
-   (`src/content/palette.ts`, contrast-tested), bundled Fraunces + Manrope, component kit in
-   `src/ui/kit/`, every screen restyled, tally-mark icon. Directions page:
-   <https://claude.ai/artifact/M1zLbZ1ATW5hTk5g2g1bLo>.
-3. **SOS activities** — done on `feat/sos-games`: delay, then breathing / block drop (cites
-   Skorka-Brown 2015) / memory pairs / bubble pop / 5-4-3-2-1 / water, a five-minute bar, and
-   "cravings beaten" on home. Game rules are pure and tested in `src/domain/games/`.
-   Craving/slip buttons are product-neutral ("I’m having a craving" / "I slipped"); a slip records
-   what was used (`slips.product`, null = own product). Any slip restarts the fast clocks; only
-   own-product slips reduce "units not used"; cigarette/roll-up slips add to the lifetime total.
-   Repository functions now run in Node via `src/data/testDb.ts`.
-4. **Something new every day** — daily card, savings goal, reasons.
-4. **Insights & journal.**
-5. **Notification preferences + backup/restore to file.**
-6. **Home-screen widget** (native module — riskiest for EAS builds, so last).
-7. **Store assets** — new display name (**"Smoke Free" collides with an established Play app**),
-   listing (draft: `store-assets/listing-draft.md`), icon, feature graphic, captioned device
-   screenshots built the way PurePrep/CoreChoice do it.
+**How the owner likes to work** (also see the global CLAUDE.md): builds are local (no EAS cloud
+credits); phone testing uses the **dev variant** (`APP_VARIANT=dev`, package `.dev`) so the Play
+install is never touched; on install, Play Protect may prompt — the owner taps "Don't send";
+commits by `adziusmaster`, never a Co-Authored-By line; merge/push/AAB only on the owner's OK.
+Icons are drawn in-house as small SVGs (`src/ui/kit/SpeakerIcon.tsx`) rather than pulling in an
+icon set — the owner asked for that to avoid another licence to credit.
 
-The app is free, no ads, no purchases — a deliberate decision, not a TODO.
+## Roadmap (owner-decided 2026-09-28; free, no ads, no purchases — deliberate)
 
-## Do these next, in this order
+Done: nicotine products · Clear Air design system + icon · SOS activities · store assets and the
+Cleared rename · Better SOS (games, records, strength, reason, craving insights on Log).
+Still open, each its own spec → plan → build:
 
-1. **Install and test the APK.** Built from `main`, `versionCode 4`, permissions verified:
-   <https://expo.dev/accounts/adrzej-dev/projects/smoking-tracker/builds/c3a528d3-6319-42fd-b676-a5ae6e1ef967>
-
-   Worth exercising, most likely to reveal something first:
-   - Onboarding backdated to a specific date **and** a distinct time (e.g. 21:30) — check the
-     timeline's hours figure matches. Date and time are merged by separate code paths.
-   - Years/months question, then check Settings shows a consistent "estimated cigarettes
-     smoked before you quit".
-   - Log a slip: the day counter must NOT reset, and the estimated **lifetime total** must be
-     higher than the Settings figure. They are deliberately different numbers.
-   - Edit the quit date in Settings: every figure should recalculate while cigarettes-per-day
-     and pack price survive.
-   - Aeroplane mode, then repeat all of it. The manifest proves the app *cannot* reach a
-     network; only running it proves every screen is happy without one.
-   - Notifications: grant permission and confirm one arrives. Blocking `SYSTEM_ALERT_WINDOW`
-     is the change most likely to have disturbed this.
-
-2. **Finish the upload-key reset in Play Console.** Play expects an upload certificate nobody
-   holds the private half of (`23:5D:81:87:9A:54:E7:0B:E2:C3:ED:54:71:28:89:FF:68:14:FB:BB` —
-   almost certainly generated during app setup). Reset it to the EAS-managed key:
-
-   - Play Console → Test and release → Setup → App integrity → **Request upload key reset**
-   - Certificate to register: `~/Downloads/eas-upload-certificate.pem`
-   - SHA-1 `B8:9B:23:03:C3:F5:C1:66:BB:A0:35:05:64:6E:33:8F:04:36:B1:34`
-   - SHA-256 `56:88:E3:A0:57:19:1F:7D:72:5C:92:30:A2:29:D0:EC:E8:5A:45:72:36:9F:65:BC:E7:C8:56:18:CA:08:3A:BF`
-
-   Google approves in a day or two. No production release exists, so this is low risk.
-   The keystore is held encrypted by EAS — there is no local file to lose.
-
-3. **Build a production AAB.** The `versionCode 4` AAB was cancelled, so this needs one build:
-
-   ```
-   npx eas-cli@latest build --platform android --profile production --non-interactive
-   ```
-
-   **Build credits are limited** — do not fire off speculative builds. Verify locally first
-   (`npm test`, `npm run typecheck`, `npx expo-doctor@latest`, `npx expo export --platform android`).
-
-4. **After building, re-verify the artifact's permissions.** `INTERNET` and
-   `SYSTEM_ALERT_WINDOW` must both be absent. Note the two formats differ:
-   **AAB** manifests are protobuf with UTF-8 strings (`base/manifest/AndroidManifest.xml`);
-   **APK** manifests are binary AXML with UTF-16LE. Scanning with the wrong encoding returns
-   zero strings, which looks exactly like "permission absent" — always assert a known string
-   (the package name) resolves, or a failed parse reads as an all-clear.
-
-5. **Upload to internal testing**, install, walk the app. Then **start closed testing.**
-
-6. **Retake screenshots on the device.** `store-assets/screenshots/` holds four captured from
-   a browser (423×751, in spec, usable). Real-device shots render fonts and shadows as users
-   see them. A fifth showing the **danger-window state** after a slip is the clearest visual
-   argument for what makes this app different.
+1. **Something new every day** — daily card, savings goal (the "reason" part shipped in 1.3.0).
+2. **Journal** (insights partly shipped in 1.3.0: Log → Cravings).
+3. **Notification preferences + backup/restore to file.**
+4. **Home-screen widget** (native module — riskiest, so last).
 
 ## Release blockers and gates
 
